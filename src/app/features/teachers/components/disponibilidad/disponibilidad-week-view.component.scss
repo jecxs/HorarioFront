@@ -1,0 +1,344 @@
+// src/app/features/docentes/components/disponibilidad/disponibilidad-week-view.component.scss
+
+// Variables
+$primary-color: #3f51b5;
+$accent-color: #ff4081;
+$warn-color: #f44336;
+$success-color: #4caf50;
+$available-color: #4caf50;
+$background-color: #f5f7fa;
+$card-bg-color: #ffffff;
+$text-color: #333333;
+$light-text: #666666;
+$border-color: #e0e0e0;
+$shadow-color: rgba(0, 0, 0, 0.1);
+
+.week-view-container {
+  .schedule-card {
+    border-radius: 8px;
+    box-shadow: 0 2px 8px $shadow-color;
+    overflow: hidden;
+
+    .schedule-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+
+      .schedule-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-size: 16px;
+        color: $primary-color;
+        font-weight: 500;
+      }
+
+      .view-legend {
+        display: flex;
+        gap: 16px;
+
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 12px;
+          color: $light-text;
+
+          .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+
+            &.available {
+              background-color: rgba($available-color, 0.8);
+            }
+          }
+        }
+      }
+    }
+
+    .schedule-content {
+      padding: 0;
+      overflow-x: auto;
+
+      .schedule-grid {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        min-width: 700px;
+        background-color: $card-bg-color;
+
+        .time-header {
+          background-color: $background-color;
+          border-bottom: 2px solid $border-color;
+          border-right: 1px solid $border-color;
+        }
+
+        .day-header {
+          padding: 12px 8px;
+          background-color: $background-color;
+          border-bottom: 2px solid $border-color;
+          border-right: 1px solid $border-color;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+          position: relative;
+          transition: background-color 0.2s ease;
+
+          &.has-availability {
+            background-color: rgba($available-color, 0.05);
+            border-bottom-color: $available-color;
+          }
+
+          .day-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+
+            .day-name {
+              font-size: 13px;
+              font-weight: 600;
+              color: $text-color;
+              text-align: center;
+            }
+
+            .day-short {
+              font-size: 11px;
+              color: $light-text;
+            }
+
+            .availability-count {
+              font-size: 10px;
+              color: $available-color;
+              background-color: rgba($available-color, 0.1);
+              padding: 2px 6px;
+              border-radius: 8px;
+              margin-top: 2px;
+            }
+          }
+
+          .add-day-button {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+
+            ::ng-deep .mat-mdc-button-base {
+              min-width: unset;
+              width: 20px;
+              height: 20px;
+              padding: 0;
+            }
+
+            mat-icon {
+              font-size: 14px;
+              height: 14px;
+              width: 14px;
+            }
+          }
+
+          &:hover .add-day-button {
+            opacity: 0.7;
+          }
+        }
+
+        .time-slot {
+          padding: 8px 4px;
+          border-bottom: 1px solid rgba($border-color, 0.3);
+          border-right: 1px solid $border-color;
+          background-color: rgba($background-color, 0.5);
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          position: relative;
+
+          &.major-hour {
+            background-color: $background-color;
+            border-bottom-color: $border-color;
+          }
+
+          .time-label {
+            font-size: 11px;
+            color: $light-text;
+            font-weight: 500;
+            writing-mode: horizontal-tb;
+          }
+        }
+
+        .day-slot {
+          min-height: 60px; // HOUR_HEIGHT
+          border-bottom: 1px solid rgba($border-color, 0.3);
+          border-right: 1px solid rgba($border-color, 0.5);
+          position: relative;
+          background-color: $card-bg-color;
+
+          &.has-blocks {
+            background-color: rgba($available-color, 0.02);
+          }
+
+          .availability-block {
+            position: absolute;
+            left: 2px;
+            right: 2px;
+            background: linear-gradient(135deg, rgba($available-color, 0.9), rgba($available-color, 0.7));
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 1px solid rgba($available-color, 0.8);
+            z-index: 2;
+
+            &:hover {
+              transform: scale(1.02);
+              box-shadow: 0 2px 8px rgba($available-color, 0.3);
+              z-index: 3;
+            }
+
+            .block-content {
+              padding: 4px 6px;
+              height: 100%;
+              display: flex;
+              flex-direction: column;
+              justify-content: space-between;
+              position: relative;
+
+              .block-time {
+                font-size: 10px;
+                font-weight: 600;
+                color: white;
+                line-height: 1;
+              }
+
+              .block-duration {
+                font-size: 9px;
+                color: rgba(white, 0.9);
+                line-height: 1;
+              }
+
+              .block-actions {
+                position: absolute;
+                top: 2px;
+                right: 2px;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+
+                .action-icon {
+                  font-size: 12px;
+                  height: 12px;
+                  width: 12px;
+                  color: white;
+                }
+              }
+            }
+
+            &:hover .block-actions {
+              opacity: 1;
+            }
+          }
+
+          .quarter-indicators {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100%;
+            pointer-events: none;
+
+            .quarter-line {
+              position: absolute;
+              left: 0;
+              right: 0;
+              height: 1px;
+              background-color: rgba($primary-color, 0.2);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Estilos para el menú contextual
+::ng-deep .warn-menu-item {
+  color: $warn-color !important;
+
+  .mat-icon {
+    color: $warn-color !important;
+  }
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .week-view-container {
+    .schedule-card .schedule-content {
+      .schedule-grid {
+        grid-template-columns: 60px repeat(7, minmax(80px, 1fr));
+        min-width: 600px;
+
+        .day-header {
+          padding: 8px 4px;
+
+          .day-info {
+            .day-name {
+              font-size: 11px;
+            }
+
+            .day-short {
+              font-size: 10px;
+            }
+
+            .availability-count {
+              font-size: 9px;
+            }
+          }
+        }
+
+        .time-slot {
+          padding: 6px 2px;
+
+          .time-label {
+            font-size: 10px;
+          }
+        }
+
+        .day-slot .availability-block .block-content {
+          padding: 2px 4px;
+
+          .block-time {
+            font-size: 9px;
+          }
+
+          .block-duration {
+            font-size: 8px;
+          }
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .week-view-container {
+    .schedule-card {
+      .schedule-header {
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+
+        .view-legend {
+          align-self: flex-end;
+        }
+      }
+
+      .schedule-content .schedule-grid {
+        grid-template-columns: 50px repeat(7, minmax(70px, 1fr));
+        min-width: 540px;
+      }
+    }
+  }
+}

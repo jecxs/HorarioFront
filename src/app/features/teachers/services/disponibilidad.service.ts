@@ -19,7 +19,8 @@ interface ExtendedAvailabilityRequest extends TeacherAvailabilityRequest {
 })
 export class DisponibilidadService extends BaseApiService {
 
-  private readonly BASE_PATH = '/api/protected/teachers';
+  // CORREGIDO: Removí '/protected' del inicio ya que BaseApiService ya incluye '/api'
+  private readonly BASE_PATH = '/protected/teachers';
 
   /**
    * Obtiene todas las disponibilidades de un docente
@@ -72,6 +73,7 @@ export class DisponibilidadService extends BaseApiService {
     availabilityUuid: string,
     availability: TeacherAvailabilityRequest
   ): Observable<ApiResponse<TeacherAvailabilityResponse>> {
+    // CORREGIDO: La URL para actualizar disponibilidades específicas
     return this.put<TeacherAvailabilityResponse>(
       `${this.BASE_PATH}/availabilities/${availabilityUuid}`,
       availability
@@ -82,6 +84,7 @@ export class DisponibilidadService extends BaseApiService {
    * Elimina una disponibilidad específica
    */
   deleteAvailability(availabilityUuid: string): Observable<ApiResponse<void>> {
+    // CORREGIDO: La URL para eliminar disponibilidades específicas
     return this.delete<void>(`${this.BASE_PATH}/availabilities/${availabilityUuid}`);
   }
 
@@ -116,9 +119,13 @@ export class DisponibilidadService extends BaseApiService {
   /**
    * Método privado para manejar el reemplazo de disponibilidades solapadas
    */
+
+  /**
+   * Método privado para manejar el reemplazo de disponibilidades solapadas
+   */
   private replaceOverlappingAvailabilities(
     teacherUuid: string,
-    availability: ExtendedAvailabilityRequest
+    availability: TeacherAvailabilityRequest & { overlappingUuids?: string[] }
   ): Observable<ApiResponse<TeacherAvailabilityResponse>> {
 
     // Primero eliminar las disponibilidades solapadas
@@ -286,4 +293,5 @@ export class DisponibilidadService extends BaseApiService {
         Math.round(shortestBlockMinutes / 60 * 10) / 10
     };
   }
+
 }

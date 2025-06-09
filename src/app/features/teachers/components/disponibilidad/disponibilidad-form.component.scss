@@ -1,306 +1,231 @@
 // src/app/features/docentes/components/disponibilidad/disponibilidad-form.component.scss
-.availability-form-container {
-  width: 100%;
-  max-width: 600px;
-  margin: 0 auto;
-}
 
-.availability-form {
-  padding: 24px;
-}
+// Variables
+$primary-color: #3f51b5;
+$accent-color: #ff4081;
+$warn-color: #f44336;
+$success-color: #4caf50;
+$info-color: #2196f3;
+$background-color: #f5f7fa;
+$text-color: #333333;
+$light-text: #666666;
+$border-color: #e0e0e0;
 
-// Header del formulario
-.form-header {
-  margin-bottom: 24px;
-  text-align: center;
-
-  .form-title {
+.disponibilidad-form-container {
+  .dialog-title {
     display: flex;
     align-items: center;
-    justify-content: center;
     gap: 8px;
-    margin: 0 0 8px 0;
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--primary-color, #3f51b5);
-
-    mat-icon {
-      font-size: 24px;
-    }
-  }
-
-  .form-subtitle {
     margin: 0;
-    color: #666;
-    font-size: 14px;
-  }
-}
+    font-size: 20px;
+    color: $primary-color;
 
-// Campos del formulario
-.full-width {
-  width: 100%;
-  margin-bottom: 20px;
-}
-
-.day-option {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-
-  .day-count {
-    font-size: 12px;
-    color: #666;
-    font-style: italic;
-  }
-}
-
-// Sección de tiempo
-.time-section {
-  margin-bottom: 24px;
-
-  h4 {
-    margin: 0 0 16px 0;
-    font-size: 16px;
-    font-weight: 500;
-    color: #333;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &::before {
-      content: '';
-      width: 4px;
-      height: 16px;
-      background: var(--primary-color, #3f51b5);
-      border-radius: 2px;
+    .teacher-name {
+      font-size: 14px;
+      color: $light-text;
+      font-weight: normal;
+      margin-left: 8px;
     }
   }
-}
 
-.time-fields {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
+  .dialog-content {
+    padding: 20px 24px;
+    min-width: 450px;
+    max-height: 70vh;
+    overflow-y: auto;
 
-  @media (max-width: 600px) {
-    grid-template-columns: 1fr;
+    .availability-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+
+      .full-width {
+        width: 100%;
+      }
+
+      .time-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+
+        .time-field {
+          input[type="time"] {
+            font-family: inherit;
+          }
+        }
+      }
+
+      .duration-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        background-color: rgba($success-color, 0.1);
+        border-radius: 8px;
+        color: $success-color;
+        font-weight: 500;
+
+        mat-icon {
+          color: $success-color;
+        }
+      }
+
+      .conflicts-section {
+        .conflicts-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          color: $warn-color;
+          font-weight: 500;
+        }
+
+        .conflicts-list {
+          margin-bottom: 16px;
+
+          .overlap-chip {
+            background-color: rgba($warn-color, 0.1);
+            color: $warn-color;
+
+            mat-icon {
+              color: $warn-color;
+            }
+          }
+
+          .adjacent-chip {
+            background-color: rgba($info-color, 0.1);
+            color: $info-color;
+
+            mat-icon {
+              color: $info-color;
+            }
+          }
+        }
+
+        .conflict-options {
+          padding: 16px;
+          background-color: rgba($warn-color, 0.05);
+          border-radius: 8px;
+          border-left: 4px solid $warn-color;
+
+          .conflict-warning {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 8px 0 0 0;
+            font-size: 14px;
+            color: $light-text;
+
+            mat-icon {
+              font-size: 16px;
+              height: 16px;
+              width: 16px;
+            }
+          }
+        }
+      }
+
+      .suggestions-section {
+        .suggestions-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          color: $primary-color;
+          font-weight: 500;
+        }
+
+        .suggestions-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+          gap: 8px;
+
+          .suggestion-button {
+            padding: 12px 8px;
+            border: 1px solid rgba($primary-color, 0.3);
+            border-radius: 8px;
+            transition: all 0.2s ease;
+
+            &:hover {
+              background-color: rgba($primary-color, 0.05);
+              border-color: $primary-color;
+            }
+
+            .suggestion-content {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 4px;
+
+              .suggestion-time {
+                font-weight: 500;
+                color: $text-color;
+                font-size: 13px;
+              }
+
+              .suggestion-duration {
+                font-size: 12px;
+                color: $light-text;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .dialog-actions {
+    padding: 16px 24px;
+    border-top: 1px solid $border-color;
+    display: flex;
+    justify-content: flex-end;
     gap: 12px;
-  }
-}
 
-.duration-display {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background: #f5f5f5;
-  border-radius: 8px;
-  color: #555;
-  font-size: 14px;
-  font-weight: 500;
-
-  mat-icon {
-    color: var(--primary-color, #3f51b5);
-    font-size: 18px;
-  }
-}
-
-// Opciones avanzadas
-.advanced-options {
-  margin-bottom: 24px;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border-left: 4px solid var(--primary-color, #3f51b5);
-
-  .overlap-checkbox {
-    margin-bottom: 8px;
-  }
-
-  .overlap-help-text {
-    margin: 0;
-    font-size: 12px;
-    color: #666;
-    line-height: 1.4;
-  }
-}
-
-// Advertencias y errores
-.form-warnings {
-  margin-bottom: 24px;
-}
-
-.warning-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-
-  &.error {
-    background: #ffebee;
-    border-left: 4px solid #f44336;
-
-    mat-icon {
-      color: #f44336;
-    }
-  }
-
-  &.warning {
-    background: #fff3e0;
-    border-left: 4px solid #ff9800;
-
-    mat-icon {
-      color: #ff9800;
-    }
-  }
-
-  &.info {
-    background: #e3f2fd;
-    border-left: 4px solid #2196f3;
-
-    mat-icon {
-      color: #2196f3;
-    }
-  }
-
-  mat-icon {
-    margin-top: 2px;
-    font-size: 20px;
-  }
-}
-
-.warning-content {
-  flex: 1;
-
-  strong {
-    display: block;
-    margin-bottom: 4px;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0 0 4px 0;
-    font-size: 14px;
-    line-height: 1.4;
-
-    &:last-child {
-      margin-bottom: 0;
-    }
-  }
-
-  .warning-suggestion {
-    font-style: italic;
-    color: #666;
-    font-size: 13px;
-  }
-}
-
-// Botones de acción
-.form-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 16px;
-  border-top: 1px solid #e0e0e0;
-
-  @media (max-width: 480px) {
-    flex-direction: column;
-
-    button {
-      width: 100%;
+    .button-spinner {
+      margin-right: 8px;
     }
   }
 }
 
-.cancel-button {
-  color: #666;
+// Estilos específicos para chips de conflictos
+::ng-deep .mat-mdc-chip {
+  &.overlap-chip {
+    --mdc-chip-container-color: rgba(244, 67, 54, 0.1);
+    --mdc-chip-label-text-color: #f44336;
+  }
 
-  &:hover {
-    background: #f5f5f5;
+  &.adjacent-chip {
+    --mdc-chip-container-color: rgba(33, 150, 243, 0.1);
+    --mdc-chip-label-text-color: #2196f3;
   }
 }
 
-.submit-button {
-  min-width: 120px;
+// Responsive
+@media (max-width: 600px) {
+  .disponibilidad-form-container {
+    .dialog-content {
+      min-width: unset;
+      padding: 16px;
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-}
+      .availability-form {
+        .time-row {
+          grid-template-columns: 1fr;
+          gap: 12px;
+        }
 
-// Animaciones
-.availability-form {
-  animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Estados de carga
-.form-loading {
-  position: relative;
-
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8);
-    border-radius: 8px;
-    z-index: 10;
-  }
-}
-
-// Dark theme support
-.dark-theme {
-  .availability-form {
-    background: #424242;
-    color: white;
-  }
-
-  .form-title {
-    color: #90caf9;
-  }
-
-  .duration-display {
-    background: #616161;
-    color: #e0e0e0;
-  }
-
-  .advanced-options {
-    background: #535353;
-  }
-
-  .warning-card {
-    &.error {
-      background: #4d2c2c;
+        .suggestions-section .suggestions-grid {
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        }
+      }
     }
 
-    &.warning {
-      background: #4d3d2c;
-    }
+    .dialog-actions {
+      padding: 12px 16px;
+      flex-direction: column-reverse;
 
-    &.info {
-      background: #2c3d4d;
+      button {
+        width: 100%;
+      }
     }
-  }
-
-  .form-actions {
-    border-color: #616161;
   }
 }

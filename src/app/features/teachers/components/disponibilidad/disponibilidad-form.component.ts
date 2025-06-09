@@ -1,22 +1,34 @@
 // src/app/features/docentes/components/disponibilidad/disponibilidad-form.component.ts
-import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDialogModule } from '@angular/material/dialog';
+import { finalize } from 'rxjs/operators';
 
-import {
-  TeacherAvailabilityResponse,
-  TeacherAvailabilityRequest,
-  DayOfWeek,
-  DAYS_OF_WEEK
-} from '../../models/disponibilidad.model';
-import { ModernTimePickerComponent } from './modern-time-picker.component';
+import { DisponibilidadService } from '../../services/disponibilidad.service';
+import { TeacherAvailabilityResponse, TeacherAvailabilityRequest, DayOfWeek } from '../../models/disponibilidad.model';
+
+interface DialogData {
+  teacherUuid: string;
+  teacherName: string;
+  preselectedDay?: DayOfWeek;
+  editingAvailability?: TeacherAvailabilityResponse;
+  existingAvailabilities?: TeacherAvailabilityResponse[];
+}
+
+interface TimeConflict {
+  availability: TeacherAvailabilityResponse;
+  type: 'overlap' | 'adjacent';
+}
 
 @Component({
   selector: 'app-disponibilidad-form',
@@ -24,408 +36,424 @@ import { ModernTimePickerComponent } from './modern-time-picker.component';
   imports: [
     CommonModule,
     ReactiveFormsModule,
+    MatDialogModule,
     MatFormFieldModule,
-    MatInputModule,
     MatSelectModule,
+    MatInputModule,
     MatButtonModule,
     MatIconModule,
-    MatCheckboxModule,
-    MatDialogModule,
-    ModernTimePickerComponent
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatChipsModule,
+    MatCheckboxModule
   ],
   template: `
-    <!-- Template actualizado usando los getters -->
-    <div class="availability-form-container">
-      <form [formGroup]="availabilityForm" (ngSubmit)="onSubmit()" class="availability-form">
+    <div class="disponibilidad-form-container">
+      <h2 mat-dialog-title class="dialog-title">
+        <mat-icon>{{ isEditing ? 'edit' : 'add' }}</mat-icon>
+        {{ isEditing ? 'Editar' : 'Agregar' }} Disponibilidad
+        <span class="teacher-name">{{ data.teacherName }}</span>
+      </h2>
 
-        <!-- Header del formulario -->
-        <div class="form-header">
-          <h3 class="form-title">
-            <mat-icon>{{ editMode ? 'edit' : 'add' }}</mat-icon>
-            {{ editMode ? 'Editar' : 'Agregar' }} Disponibilidad
-          </h3>
-          <p class="form-subtitle" *ngIf="editMode">
-            Editando disponibilidad para {{ getDayName(editingAvailability?.dayOfWeek) }}
-          </p>
-        </div>
+      <mat-dialog-content class="dialog-content">
+        <form [formGroup]="availabilityForm" class="availability-form">
+          <!-- Día de la semana -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Día de la semana</mat-label>
+            <mat-select formControlName="dayOfWeek" [disabled]="isEditing">
+              <mat-option *ngFor="let day of daysOfWeek" [value]="day.value">
+                {{ day.label }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="availabilityForm.get('dayOfWeek')?.hasError('required')">
+              El día de la semana es obligatorio
+            </mat-error>
+          </mat-form-field>
 
-        <!-- Día de la semana -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Día de la semana</mat-label>
-          <mat-select formControlName="dayOfWeek" [disabled]="editMode">
-            <mat-option *ngFor="let day of daysOfWeek" [value]="day.value">
-              <div class="day-option">
-                <span>{{ day.label }}</span>
-                <span class="day-count" *ngIf="getAvailabilityCountForDay(day.value) > 0">
-              ({{ getAvailabilityCountForDay(day.value) }} existente{{ getAvailabilityCountForDay(day.value) > 1 ? 's' : '' }})
-            </span>
-              </div>
-            </mat-option>
-          </mat-select>
-          <mat-error *ngIf="dayOfWeekHasError">
-            {{ dayOfWeekErrorMessage }}
-          </mat-error>
-        </mat-form-field>
+          <!-- Horarios -->
+          <div class="time-row">
+            <mat-form-field appearance="outline" class="time-field">
+              <mat-label>Hora de inicio</mat-label>
+              <input
+                matInput
+                type="time"
+                formControlName="startTime"
+                (blur)="onTimeChange()"
+                min="06:00"
+                max="22:00">
+              <mat-error *ngIf="availabilityForm.get('startTime')?.hasError('required')">
+                La hora de inicio es obligatoria
+              </mat-error>
+            </mat-form-field>
 
-        <!-- Selectores de tiempo modernos -->
-        <div class="time-section">
-          <h4>Horario de Disponibilidad</h4>
-
-          <div class="time-fields">
-            <app-modern-time-picker
-              formControlName="startTime"
-              label="Hora de inicio"
-              placeholder="Seleccionar inicio"
-              [minHour]="6"
-              [maxHour]="22"
-              [minuteStep]="15"
-              [hasError]="startTimeHasError"
-              (timeChange)="onTimeChange()">
-            </app-modern-time-picker>
-
-            <app-modern-time-picker
-              formControlName="endTime"
-              label="Hora de fin"
-              placeholder="Seleccionar fin"
-              [minHour]="6"
-              [maxHour]="22"
-              [minuteStep]="15"
-              [hasError]="endTimeHasError"
-              (timeChange)="onTimeChange()">
-            </app-modern-time-picker>
-          </div>
-
-          <!-- Mostrar errores de tiempo si existen -->
-          <div class="field-errors" *ngIf="startTimeHasError || endTimeHasError">
-            <div class="error-message" *ngIf="startTimeHasError">
-              <mat-icon>error</mat-icon>
-              {{ startTimeErrorMessage }}
-            </div>
-            <div class="error-message" *ngIf="endTimeHasError">
-              <mat-icon>error</mat-icon>
-              {{ endTimeErrorMessage }}
-            </div>
+            <mat-form-field appearance="outline" class="time-field">
+              <mat-label>Hora de fin</mat-label>
+              <input
+                matInput
+                type="time"
+                formControlName="endTime"
+                (blur)="onTimeChange()"
+                min="06:00"
+                max="22:00">
+              <mat-error *ngIf="availabilityForm.get('endTime')?.hasError('required')">
+                La hora de fin es obligatoria
+              </mat-error>
+              <mat-error *ngIf="availabilityForm.get('endTime')?.hasError('invalidTimeRange')">
+                La hora de fin debe ser posterior a la hora de inicio
+              </mat-error>
+            </mat-form-field>
           </div>
 
           <!-- Duración calculada -->
-          <div class="duration-display" *ngIf="calculatedDuration">
+          <div *ngIf="calculatedDuration > 0" class="duration-info">
             <mat-icon>schedule</mat-icon>
-            <span>Duración: {{ calculatedDuration }}</span>
+            <span>Duración: {{ calculatedDuration }} horas</span>
           </div>
-        </div>
 
-        <!-- Opciones avanzadas -->
-        <div class="advanced-options" *ngIf="!editMode">
-          <mat-checkbox formControlName="allowOverlap" class="overlap-checkbox">
-            Permitir reemplazar horarios existentes en este día
-          </mat-checkbox>
-          <p class="overlap-help-text">
-            Al activar esta opción, se eliminarán automáticamente las disponibilidades que se solapen con el nuevo horario.
-          </p>
-        </div>
-
-        <!-- Advertencias y errores -->
-        <div class="form-warnings">
-          <!-- Error de validación de tiempo -->
-          <div *ngIf="hasTimeError" class="warning-card error">
-            <mat-icon>error</mat-icon>
-            <div class="warning-content">
-              <strong>Error de horario</strong>
-              <p>{{ timeErrorMessage }}</p>
+          <!-- Conflictos detectados -->
+          <div *ngIf="timeConflicts.length > 0" class="conflicts-section">
+            <div class="conflicts-header">
+              <mat-icon color="warn">warning</mat-icon>
+              <span>Conflictos detectados</span>
             </div>
-          </div>
 
-          <!-- Advertencia de solapamiento -->
-          <div *ngIf="hasOverlapWarning && !allowOverlap" class="warning-card warning">
-            <mat-icon>warning</mat-icon>
-            <div class="warning-content">
-              <strong>Conflicto de horario</strong>
-              <p>{{ overlapWarningMessage }}</p>
-              <p class="warning-suggestion">
-                Puedes activar "Permitir reemplazar horarios existentes" para resolver automáticamente este conflicto.
+            <mat-chip-set class="conflicts-list">
+              <mat-chip
+                *ngFor="let conflict of timeConflicts"
+                [color]="conflict.type === 'overlap' ? 'warn' : 'accent'"
+                [class.overlap-chip]="conflict.type === 'overlap'"
+                [class.adjacent-chip]="conflict.type === 'adjacent'">
+                <mat-icon>{{ conflict.type === 'overlap' ? 'error' : 'info' }}</mat-icon>
+                {{ conflict.availability.startTime.slice(0,5) }} - {{ conflict.availability.endTime.slice(0,5) }}
+                ({{ conflict.type === 'overlap' ? 'Solapamiento' : 'Adyacente' }})
+              </mat-chip>
+            </mat-chip-set>
+
+            <div *ngIf="hasOverlapConflicts" class="conflict-options">
+              <mat-checkbox
+                formControlName="replaceOverlapping"
+                color="warn">
+                Reemplazar horarios en conflicto
+              </mat-checkbox>
+              <p class="conflict-warning">
+                <mat-icon>info</mat-icon>
+                Al activar esta opción, se eliminarán los horarios que se solapan con el nuevo.
               </p>
             </div>
           </div>
 
-          <!-- Información de reemplazo -->
-          <div *ngIf="hasOverlapWarning && allowOverlap" class="warning-card info">
-            <mat-icon>info</mat-icon>
-            <div class="warning-content">
-              <strong>Reemplazo automático</strong>
-              <p>Se eliminarán {{ overlappingAvailabilities.length }} disponibilidad(es) existente(s) y se creará la nueva.</p>
-            </div>
-          </div>
-        </div>
+          <!-- Horarios sugeridos -->
 
-        <!-- Botones de acción -->
-        <div class="form-actions">
-          <button
-            mat-button
-            type="button"
-            (click)="onCancel()"
-            class="cancel-button">
-            <mat-icon>close</mat-icon>
-            Cancelar
-          </button>
+        </form>
+      </mat-dialog-content>
 
-          <button
-            mat-raised-button
-            color="primary"
-            type="submit"
-            [disabled]="!canSubmit()"
-            class="submit-button">
-            <mat-icon>{{ editMode ? 'save' : 'add' }}</mat-icon>
-            {{ editMode ? 'Actualizar' : 'Guardar' }}
-          </button>
-        </div>
-      </form>
+      <mat-dialog-actions class="dialog-actions">
+        <button
+          mat-button
+          type="button"
+          (click)="onCancel()"
+          [disabled]="loading">
+          Cancelar
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          type="button"
+          (click)="onSave()"
+          [disabled]="loading || !availabilityForm.valid || (hasOverlapConflicts && !availabilityForm.get('replaceOverlapping')?.value)">
+
+          <mat-spinner
+            *ngIf="loading"
+            diameter="16"
+            class="button-spinner">
+          </mat-spinner>
+
+          <mat-icon *ngIf="!loading">{{ isEditing ? 'save' : 'add' }}</mat-icon>
+          {{ isEditing ? 'Guardar cambios' : 'Agregar disponibilidad' }}
+        </button>
+      </mat-dialog-actions>
     </div>
   `,
   styleUrls: ['./disponibilidad-form.component.scss']
 })
 export class DisponibilidadFormComponent implements OnInit {
-  @Input() initialDay: DayOfWeek | null = null;
-  @Input() daysOfWeek = DAYS_OF_WEEK;
-  @Input() existingAvailabilities: TeacherAvailabilityResponse[] = [];
-  @Input() editingAvailability: TeacherAvailabilityResponse | null = null;
+  availabilityForm!: FormGroup;
+  loading = false;
+  timeConflicts: TimeConflict[] = [];
+  calculatedDuration = 0;
+  suggestedTimes: { startTime: string; endTime: string; duration: number }[] = [];
 
-  @Output() formSubmit = new EventEmitter<TeacherAvailabilityRequest>();
-  @Output() formUpdate = new EventEmitter<{uuid: string, data: TeacherAvailabilityRequest}>();
-  @Output() formCancel = new EventEmitter<void>();
+  readonly daysOfWeek = [
+    { value: 'MONDAY' as DayOfWeek, label: 'Lunes' },
+    { value: 'TUESDAY' as DayOfWeek, label: 'Martes' },
+    { value: 'WEDNESDAY' as DayOfWeek, label: 'Miércoles' },
+    { value: 'THURSDAY' as DayOfWeek, label: 'Jueves' },
+    { value: 'FRIDAY' as DayOfWeek, label: 'Viernes' },
+    { value: 'SATURDAY' as DayOfWeek, label: 'Sábado' },
+    { value: 'SUNDAY' as DayOfWeek, label: 'Domingo' }
+  ];
 
-  availabilityForm: FormGroup;
-  editMode = false;
-
-  // Validaciones y warnings
-  hasTimeError = false;
-  timeErrorMessage = '';
-  hasOverlapWarning = false;
-  overlapWarningMessage = '';
-  overlappingAvailabilities: TeacherAvailabilityResponse[] = [];
-  calculatedDuration = '';
-
-  constructor(private fb: FormBuilder) {
-    this.availabilityForm = this.createForm();
-  }
+  constructor(
+    private fb: FormBuilder,
+    private dialogRef: MatDialogRef<DisponibilidadFormComponent>,
+    @Inject(MAT_DIALOG_DATA) public data: DialogData,
+    private disponibilidadService: DisponibilidadService,
+    private snackBar: MatSnackBar
+  ) {}
 
   ngOnInit(): void {
-    this.editMode = !!this.editingAvailability;
+    this.initializeForm();
+    this.setupFormSubscriptions();
 
-    if (this.editMode && this.editingAvailability) {
-      this.loadEditData();
-    } else if (this.initialDay) {
-      this.availabilityForm.patchValue({
-        dayOfWeek: this.initialDay
-      });
+    if (!this.isEditing) {
+      this.generateSuggestions();
     }
-
-    this.setupValidations();
   }
 
-  createForm(): FormGroup {
-    return this.fb.group({
-      dayOfWeek: [null, Validators.required],
-      startTime: [null, Validators.required],
-      endTime: [null, Validators.required],
-      allowOverlap: [false]
+  get isEditing(): boolean {
+    return !!this.data.editingAvailability;
+  }
+
+  get hasOverlapConflicts(): boolean {
+    return this.timeConflicts.some(conflict => conflict.type === 'overlap');
+  }
+
+  private initializeForm(): void {
+    const editingData = this.data.editingAvailability;
+
+    this.availabilityForm = this.fb.group({
+      dayOfWeek: [
+        editingData?.dayOfWeek || this.data.preselectedDay || 'MONDAY',
+        [Validators.required]
+      ],
+      startTime: [
+        editingData?.startTime?.slice(0, 5) || '',
+        [Validators.required]
+      ],
+      endTime: [
+        editingData?.endTime?.slice(0, 5) || '',
+        [Validators.required]
+      ],
+      replaceOverlapping: [false]
+    });
+
+    // CORREGIDO: Agregar validador personalizado con el tipo correcto
+    this.availabilityForm.setValidators([this.timeRangeValidator()]);
+  }
+
+  private setupFormSubscriptions(): void {
+    // Detectar cambios en día, hora inicio o fin para recalcular conflictos
+    this.availabilityForm.valueChanges.subscribe(() => {
+      this.onTimeChange();
     });
   }
 
-  loadEditData(): void {
-    if (this.editingAvailability) {
-      this.availabilityForm.patchValue({
-        dayOfWeek: this.editingAvailability.dayOfWeek,
-        startTime: this.editingAvailability.startTime,
-        endTime: this.editingAvailability.endTime,
-        allowOverlap: false
-      });
+  onTimeChange(): void {
+    const { dayOfWeek, startTime, endTime } = this.availabilityForm.value;
+
+    if (startTime && endTime) {
+      this.calculateDuration();
+      this.detectConflicts();
     }
+
+    // Actualizar validez del formulario
+    this.availabilityForm.updateValueAndValidity({ emitEvent: false });
   }
 
-  setupValidations(): void {
-    // Escuchar cambios en los campos para validaciones en tiempo real
-    ['dayOfWeek', 'startTime', 'endTime', 'allowOverlap'].forEach(field => {
-      this.availabilityForm.get(field)?.valueChanges.subscribe(() => {
-        this.validateForm();
-      });
-    });
-  }
+  private calculateDuration(): void {
+    const { startTime, endTime } = this.availabilityForm.value;
 
-  validateForm(): void {
-    this.resetValidations();
-
-    const startTime = this.availabilityForm.get('startTime')?.value;
-    const endTime = this.availabilityForm.get('endTime')?.value;
-    const day = this.availabilityForm.get('dayOfWeek')?.value;
-
-    if (!startTime || !endTime || !day) {
+    if (!startTime || !endTime) {
+      this.calculatedDuration = 0;
       return;
     }
 
-    // Validar orden de horas
-    if (startTime >= endTime) {
-      this.hasTimeError = true;
-      this.timeErrorMessage = 'La hora de fin debe ser posterior a la hora de inicio';
-      return;
-    }
-
-    // Calcular duración
-    this.calculateDuration(startTime, endTime);
-
-    // Verificar solapamientos
-    this.checkOverlaps(day, startTime, endTime);
-  }
-
-  private resetValidations(): void {
-    this.hasTimeError = false;
-    this.timeErrorMessage = '';
-    this.hasOverlapWarning = false;
-    this.overlapWarningMessage = '';
-    this.overlappingAvailabilities = [];
-  }
-
-  private calculateDuration(startTime: string, endTime: string): void {
     const [startHour, startMinute] = startTime.split(':').map(Number);
     const [endHour, endMinute] = endTime.split(':').map(Number);
 
     const startMinutes = startHour * 60 + startMinute;
     const endMinutes = endHour * 60 + endMinute;
-    const durationMinutes = endMinutes - startMinutes;
 
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-
-    if (hours > 0) {
-      this.calculatedDuration = `${hours}h ${minutes > 0 ? minutes + 'min' : ''}`;
+    if (endMinutes > startMinutes) {
+      this.calculatedDuration = Math.round((endMinutes - startMinutes) / 60 * 10) / 10;
     } else {
-      this.calculatedDuration = `${minutes}min`;
+      this.calculatedDuration = 0;
     }
   }
 
-  private checkOverlaps(day: DayOfWeek, startTime: string, endTime: string): void {
-    this.overlappingAvailabilities = this.existingAvailabilities.filter(availability => {
-      // Excluir la disponibilidad que se está editando
-      if (this.editMode && this.editingAvailability && availability.uuid === this.editingAvailability.uuid) {
-        return false;
+  private detectConflicts(): void {
+    const { dayOfWeek, startTime, endTime } = this.availabilityForm.value;
+    this.timeConflicts = [];
+
+    if (!dayOfWeek || !startTime || !endTime || !this.data.existingAvailabilities) {
+      return;
+    }
+
+    const dayAvailabilities = this.data.existingAvailabilities.filter(
+      a => a.dayOfWeek === dayOfWeek
+    );
+
+    for (const existing of dayAvailabilities) {
+      const existingStart = this.timeToMinutes(existing.startTime);
+      const existingEnd = this.timeToMinutes(existing.endTime);
+      const newStart = this.timeToMinutes(startTime);
+      const newEnd = this.timeToMinutes(endTime);
+
+      // Detectar solapamientos
+      if (
+        (newStart < existingEnd && newEnd > existingStart) ||
+        (existingStart < newEnd && existingEnd > newStart)
+      ) {
+        this.timeConflicts.push({
+          availability: existing,
+          type: 'overlap'
+        });
+      }
+      // Detectar horarios adyacentes (opcional, para información)
+      else if (
+        Math.abs(newEnd - existingStart) <= 15 ||
+        Math.abs(existingEnd - newStart) <= 15
+      ) {
+        this.timeConflicts.push({
+          availability: existing,
+          type: 'adjacent'
+        });
+      }
+    }
+  }
+
+  private timeToMinutes(timeStr: string): number {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  // CORREGIDO: Validador personalizado con el tipo correcto
+  private timeRangeValidator(): ValidatorFn {
+    return (control: AbstractControl): ValidationErrors | null => {
+      if (!control || !control.get) {
+        return null;
       }
 
-      if (availability.dayOfWeek !== day) {
-        return false;
+      const startTime = control.get('startTime')?.value;
+      const endTime = control.get('endTime')?.value;
+
+      if (startTime && endTime) {
+        const startMinutes = this.timeToMinutes(startTime);
+        const endMinutes = this.timeToMinutes(endTime);
+
+        if (endMinutes <= startMinutes) {
+          control.get('endTime')?.setErrors({ invalidTimeRange: true });
+          return { invalidTimeRange: true };
+        } else {
+          // Limpiar error si el rango es válido
+          const endTimeControl = control.get('endTime');
+          if (endTimeControl?.errors) {
+            const { invalidTimeRange, ...otherErrors } = endTimeControl.errors;
+            const hasOtherErrors = Object.keys(otherErrors).length > 0;
+            endTimeControl.setErrors(hasOtherErrors ? otherErrors : null);
+          }
+        }
       }
 
-      // Verificar solapamiento
-      return (
-        (startTime < availability.endTime && endTime > availability.startTime) ||
-        (availability.startTime < endTime && availability.endTime > startTime)
-      );
+      return null;
+    };
+  }
+
+  private generateSuggestions(): void {
+    const commonTimeSlots = [
+      { startTime: '07:00', endTime: '12:00', duration: 5 },
+      { startTime: '08:00', endTime: '12:00', duration: 4 },
+      { startTime: '13:00', endTime: '17:00', duration: 4 },
+      { startTime: '14:00', endTime: '18:00', duration: 4 },
+      { startTime: '18:00', endTime: '22:00', duration: 4 },
+      { startTime: '07:00', endTime: '10:00', duration: 3 },
+      { startTime: '10:00', endTime: '13:00', duration: 3 },
+      { startTime: '15:00', endTime: '18:00', duration: 3 }
+    ];
+
+    this.suggestedTimes = commonTimeSlots;
+  }
+
+  applySuggestion(suggestion: { startTime: string; endTime: string }): void {
+    this.availabilityForm.patchValue({
+      startTime: suggestion.startTime,
+      endTime: suggestion.endTime
     });
+  }
 
-    if (this.overlappingAvailabilities.length > 0) {
-      this.hasOverlapWarning = true;
-      const count = this.overlappingAvailabilities.length;
-      this.overlapWarningMessage = `Este horario se solapa con ${count} disponibilidad${count > 1 ? 'es' : ''} existente${count > 1 ? 's' : ''}.`;
+  getCurrentDayLabel(): string {
+    const dayValue = this.availabilityForm.get('dayOfWeek')?.value;
+    const day = this.daysOfWeek.find(d => d.value === dayValue);
+    return day?.label || '';
+  }
+
+  onSave(): void {
+    if (!this.availabilityForm.valid) {
+      this.markFormGroupTouched();
+      return;
     }
-  }
-
-  get allowOverlap(): boolean {
-    return this.availabilityForm.get('allowOverlap')?.value || false;
-  }
-
-  onTimeChange(): void {
-    // Método llamado cuando cambian los selectores de tiempo
-    this.validateForm();
-  }
-
-  getAvailabilityCountForDay(day: DayOfWeek): number {
-    return this.existingAvailabilities.filter(a => a.dayOfWeek === day).length;
-  }
-
-
-
-  getDayName(day: DayOfWeek | undefined): string {
-    if (!day) return '';
-    const found = this.daysOfWeek.find(d => d.value === day);
-    return found ? found.label : '';
-  }
-
-  // Getters para validación de errores
-  get startTimeHasError(): boolean {
-    const control = this.availabilityForm.get('startTime');
-    return !!(control?.invalid && control?.touched);
-  }
-
-  get endTimeHasError(): boolean {
-    const control = this.availabilityForm.get('endTime');
-    return !!(control?.invalid && control?.touched);
-  }
-
-  get dayOfWeekHasError(): boolean {
-    const control = this.availabilityForm.get('dayOfWeek');
-    return !!(control?.invalid && control?.touched);
-  }
-
-  // Getters para obtener mensajes de error específicos
-  get startTimeErrorMessage(): string {
-    const control = this.availabilityForm.get('startTime');
-    if (control?.hasError('required')) {
-      return 'La hora de inicio es obligatoria';
-    }
-    return '';
-  }
-
-  get endTimeErrorMessage(): string {
-    const control = this.availabilityForm.get('endTime');
-    if (control?.hasError('required')) {
-      return 'La hora de fin es obligatoria';
-    }
-    return '';
-  }
-
-  get dayOfWeekErrorMessage(): string {
-    const control = this.availabilityForm.get('dayOfWeek');
-    if (control?.hasError('required')) {
-      return 'El día es obligatorio';
-    }
-    return '';
-  }
-
-  canSubmit(): boolean {
-    return this.availabilityForm.valid &&
-      !this.hasTimeError &&
-      (!this.hasOverlapWarning || this.allowOverlap);
-  }
-
-  onSubmit(): void {
-    if (!this.canSubmit()) return;
 
     const formValue = this.availabilityForm.value;
-    const availability: TeacherAvailabilityRequest = {
+    const request: TeacherAvailabilityRequest = {
       dayOfWeek: formValue.dayOfWeek,
       startTime: formValue.startTime,
       endTime: formValue.endTime
     };
 
-    if (this.editMode && this.editingAvailability) {
-      this.formUpdate.emit({
-        uuid: this.editingAvailability.uuid,
-        data: availability
+    this.loading = true;
+
+    const operation = this.isEditing
+      ? this.disponibilidadService.updateAvailability(this.data.editingAvailability!.uuid, request)
+      : this.disponibilidadService.createAvailability(this.data.teacherUuid, {
+        ...request,
+        replaceExisting: formValue.replaceOverlapping,
+        overlappingUuids: this.timeConflicts
+          .filter(c => c.type === 'overlap')
+          .map(c => c.availability.uuid)
       });
-    } else {
-      // Si hay solapamientos y se permite reemplazar, incluir información adicional
-      if (this.hasOverlapWarning && this.allowOverlap) {
-        // Emitir evento especial para manejo de reemplazo
-        this.formSubmit.emit({
-          ...availability,
-          replaceExisting: true,
-          overlappingUuids: this.overlappingAvailabilities.map(a => a.uuid)
-        } as any);
-      } else {
-        this.formSubmit.emit(availability);
-      }
-    }
+
+    operation
+      .pipe(finalize(() => this.loading = false))
+      .subscribe({
+        next: (response) => {
+          const message = this.isEditing
+            ? 'Disponibilidad actualizada correctamente'
+            : 'Disponibilidad agregada correctamente';
+
+          this.showMessage(message, 'success');
+          this.dialogRef.close(true);
+        },
+        error: (error) => {
+          console.error('Error al guardar disponibilidad:', error);
+          let errorMessage = 'Error al guardar la disponibilidad';
+
+          if (error.error?.message) {
+            errorMessage = error.error.message;
+          }
+
+          this.showMessage(errorMessage, 'error');
+        }
+      });
   }
 
   onCancel(): void {
-    this.formCancel.emit();
+    this.dialogRef.close(false);
+  }
+
+  private markFormGroupTouched(): void {
+    Object.keys(this.availabilityForm.controls).forEach(key => {
+      const control = this.availabilityForm.get(key);
+      control?.markAsTouched();
+    });
+  }
+
+  private showMessage(message: string, type: 'success' | 'error'): void {
+    this.snackBar.open(message, 'Cerrar', {
+      duration: 5000,
+      panelClass: `${type}-snackbar`,
+      horizontalPosition: 'end',
+      verticalPosition: 'top'
+    });
   }
 }
