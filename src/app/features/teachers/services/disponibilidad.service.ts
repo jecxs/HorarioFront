@@ -19,7 +19,10 @@ interface ExtendedAvailabilityRequest extends TeacherAvailabilityRequest {
 })
 export class DisponibilidadService extends BaseApiService {
 
-  private readonly BASE_PATH = '/api/protected/teachers';
+  // Base path de la API para las operaciones de disponibilidad de docentes
+  // environment.apiBaseUrl ya incluye el prefijo '/api', por lo que
+  // aquí sólo indicamos la ruta protegida relativa
+  private readonly BASE_PATH = '/protected/teachers';
 
   /**
    * Obtiene todas las disponibilidades de un docente
