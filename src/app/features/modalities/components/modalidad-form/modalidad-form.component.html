@@ -1,0 +1,82 @@
+<div class="modalidad-form-container">
+  <h2 mat-dialog-title class="form-title">
+    <mat-icon>{{ isEdit ? 'edit' : 'add' }}</mat-icon>
+    {{ isEdit ? 'Editar' : 'Nueva' }} Modalidad Educativa
+  </h2>
+
+  <mat-dialog-content class="form-content">
+    <form [formGroup]="modalidadForm" class="modalidad-form">
+      <!-- Nombre de la modalidad -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre de la Modalidad</mat-label>
+        <input
+          matInput
+          formControlName="name"
+          placeholder="Ej: Escuela Superior, Instituto Técnico"
+          autocomplete="off">
+        <mat-icon matSuffix>school</mat-icon>
+        <mat-error *ngIf="modalidadForm.get('name')?.hasError('required')">
+          El nombre es obligatorio
+        </mat-error>
+        <mat-error *ngIf="modalidadForm.get('name')?.hasError('minlength')">
+          Mínimo 3 caracteres
+        </mat-error>
+        <mat-error *ngIf="modalidadForm.get('name')?.hasError('maxlength')">
+          Máximo 100 caracteres
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Duración en años -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Duración en Años</mat-label>
+        <mat-select formControlName="durationYears">
+          <mat-option [value]="1">1 año</mat-option>
+          <mat-option [value]="2">2 años</mat-option>
+          <mat-option [value]="3">3 años</mat-option>
+          <mat-option [value]="4">4 años</mat-option>
+          <mat-option [value]="5">5 años</mat-option>
+        </mat-select>
+        <mat-icon matSuffix>schedule</mat-icon>
+        <mat-error *ngIf="modalidadForm.get('durationYears')?.hasError('required')">
+          La duración es obligatoria
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Descripción -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Descripción (Opcional)</mat-label>
+        <textarea
+          matInput
+          formControlName="description"
+          placeholder="Descripción de la modalidad educativa"
+          rows="4"
+          maxlength="500">
+            </textarea>
+        <mat-icon matSuffix>description</mat-icon>
+        <mat-hint>{{ modalidadForm.get('description')?.value?.length || 0 }}/500</mat-hint>
+      </mat-form-field>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="form-actions">
+    <button
+      mat-button
+      type="button"
+      (click)="onCancel()"
+      class="cancel-btn">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      type="submit"
+      [disabled]="modalidadForm.invalid"
+      (click)="onSubmit()"
+      class="submit-btn">
+      <mat-icon>{{ isEdit ? 'save' : 'add' }}</mat-icon>
+      {{ isEdit ? 'Actualizar' : 'Crear' }}
+    </button>
+  </mat-dialog-actions>
+</div>

@@ -1,0 +1,290 @@
+/* src/app/features/carreras/components/carrera-form/carrera-form.component.scss */
+
+.carrera-form-container {
+  min-width: 550px;
+  max-width: 650px;
+
+  @media (max-width: 768px) {
+    min-width: 350px;
+    max-width: 95vw;
+  }
+
+  .form-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 24px 0;
+    padding: 0 0 16px 0;
+    border-bottom: 1px solid #e0e0e0;
+    color: #1976d2;
+    font-weight: 600;
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  .form-content {
+    padding: 24px 0;
+    max-height: 70vh;
+    overflow-y: auto;
+
+    .carrera-form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+
+      .full-width {
+        width: 100%;
+      }
+
+      mat-form-field {
+        .mat-mdc-form-field-subscript-wrapper {
+          margin-top: 8px;
+        }
+
+        mat-icon[matSuffix] {
+          color: #666;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+
+      // Estilos para el select de modalidades
+      .modalidad-option {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+
+        .modalidad-name {
+          font-weight: 500;
+          color: #333;
+        }
+
+        .modalidad-duration {
+          font-size: 12px;
+          color: #666;
+          background: #f5f5f5;
+          padding: 2px 8px;
+          border-radius: 12px;
+          margin-left: 8px;
+        }
+      }
+
+      // Loading de modalidades
+      .loading-modalidades {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        color: #666;
+        font-size: 14px;
+
+        mat-spinner {
+          ::ng-deep circle {
+            stroke: #1976d2;
+          }
+        }
+      }
+
+      // Sección de información
+      .info-section {
+        margin-top: 8px;
+
+        .info-card {
+          background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+          border-radius: 12px;
+          padding: 20px;
+          border-left: 4px solid #1976d2;
+
+          .info-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            font-weight: 600;
+            color: #1976d2;
+
+            mat-icon {
+              font-size: 20px;
+              width: 20px;
+              height: 20px;
+            }
+          }
+
+          .info-content {
+            p {
+              margin: 0 0 8px 0;
+              color: #444;
+              font-size: 14px;
+              line-height: 1.5;
+
+              strong {
+                color: #1976d2;
+                font-weight: 600;
+              }
+
+              &.description {
+                font-style: italic;
+                color: #666;
+                margin-top: 12px;
+                padding-top: 12px;
+                border-top: 1px solid rgba(25, 118, 210, 0.2);
+              }
+
+              &:last-child {
+                margin-bottom: 0;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 0 0 0;
+    border-top: 1px solid #e0e0e0;
+    margin-top: 24px;
+
+    .cancel-btn {
+      color: #666;
+      border: 1px solid #ddd;
+
+      &:hover {
+        background-color: #f5f5f5;
+        border-color: #bbb;
+      }
+
+      mat-icon {
+        margin-right: 8px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .submit-btn {
+      min-width: 120px;
+      font-weight: 600;
+      position: relative;
+
+      mat-icon,
+      mat-spinner {
+        margin-right: 8px;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      mat-spinner {
+        ::ng-deep circle {
+          stroke: white;
+        }
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    @media (max-width: 768px) {
+      flex-direction: column;
+      gap: 8px;
+
+      button {
+        width: 100%;
+        height: 48px;
+      }
+    }
+  }
+}
+
+// Animaciones personalizadas
+.carrera-form-container {
+  animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Animación para la tarjeta de información
+.info-section {
+  animation: fadeInScale 0.4s ease-out;
+}
+
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// Overrides para Material Design
+::ng-deep {
+  .mat-mdc-dialog-container {
+    border-radius: 16px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .mat-mdc-form-field-outline {
+    border-radius: 12px !important;
+  }
+
+  .mat-mdc-text-field-wrapper {
+    border-radius: 12px !important;
+  }
+
+  // Estilos para errores
+  .mat-mdc-form-field-error {
+    font-size: 12px;
+    color: #f44336;
+    margin-top: 4px;
+  }
+
+  // Estilos para hints
+  .mat-mdc-form-field-hint {
+    font-size: 12px;
+    color: #1976d2;
+    font-weight: 500;
+  }
+
+  // Estilos para el select
+  .mat-mdc-select-panel {
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .mat-mdc-option {
+    &:hover {
+      background-color: #f5f7fa !important;
+    }
+
+    &.mdc-list-item--selected {
+      background-color: #e3f2fd !important;
+      color: #1976d2 !important;
+    }
+  }
+}

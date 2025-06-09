@@ -1,0 +1,414 @@
+// src/app/features/docentes/components/disponibilidad/disponibilidad-list.component.scss
+
+.disponibilidad-container {
+  padding: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  .stats-card {
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 24px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      backdrop-filter: blur(10px);
+
+      mat-icon {
+        font-size: 32px;
+        width: 32px;
+        height: 32px;
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .stat-info {
+        display: flex;
+        flex-direction: column;
+
+        .stat-value {
+          font-size: 24px;
+          font-weight: 600;
+          line-height: 1;
+        }
+
+        .stat-label {
+          font-size: 14px;
+          opacity: 0.8;
+          margin-top: 4px;
+        }
+      }
+    }
+  }
+
+  .form-container {
+    margin-bottom: 24px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  // Vista por días
+  .days-view {
+    padding: 16px 0;
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: #666;
+
+      mat-icon {
+        font-size: 64px;
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      h3 {
+        margin: 0 0 8px 0;
+        font-weight: 500;
+      }
+
+      p {
+        margin: 0 0 24px 0;
+        opacity: 0.7;
+      }
+    }
+
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .day-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+      background: white;
+
+      &.has-availability {
+        border-color: #1976d2;
+        box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+      }
+
+      &.empty-day {
+        border-style: dashed;
+        opacity: 0.7;
+
+        &:hover {
+          border-color: #1976d2;
+          opacity: 1;
+        }
+      }
+
+      .day-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px 12px;
+        border-bottom: 1px solid #f0f0f0;
+
+        h4 {
+          margin: 0;
+          font-weight: 500;
+          color: #333;
+        }
+      }
+
+      .day-content {
+        padding: 16px 20px;
+        min-height: 120px;
+
+        .availability-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px;
+          margin-bottom: 8px;
+          background: #f8f9fa;
+          border-radius: 8px;
+          border-left: 4px solid #1976d2;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          .time-info {
+            flex: 1;
+
+            .time-range {
+              display: block;
+              font-weight: 500;
+              color: #333;
+              margin-bottom: 4px;
+            }
+
+            .duration {
+              font-size: 12px;
+              color: #666;
+              background: #e3f2fd;
+              padding: 2px 8px;
+              border-radius: 12px;
+            }
+          }
+
+          .availability-actions {
+            display: flex;
+            gap: 4px;
+          }
+        }
+
+        .no-availability {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 80px;
+          color: #999;
+          font-style: italic;
+        }
+      }
+    }
+  }
+
+  // Vista de tabla
+  .table-view {
+    padding: 16px 0;
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 16px;
+      color: #666;
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+    }
+
+    .availability-table {
+      width: 100%;
+      margin-top: 16px;
+
+      .table-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      mat-chip {
+        font-size: 12px;
+        min-height: 28px;
+      }
+    }
+  }
+
+  // Vista calendario
+  .calendar-view {
+    padding: 16px 0;
+  }
+
+  // Loading state
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 16px;
+    color: #666;
+
+    p {
+      margin-top: 16px;
+      margin-bottom: 0;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .disponibilidad-container {
+    padding: 8px;
+
+    .stats-card .stats-grid {
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    .days-view .days-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .header-actions {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}
+
+// Calendario específico
+// src/app/features/docentes/components/disponibilidad/disponibilidad-calendar.component.scss
+
+.calendar-view {
+  .calendar-container {
+    display: flex;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    .time-column,
+    .day-column {
+      border-right: 1px solid #e0e0e0;
+
+      &:last-child {
+        border-right: none;
+      }
+    }
+
+    .time-column {
+      min-width: 80px;
+      background: #f8f9fa;
+    }
+
+    .day-column {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .header-cell {
+      padding: 16px 8px;
+      background: #1976d2;
+      color: white;
+      font-weight: 500;
+      text-align: center;
+      border-bottom: 1px solid #1565c0;
+      font-size: 14px;
+    }
+
+    .time-cell {
+      min-height: 60px;
+      border-bottom: 1px solid #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 8px 4px;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    .time-column .time-cell {
+      background: #f8f9fa;
+      font-size: 12px;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .availability-slot {
+      width: 100%;
+      height: 100%;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &.available {
+        background: #4caf50;
+        color: white;
+
+        &:hover {
+          background: #45a049;
+          transform: scale(1.02);
+        }
+      }
+
+      &:not(.available) {
+        background: transparent;
+      }
+    }
+  }
+
+  .calendar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-top: 16px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+
+      .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+
+        &.available {
+          background: #4caf50;
+        }
+
+        &.unavailable {
+          background: #e0e0e0;
+        }
+      }
+    }
+  }
+}
+
+// Responsive para calendario
+@media (max-width: 768px) {
+  .calendar-view .calendar-container {
+    font-size: 12px;
+
+    .header-cell {
+      padding: 12px 4px;
+      font-size: 12px;
+    }
+
+    .time-cell {
+      min-height: 50px;
+      padding: 4px 2px;
+    }
+
+    .time-column {
+      min-width: 60px;
+    }
+
+    .day-column {
+      min-width: 80px;
+    }
+  }
+}

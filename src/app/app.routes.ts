@@ -1,3 +1,48 @@
+// src/app/app.routes.ts
 import { Routes } from '@angular/router';
+import { AuthGuard } from './shared/guards/auth.guard';
 
-export const routes: Routes = [];
+export const routes: Routes = [
+  // Ruta pública de login
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./features/auth/login.component').then(m => m.LoginComponent)
+  },
+  // Siempre redirige al login
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
+  // Dashboard con layout común
+  {
+    path: 'dashboard',
+    loadComponent: () =>
+      import('./features/dashboard/layout/dashboard-layout.component').then(m => m.DashboardLayoutComponent),
+    canActivate: [AuthGuard],
+    children: [
+      // Home del dashboard
+      {
+        path: '',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard.component').then(m => m.DashboardHomeComponent)
+      },
+      // Modalidades educativas
+      {
+        path: 'modalidades',
+        loadComponent: () =>
+          import('./features/modalities/modalidades.component').then(m => m.ModalidadesComponent)
+      },
+      {
+        path: 'carreras',
+        loadComponent: () =>
+          import('./features/Careers/carreras.component').then(m => m.CarrerasComponent)
+      },
+      {
+        path: 'docentes',
+        loadChildren: () => import('./features/teachers/docentes.routes').then(routes => routes.DOCENTES_ROUTES)
+      }
+      // Carreras (para futuro desarrollo)
+
+    ]
+  },
+  // Wildcard route - debe ir al final
+  { path: '**', redirectTo: 'login' }
+];

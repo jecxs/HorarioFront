@@ -1,0 +1,463 @@
+<div class="docente-list-container">
+  <!-- Header -->
+  <div class="list-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>person</mat-icon>
+        Docentes
+      </h1>
+      <p class="page-subtitle">
+        Gestiona los docentes, sus departamentos y áreas de conocimiento
+      </p>
+    </div>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="openCreateDialog()"
+      class="add-btn">
+      <mat-icon>add</mat-icon>
+      Nuevo Docente
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <mat-card class="filters-card">
+      <div class="filters-content">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filtrar por Departamento</mat-label>
+          <mat-select [(value)]="selectedDepartmentFilter" (selectionChange)="applyFilters()">
+            <mat-option value="">Todos los departamentos</mat-option>
+            <mat-option *ngFor="let departamento of departamentos" [value]="departamento.uuid">
+              {{ departamento.name }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>filter_list</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filtrar por Área de Conocimiento</mat-label>
+          <mat-select [(value)]="selectedKnowledgeAreaFilter" (selectionChange)="applyFilters()" multiple>
+            <mat-option *ngFor="let area of areasConocimiento" [value]="area.uuid">
+              {{ area.name }}
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>filter_list</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Buscar docente</mat-label>
+          <input matInput
+                 [(ngModel)]="searchTerm"
+                 (input)="applyFilters()"
+                 placeholder="Nombre, email o teléfono">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Cuenta de Usuario</mat-label>
+          <mat-select [(value)]="userAccountFilter" (selectionChange)="applyFilters()">
+            <mat-option [value]="null">Todos</mat-option>
+            <mat-option [value]="true">Con cuenta</mat-option>
+            <mat-option [value]="false">Sin cuenta</mat-option>
+          </mat-select>
+          <mat-icon matSuffix>account_circle</mat-icon>
+        </mat-form-field>
+
+        <button mat-button (click)="clearFilters()" [disabled]="!hasFilters()" class="clear-filters-btn">
+          <mat-icon>clear</mat-icon>
+          Limpiar Filtros
+        </button>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- Contenido principal -->
+  <mat-card class="content-card">
+    <!-- Loading spinner -->
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Cargando docentes...</p>
+    </div>
+
+    <!-- Lista de docentes -->
+    <div *ngIf="!loading" class="docentes-content">
+      <!-- Tabla para pantallas grandes -->
+      <div class="table-container" [class.hidden-mobile]="true">
+        <table mat-table [dataSource]="filteredDocentes" class="docentes-table">
+          <!-- Columna Nombre -->
+          <ng-container matColumnDef="fullName">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>person</mat-icon>
+              Nombre Completo
+            </th>
+            <td mat-cell *matCellDef="let docente" class="name-cell">
+              <div class="name-content">
+                <span class="name-text">{{ docente.fullName }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Email -->
+          <ng-container matColumnDef="email">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>email</mat-icon>
+              Email
+            </th>
+            <td mat-cell *matCellDef="let docente" class="email-cell">
+              <div class="email-content">
+                <span class="email-text">{{ docente.email }}</span>
+                <span *ngIf="docente.phone" class="phone-text">
+                  <mat-icon class="phone-icon">phone</mat-icon>
+                  {{ docente.phone }}
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Departamento -->
+          <ng-container matColumnDef="department">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>business</mat-icon>
+              Departamento
+            </th>
+            <td mat-cell *matCellDef="let docente" class="department-cell">
+              <div class="department-info">
+                <span class="department-name">{{ docente.department.name }}</span>
+                <span *ngIf="docente.department.code" class="department-code">
+                  ({{ docente.department.code }})
+                </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Áreas de Conocimiento -->
+          <ng-container matColumnDef="knowledgeAreas">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>psychology</mat-icon>
+              Áreas de Conocimiento
+            </th>
+            <td mat-cell *matCellDef="let docente" class="areas-cell">
+              <div class="areas-info">
+                <span class="areas-count">{{ docente.knowledgeAreas.length }} áreas</span>
+                <div class="areas-chips">
+                  <mat-chip-set>
+                    <mat-chip *ngFor="let area of docente.knowledgeAreas.slice(0, 2)" class="area-chip">
+                      {{ area.name }}
+                    </mat-chip>
+                    <mat-chip *ngIf="docente.knowledgeAreas.length > 2" class="more-chip">
+                      +{{ docente.knowledgeAreas.length - 2 }}
+                    </mat-chip>
+                  </mat-chip-set>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Cuenta de Usuario -->
+          <ng-container matColumnDef="hasUserAccount">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>account_circle</mat-icon>
+              Cuenta
+            </th>
+            <td mat-cell *matCellDef="let docente" class="account-cell">
+              <div class="account-status">
+                <mat-icon [class.active-account]="docente.hasUserAccount"
+                          [class.inactive-account]="!docente.hasUserAccount">
+                  {{ docente.hasUserAccount ? 'check_circle' : 'cancel' }}
+                </mat-icon>
+                <span>{{ docente.hasUserAccount ? 'Activada' : 'No tiene' }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Acciones -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="header-cell actions-header">
+              <mat-icon>settings</mat-icon>
+              Acciones
+            </th>
+            <td mat-cell *matCellDef="let docente" class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="viewDocenteProfile(docente)"
+                  matTooltip="Ver perfil">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="accent"
+                  (click)="viewDocenteAvailability(docente)"
+                  matTooltip="Ver disponibilidad">
+                  <mat-icon>schedule</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="primary"
+                  [disabled]="!docente.hasUserAccount"
+                  (click)="viewCredentials(docente)"
+                  matTooltip="Ver credenciales">
+                  <mat-icon [matBadge]="docente.hasUserAccount ? '✓' : ''"
+                            matBadgeSize="small"
+                            [matBadgeHidden]="!docente.hasUserAccount">
+                    vpn_key
+                  </mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="openEditDialog(docente)"
+                  matTooltip="Editar docente">
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(docente)"
+                  matTooltip="Eliminar docente">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;"
+              class="table-row"
+              [class.expanded-row]="expandedDocente === row.uuid"></tr>
+        </table>
+
+        <!-- Filas expandibles para ver más detalles -->
+        <div class="expanded-detail" *ngFor="let docente of filteredDocentes">
+          <div class="detail-container" [class.visible]="expandedDocente === docente.uuid">
+            <div class="detail-content" *ngIf="expandedDocente === docente.uuid">
+              <div class="detail-section">
+                <h3 class="detail-title">Información Detallada - {{ docente.fullName }}</h3>
+
+                <div class="detail-grid">
+                  <div class="detail-column">
+                    <div class="detail-item">
+                      <mat-icon>email</mat-icon>
+                      <div class="detail-text">
+                        <span class="detail-label">Email:</span>
+                        <span class="detail-value">{{ docente.email }}</span>
+                      </div>
+                    </div>
+
+                    <div class="detail-item" *ngIf="docente.phone">
+                      <mat-icon>phone</mat-icon>
+                      <div class="detail-text">
+                        <span class="detail-label">Teléfono:</span>
+                        <span class="detail-value">{{ docente.phone }}</span>
+                      </div>
+                    </div>
+
+                    <div class="detail-item">
+                      <mat-icon>business</mat-icon>
+                      <div class="detail-text">
+                        <span class="detail-label">Departamento:</span>
+                        <span class="detail-value">{{ docente.department.name }}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="detail-column">
+                    <div class="detail-item">
+                      <mat-icon>psychology</mat-icon>
+                      <div class="detail-text">
+                        <span class="detail-label">Áreas de Conocimiento:</span>
+                        <div class="detail-value">
+                          <mat-chip-set>
+                            <mat-chip *ngFor="let area of docente.knowledgeAreas" class="area-chip-detail">
+                              {{ area.name }}
+                            </mat-chip>
+                          </mat-chip-set>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="detail-item">
+                      <mat-icon>account_circle</mat-icon>
+                      <div class="detail-text">
+                        <span class="detail-label">Cuenta de Usuario:</span>
+                        <span class="detail-value account-status-detail"
+                              [class.active-account]="docente.hasUserAccount"
+                              [class.inactive-account]="!docente.hasUserAccount">
+                          {{ docente.hasUserAccount ? 'Activada' : 'No tiene cuenta' }}
+                          <button
+                            *ngIf="docente.hasUserAccount"
+                            mat-button
+                            color="primary"
+                            (click)="viewCredentials(docente)">
+                            <mat-icon>vpn_key</mat-icon>
+                            Ver Credenciales
+                          </button>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="detail-actions">
+                  <button mat-raised-button color="primary" (click)="openEditDialog(docente)">
+                    <mat-icon>edit</mat-icon>
+                    Editar Docente
+                  </button>
+
+                  <button mat-raised-button color="accent" (click)="toggleExpandRow(docente.uuid)">
+                    <mat-icon>close</mat-icon>
+                    Cerrar Detalles
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="filteredDocentes.length === 0" class="empty-state">
+          <mat-icon class="empty-icon">person_off</mat-icon>
+          <h3>{{ hasFilters() ? 'No se encontraron docentes' : 'No hay docentes registrados' }}</h3>
+          <p>{{ hasFilters() ? 'Intenta ajustar los filtros de búsqueda' : 'Comienza registrando tu primer docente' }}</p>
+          <button mat-raised-button color="primary" (click)="hasFilters() ? clearFilters() : openCreateDialog()">
+            <mat-icon>{{ hasFilters() ? 'clear' : 'add' }}</mat-icon>
+            {{ hasFilters() ? 'Limpiar Filtros' : 'Registrar Primer Docente' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards para móviles -->
+      <div class="mobile-cards">
+        <div *ngFor="let docente of filteredDocentes" class="mobile-card">
+          <mat-card class="docente-card">
+            <mat-card-header>
+              <div class="card-header-content">
+                <mat-icon class="card-icon" [class.has-account]="docente.hasUserAccount">person</mat-icon>
+                <div class="card-title-section">
+                  <h3>{{ docente.fullName }}</h3>
+                  <div class="card-badges">
+                    <span class="email-badge">
+                      {{ docente.email }}
+                    </span>
+                    <span class="account-badge" [class.active-account]="docente.hasUserAccount">
+                      {{ docente.hasUserAccount ? 'Con cuenta' : 'Sin cuenta' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="card-info">
+                <div class="info-item">
+                  <mat-icon>business</mat-icon>
+                  <span>{{ docente.department.name }}</span>
+                </div>
+                <div class="info-item" *ngIf="docente.phone">
+                  <mat-icon>phone</mat-icon>
+                  <span>{{ docente.phone }}</span>
+                </div>
+              </div>
+
+              <div class="areas-preview">
+                <span class="areas-label">Áreas de conocimiento:</span>
+                <div class="areas-list">
+                  <mat-chip-set>
+                    <mat-chip *ngFor="let area of docente.knowledgeAreas.slice(0, 2)" class="area-chip-mobile">
+                      {{ area.name }}
+                    </mat-chip>
+                    <mat-chip *ngIf="docente.knowledgeAreas.length > 2" class="more-chip-mobile">
+                      +{{ docente.knowledgeAreas.length - 2 }}
+                    </mat-chip>
+                  </mat-chip-set>
+                </div>
+              </div>
+            </mat-card-content>
+
+            <mat-card-actions class="card-actions">
+              <button
+                mat-button
+                color="accent"
+                (click)="toggleExpandRow(docente.uuid)">
+                <mat-icon>{{ expandedDocente === docente.uuid ? 'expand_less' : 'expand_more' }}</mat-icon>
+                {{ expandedDocente === docente.uuid ? 'Cerrar' : 'Detalles' }}
+              </button>
+
+              <button
+                mat-button
+                color="primary"
+                [disabled]="!docente.hasUserAccount"
+                (click)="viewCredentials(docente)">
+                <mat-icon>vpn_key</mat-icon>
+                Credenciales
+              </button>
+
+              <button
+                mat-button
+                color="primary"
+                (click)="openEditDialog(docente)">
+                <mat-icon>edit</mat-icon>
+                Editar
+              </button>
+
+              <button
+                mat-button
+                color="warn"
+                (click)="confirmDelete(docente)">
+                <mat-icon>delete</mat-icon>
+                Eliminar
+              </button>
+            </mat-card-actions>
+
+            <!-- Detalle expandible en móvil -->
+            <div class="mobile-detail" *ngIf="expandedDocente === docente.uuid">
+              <mat-divider></mat-divider>
+              <div class="mobile-detail-content">
+                <h4>Información Completa</h4>
+
+                <div class="mobile-detail-item">
+                  <strong>Departamento:</strong> {{ docente.department.name }}
+                </div>
+
+                <div class="mobile-detail-item">
+                  <strong>Áreas de conocimiento:</strong>
+                  <div class="mobile-areas-list">
+                    <span *ngFor="let area of docente.knowledgeAreas; let last = last">
+                      {{ area.name }}{{ !last ? ', ' : '' }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="mobile-detail-item">
+                  <strong>Estado de cuenta:</strong>
+                  <span [class.active-account]="docente.hasUserAccount"
+                        [class.inactive-account]="!docente.hasUserAccount">
+                    {{ docente.hasUserAccount ? 'Cuenta activa' : 'Sin cuenta' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </mat-card>
+        </div>
+
+        <!-- Empty state móvil -->
+        <div *ngIf="filteredDocentes.length === 0" class="empty-state mobile">
+          <mat-icon class="empty-icon">person_off</mat-icon>
+          <h3>{{ hasFilters() ? 'Sin resultados' : 'No hay docentes' }}</h3>
+          <p>{{ hasFilters() ? 'Ajusta los filtros' : 'Registra tu primer docente' }}</p>
+          <button mat-raised-button color="primary" (click)="hasFilters() ? clearFilters() : openCreateDialog()">
+            <mat-icon>{{ hasFilters() ? 'clear' : 'add' }}</mat-icon>
+            {{ hasFilters() ? 'Limpiar' : 'Nuevo Docente' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</div>
+

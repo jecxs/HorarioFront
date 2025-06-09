@@ -1,0 +1,64 @@
+<!-- login.component.html -->
+<div class="login-container">
+  <form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <h2>Iniciar sesión</h2>
+
+    <div *ngIf="errorMessage" class="alert alert-danger">
+      {{ errorMessage }}
+    </div>
+
+    <!-- Email -->
+    <div class="form-group">
+      <label for="email">Correo electrónico</label>
+      <input
+        id="email"
+        type="email"
+        formControlName="email"
+        class="form-control"
+      />
+      <div
+        *ngIf="f['email'].invalid && f['email'].touched"
+        class="text-danger"
+      >
+        {{ f['email'].hasError('required')
+        ? 'El email es obligatorio'
+        : 'Formato de email inválido' }}
+      </div>
+    </div>
+
+    <!-- Password -->
+    <div class="form-group">
+      <label for="password">Contraseña</label>
+      <input
+        id="password"
+        type="password"
+        formControlName="password"
+        class="form-control"
+      />
+      <div
+        *ngIf="f['password'].invalid && f['password'].touched"
+        class="text-danger"
+      >
+        La contraseña es obligatoria
+      </div>
+    </div>
+
+    <button
+      type="submit"
+      class="btn btn-primary w-100"
+      [disabled]="form.invalid"
+    >
+      Entrar
+    </button>
+  </form>
+</div>
+
+<style>
+  .login-container {
+    max-width: 400px;
+    margin: 5rem auto;
+    padding: 2rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+  }
+</style>

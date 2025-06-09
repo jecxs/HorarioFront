@@ -1,0 +1,258 @@
+<div class="carrera-list-container">
+  <!-- Header -->
+  <div class="list-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>account_balance</mat-icon>
+        Carreras Profesionales
+      </h1>
+      <p class="page-subtitle">
+        Gestiona las carreras profesionales y sus ciclos académicos
+      </p>
+    </div>
+    <button
+      mat-raised-button
+      color="primary"
+      (click)="openCreateDialog()"
+      class="add-btn">
+      <mat-icon>add</mat-icon>
+      Nueva Carrera
+    </button>
+  </div>
+
+  <!-- Filtros -->
+  <div class="filters-section">
+    <mat-card class="filters-card">
+      <div class="filters-content">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filtrar por Modalidad</mat-label>
+          <mat-select [(value)]="selectedModalityFilter" (selectionChange)="applyFilters()">
+            <mat-option value="">Todas las modalidades</mat-option>
+            <mat-option *ngFor="let modalidad of modalidades" [value]="modalidad.uuid">
+              {{ modalidad.name }} ({{ modalidad.durationYears }} {{ modalidad.durationYears === 1 ? 'año' : 'años' }})
+            </mat-option>
+          </mat-select>
+          <mat-icon matSuffix>filter_list</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Buscar carrera</mat-label>
+          <input matInput
+                 [(ngModel)]="searchTerm"
+                 (input)="applyFilters()"
+                 placeholder="Nombre de la carrera">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button mat-button (click)="clearFilters()" class="clear-filters-btn">
+          <mat-icon>clear</mat-icon>
+          Limpiar Filtros
+        </button>
+      </div>
+    </mat-card>
+  </div>
+
+  <!-- Contenido principal -->
+  <mat-card class="content-card">
+    <!-- Loading spinner -->
+    <div *ngIf="loading" class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Cargando carreras...</p>
+    </div>
+
+    <!-- Lista de carreras -->
+    <div *ngIf="!loading" class="carreras-content">
+      <!-- Tabla para pantallas grandes -->
+      <div class="table-container" [class.hidden-mobile]="true">
+        <table mat-table [dataSource]="filteredCarreras" class="carreras-table">
+          <!-- Columna Nombre -->
+          <ng-container matColumnDef="name">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>account_balance</mat-icon>
+              Carrera
+            </th>
+            <td mat-cell *matCellDef="let carrera" class="name-cell">
+              <div class="name-content">
+                <span class="name-text">{{ carrera.name }}</span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Modalidad -->
+          <ng-container matColumnDef="modality">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>school</mat-icon>
+              Modalidad
+            </th>
+            <td mat-cell *matCellDef="let carrera" class="modality-cell">
+              <div class="modality-info">
+                <span class="modality-name">{{ carrera.modality.name }}</span>
+                <span class="modality-duration">
+                      {{ carrera.modality.durationYears }} {{ carrera.modality.durationYears === 1 ? 'año' : 'años' }}
+                    </span>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Ciclos -->
+          <ng-container matColumnDef="cycles">
+            <th mat-header-cell *matHeaderCellDef class="header-cell">
+              <mat-icon>timeline</mat-icon>
+              Ciclos
+            </th>
+            <td mat-cell *matCellDef="let carrera" class="cycles-cell">
+              <div class="cycles-info">
+                <span class="cycles-count">{{ carrera.cycles.length }} ciclos</span>
+                <div class="cycles-chips">
+                  <mat-chip-set>
+                    <mat-chip *ngFor="let cycle of carrera.cycles.slice(0, 3)" class="cycle-chip">
+                      Ciclo {{ cycle.number }}
+                    </mat-chip>
+                    <mat-chip *ngIf="carrera.cycles.length > 3" class="more-chip">
+                      +{{ carrera.cycles.length - 3 }}
+                    </mat-chip>
+                  </mat-chip-set>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+
+          <!-- Columna Acciones -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef class="header-cell actions-header">
+              <mat-icon>settings</mat-icon>
+              Acciones
+            </th>
+            <td mat-cell *matCellDef="let carrera" class="actions-cell">
+              <div class="action-buttons">
+                <button
+                  mat-icon-button
+                  color="accent"
+                  (click)="viewCycles(carrera)"
+                  matTooltip="Ver ciclos">
+                  <mat-icon>visibility</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="primary"
+                  (click)="openEditDialog(carrera)"
+                  matTooltip="Editar carrera">
+                  <mat-icon>edit</mat-icon>
+                </button>
+
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(carrera)"
+                  matTooltip="Eliminar carrera">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="table-row"></tr>
+        </table>
+
+        <!-- Empty state -->
+        <div *ngIf="filteredCarreras.length === 0" class="empty-state">
+          <mat-icon class="empty-icon">account_balance</mat-icon>
+          <h3>{{ hasFilters() ? 'No se encontraron carreras' : 'No hay carreras registradas' }}</h3>
+          <p>{{ hasFilters() ? 'Intenta ajustar los filtros de búsqueda' : 'Comienza creando tu primera carrera profesional' }}</p>
+          <button mat-raised-button color="primary" (click)="hasFilters() ? clearFilters() : openCreateDialog()">
+            <mat-icon>{{ hasFilters() ? 'clear' : 'add' }}</mat-icon>
+            {{ hasFilters() ? 'Limpiar Filtros' : 'Crear Primera Carrera' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Cards para móviles -->
+      <div class="mobile-cards">
+        <div *ngFor="let carrera of filteredCarreras" class="mobile-card">
+          <mat-card class="carrera-card">
+            <mat-card-header>
+              <div class="card-header-content">
+                <mat-icon class="card-icon">account_balance</mat-icon>
+                <div class="card-title-section">
+                  <h3>{{ carrera.name }}</h3>
+                  <div class="card-badges">
+                        <span class="modality-badge">
+                          {{ carrera.modality.name }}
+                        </span>
+                    <span class="cycles-badge">
+                          {{ carrera.cycles.length }} ciclos
+                        </span>
+                  </div>
+                </div>
+              </div>
+            </mat-card-header>
+
+            <mat-card-content>
+              <div class="card-info">
+                <div class="info-item">
+                  <mat-icon>schedule</mat-icon>
+                  <span>{{ carrera.modality.durationYears }} {{ carrera.modality.durationYears === 1 ? 'año' : 'años' }} de duración</span>
+                </div>
+                <div class="info-item">
+                  <mat-icon>timeline</mat-icon>
+                  <span>{{ carrera.cycles.length }} ciclos académicos</span>
+                </div>
+              </div>
+
+              <div class="cycles-preview">
+                <span class="cycles-label">Ciclos:</span>
+                <div class="cycles-list">
+                      <span *ngFor="let cycle of carrera.cycles.slice(0, 4); let last = last" class="cycle-item">
+                        {{ cycle.number }}{{ !last && carrera.cycles.length > 4 ? ',' : '' }}
+                      </span>
+                  <span *ngIf="carrera.cycles.length > 4" class="more-cycles">
+                        ... +{{ carrera.cycles.length - 4 }} más
+                      </span>
+                </div>
+              </div>
+            </mat-card-content>
+
+            <mat-card-actions class="card-actions">
+              <button
+                mat-button
+                color="accent"
+                (click)="viewCycles(carrera)">
+                <mat-icon>visibility</mat-icon>
+                Ver Ciclos
+              </button>
+
+              <button
+                mat-button
+                color="primary"
+                (click)="openEditDialog(carrera)">
+                <mat-icon>edit</mat-icon>
+                Editar
+              </button>
+
+              <button
+                mat-button
+                color="warn"
+                (click)="confirmDelete(carrera)">
+                <mat-icon>delete</mat-icon>
+                Eliminar
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+
+        <!-- Empty state móvil -->
+        <div *ngIf="filteredCarreras.length === 0" class="empty-state mobile">
+          <mat-icon class="empty-icon">account_balance</mat-icon>
+          <h3>{{ hasFilters() ? 'Sin resultados' : 'No hay carreras' }}</h3>
+          <p>{{ hasFilters() ? 'Ajusta los filtros' : 'Crea tu primera carrera' }}</p>
+          <button mat-raised-button color="primary" (click)="hasFilters() ? clearFilters() : openCreateDialog()">
+            <mat-icon>{{ hasFilters() ? 'clear' : 'add' }}</mat-icon>
+            {{ hasFilters() ? 'Limpiar' : 'Nueva Carrera' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </mat-card>
+</div>

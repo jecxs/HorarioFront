@@ -1,0 +1,97 @@
+<div class="carrera-form-container">
+  <h2 mat-dialog-title class="form-title">
+    <mat-icon>{{ isEdit ? 'edit' : 'add' }}</mat-icon>
+    {{ isEdit ? 'Editar' : 'Nueva' }} Carrera
+  </h2>
+
+  <mat-dialog-content class="form-content">
+    <form [formGroup]="carreraForm" class="carrera-form">
+      <!-- Nombre de la carrera -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Nombre de la Carrera</mat-label>
+        <input
+          matInput
+          formControlName="name"
+          placeholder="Ej: Ingeniería de Sistemas, Enfermería Técnica"
+          autocomplete="off">
+        <mat-icon matSuffix>account_balance</mat-icon>
+        <mat-error *ngIf="carreraForm.get('name')?.hasError('required')">
+          El nombre es obligatorio
+        </mat-error>
+        <mat-error *ngIf="carreraForm.get('name')?.hasError('minlength')">
+          Mínimo 3 caracteres
+        </mat-error>
+        <mat-error *ngIf="carreraForm.get('name')?.hasError('maxlength')">
+          Máximo 100 caracteres
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Modalidad Educativa -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Modalidad Educativa</mat-label>
+        <mat-select formControlName="modalityId" [disabled]="loadingModalidades">
+          <mat-option *ngFor="let modalidad of modalidades" [value]="modalidad.uuid">
+            <div class="modalidad-option">
+              <span class="modalidad-name">{{ modalidad.name }}</span>
+              <span class="modalidad-duration">({{ modalidad.durationYears }} {{ modalidad.durationYears === 1 ? 'año' : 'años' }})</span>
+            </div>
+          </mat-option>
+        </mat-select>
+        <mat-icon matSuffix>school</mat-icon>
+        <mat-error *ngIf="carreraForm.get('modalityId')?.hasError('required')">
+          La modalidad es obligatoria
+        </mat-error>
+        <mat-hint *ngIf="selectedModalidad">
+          Se generarán {{ (selectedModalidad.durationYears * 2) }} ciclos automáticamente
+        </mat-hint>
+      </mat-form-field>
+
+      <!-- Loading modalidades -->
+      <div *ngIf="loadingModalidades" class="loading-modalidades">
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Cargando modalidades...</span>
+      </div>
+
+      <!-- Información adicional -->
+      <div *ngIf="selectedModalidad" class="info-section">
+        <div class="info-card">
+          <div class="info-header">
+            <mat-icon>info</mat-icon>
+            <span>Información de la Modalidad</span>
+          </div>
+          <div class="info-content">
+            <p><strong>Modalidad:</strong> {{ selectedModalidad.name }}</p>
+            <p><strong>Duración:</strong> {{ selectedModalidad.durationYears }} {{ selectedModalidad.durationYears === 1 ? 'año' : 'años' }}</p>
+            <p><strong>Ciclos a generar:</strong> {{ selectedModalidad.durationYears * 2 }}</p>
+            <p *ngIf="selectedModalidad.description" class="description">
+              <strong>Descripción:</strong> {{ selectedModalidad.description }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="form-actions">
+    <button
+      mat-button
+      type="button"
+      (click)="onCancel()"
+      class="cancel-btn">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      type="submit"
+      [disabled]="carreraForm.invalid || submitting"
+      (click)="onSubmit()"
+      class="submit-btn">
+      <mat-spinner *ngIf="submitting" diameter="16"></mat-spinner>
+      <mat-icon *ngIf="!submitting">{{ isEdit ? 'save' : 'add' }}</mat-icon>
+      {{ isEdit ? 'Actualizar' : 'Crear' }}
+    </button>
+  </mat-dialog-actions>
+</div>

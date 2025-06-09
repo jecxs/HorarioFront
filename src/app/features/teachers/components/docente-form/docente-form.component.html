@@ -1,0 +1,315 @@
+
+<div class="docente-form-container">
+  <h2 mat-dialog-title class="form-title">
+    <mat-icon>{{ isEdit ? 'edit' : 'add' }}</mat-icon>
+    {{ isEdit ? 'Editar' : 'Nuevo' }} Docente
+  </h2>
+
+  <mat-dialog-content class="form-content">
+    <form [formGroup]="docenteForm" class="docente-form">
+      <!-- Información Personal -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <mat-icon>person</mat-icon>
+          Información Personal
+        </h3>
+
+        <!-- Nombre completo -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Nombre Completo</mat-label>
+          <input
+            matInput
+            formControlName="fullName"
+            placeholder="Ej: Juan Pérez Rodríguez"
+            autocomplete="off">
+          <mat-icon matSuffix>person</mat-icon>
+          <mat-error *ngIf="docenteForm.get('fullName')?.hasError('required')">
+            El nombre es obligatorio
+          </mat-error>
+          <mat-error *ngIf="docenteForm.get('fullName')?.hasError('minlength')">
+            Mínimo 3 caracteres
+          </mat-error>
+          <mat-error *ngIf="docenteForm.get('fullName')?.hasError('maxlength')">
+            Máximo 150 caracteres
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Email -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Correo Electrónico</mat-label>
+          <input
+            matInput
+            formControlName="email"
+            placeholder="Ej: juan.perez@ejemplo.com"
+            autocomplete="off"
+            [readonly]="isEdit">
+          <mat-icon matSuffix>email</mat-icon>
+          <mat-error *ngIf="docenteForm.get('email')?.hasError('required')">
+            El correo electrónico es obligatorio
+          </mat-error>
+          <mat-error *ngIf="docenteForm.get('email')?.hasError('email')">
+            Ingrese un correo electrónico válido
+          </mat-error>
+          <mat-error *ngIf="docenteForm.get('email')?.hasError('maxlength')">
+            Máximo 100 caracteres
+          </mat-error>
+          <mat-hint *ngIf="isEdit">El correo electrónico no se puede modificar</mat-hint>
+        </mat-form-field>
+
+        <!-- Teléfono (opcional) -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Teléfono (opcional)</mat-label>
+          <input
+            matInput
+            formControlName="phone"
+            placeholder="Ej: 999-888-777"
+            autocomplete="off">
+          <mat-icon matSuffix>phone</mat-icon>
+          <mat-error *ngIf="docenteForm.get('phone')?.hasError('maxlength')">
+            Máximo 20 caracteres
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <!-- Información Académica -->
+      <div class="form-section">
+        <h3 class="section-title">
+          <mat-icon>school</mat-icon>
+          Información Académica
+        </h3>
+
+        <!-- Departamento Académico -->
+        <div class="field-with-action">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Departamento Académico</mat-label>
+            <mat-select formControlName="departmentUuid">
+              <mat-option *ngFor="let departamento of departamentos" [value]="departamento.uuid">
+                {{ departamento.name }}
+              </mat-option>
+              <mat-option *ngIf="departamentos.length === 0" disabled>
+                No hay departamentos disponibles
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>business</mat-icon>
+            <mat-error *ngIf="docenteForm.get('departmentUuid')?.hasError('required')">
+              El departamento es obligatorio
+            </mat-error>
+          </mat-form-field>
+
+          <button
+            mat-mini-fab
+            color="primary"
+            type="button"
+            matTooltip="Crear nuevo departamento"
+            (click)="toggleDepartamentoForm()">
+            <mat-icon>{{ showDepartamentoForm ? 'close' : 'add' }}</mat-icon>
+          </button>
+        </div>
+
+        <!-- Formulario de creación de departamento (expandible) -->
+        <div class="nested-form" *ngIf="showDepartamentoForm">
+          <mat-card class="nested-form-card">
+            <mat-card-header>
+              <mat-card-title>Crear Nuevo Departamento</mat-card-title>
+            </mat-card-header>
+
+            <mat-card-content>
+              <form [formGroup]="departamentoForm" class="nested-form-content">
+                <!-- Nombre del departamento -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Nombre del Departamento</mat-label>
+                  <input
+                    matInput
+                    formControlName="name"
+                    placeholder="Ej: Ingeniería de Sistemas"
+                    autocomplete="off">
+                  <mat-error *ngIf="departamentoForm.get('name')?.hasError('required')">
+                    El nombre es obligatorio
+                  </mat-error>
+                </mat-form-field>
+
+                <!-- Código del departamento -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Código (opcional)</mat-label>
+                  <input
+                    matInput
+                    formControlName="code"
+                    placeholder="Ej: ING-SIS"
+                    autocomplete="off">
+                </mat-form-field>
+
+                <!-- Descripción del departamento -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Descripción (opcional)</mat-label>
+                  <textarea
+                    matInput
+                    formControlName="description"
+                    placeholder="Breve descripción del departamento"
+                    rows="3"></textarea>
+                </mat-form-field>
+              </form>
+            </mat-card-content>
+
+            <mat-card-actions>
+              <button
+                mat-button
+                color="warn"
+                type="button"
+                (click)="toggleDepartamentoForm()">
+                <mat-icon>close</mat-icon>
+                Cancelar
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                [disabled]="departamentoForm.invalid || creatingDepartamento"
+                (click)="createDepartamento()">
+                <mat-progress-spinner *ngIf="creatingDepartamento" diameter="16" mode="indeterminate"></mat-progress-spinner>
+                <mat-icon *ngIf="!creatingDepartamento">save</mat-icon>
+                Guardar Departamento
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+
+        <!-- Áreas de Conocimiento -->
+        <div class="field-with-action">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Áreas de Conocimiento</mat-label>
+            <mat-select formControlName="knowledgeAreaUuids" multiple>
+              <mat-option *ngFor="let area of filteredAreas" [value]="area.uuid">
+                {{ area.name }}
+              </mat-option>
+              <mat-option *ngIf="filteredAreas.length === 0" disabled>
+                {{ docenteForm.get('departmentUuid')?.value ? 'No hay áreas para este departamento' : 'Seleccione un departamento primero' }}
+              </mat-option>
+            </mat-select>
+            <mat-icon matSuffix>psychology</mat-icon>
+            <mat-hint *ngIf="docenteForm.get('departmentUuid')?.value">
+              Las áreas mostradas pertenecen al departamento seleccionado
+            </mat-hint>
+          </mat-form-field>
+
+          <button
+            mat-mini-fab
+            color="primary"
+            type="button"
+            matTooltip="Crear nueva área de conocimiento"
+            [disabled]="!docenteForm.get('departmentUuid')?.value"
+            (click)="toggleAreaForm()">
+            <mat-icon>{{ showAreaForm ? 'close' : 'add' }}</mat-icon>
+          </button>
+        </div>
+
+        <!-- Formulario de creación de área de conocimiento (expandible) -->
+        <div class="nested-form" *ngIf="showAreaForm">
+          <mat-card class="nested-form-card">
+            <mat-card-header>
+              <mat-card-title>Crear Nueva Área de Conocimiento</mat-card-title>
+              <mat-card-subtitle>
+                Para el departamento: {{ getDepartmentName(areaConocimientoForm.get('departmentUuid')?.value) }}
+              </mat-card-subtitle>
+            </mat-card-header>
+
+            <mat-card-content>
+              <form [formGroup]="areaConocimientoForm" class="nested-form-content">
+                <!-- Nombre del área -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Nombre del Área</mat-label>
+                  <input
+                    matInput
+                    formControlName="name"
+                    placeholder="Ej: Bases de Datos"
+                    autocomplete="off">
+                  <mat-error *ngIf="areaConocimientoForm.get('name')?.hasError('required')">
+                    El nombre es obligatorio
+                  </mat-error>
+                </mat-form-field>
+
+                <!-- Descripción del área -->
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Descripción (opcional)</mat-label>
+                  <textarea
+                    matInput
+                    formControlName="description"
+                    placeholder="Breve descripción del área de conocimiento"
+                    rows="3"></textarea>
+                </mat-form-field>
+
+                <!-- Campo oculto para departamento -->
+                <input type="hidden" formControlName="departmentUuid">
+              </form>
+            </mat-card-content>
+
+            <mat-card-actions>
+              <button
+                mat-button
+                color="warn"
+                type="button"
+                (click)="toggleAreaForm()">
+                <mat-icon>close</mat-icon>
+                Cancelar
+              </button>
+
+              <button
+                mat-raised-button
+                color="primary"
+                type="button"
+                [disabled]="areaConocimientoForm.invalid || creatingArea"
+                (click)="createArea()">
+                <mat-progress-spinner *ngIf="creatingArea" diameter="16" mode="indeterminate"></mat-progress-spinner>
+                <mat-icon *ngIf="!creatingArea">save</mat-icon>
+                Guardar Área
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        </div>
+      </div>
+
+      <!-- Nota sobre creación de cuenta -->
+      <div class="info-section">
+        <div class="info-card">
+          <div class="info-header">
+            <mat-icon>info</mat-icon>
+            <span>Información sobre cuenta de usuario</span>
+          </div>
+          <div class="info-content">
+            <p>Al crear un docente, se generará automáticamente una cuenta de usuario con las siguientes características:</p>
+            <ul>
+              <li><strong>Email de acceso:</strong> El mismo correo electrónico registrado para el docente</li>
+              <li><strong>Contraseña inicial:</strong> Una contraseña por defecto que será "cambio123"</li>
+              <li><strong>Rol:</strong> Docente (acceso limitado a registrar disponibilidad)</li>
+            </ul>
+            <p>El docente deberá cambiar su contraseña en el primer inicio de sesión.</p>
+          </div>
+        </div>
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions class="form-actions">
+    <button
+      mat-button
+      type="button"
+      (click)="onCancel()"
+      class="cancel-btn">
+      <mat-icon>close</mat-icon>
+      Cancelar
+    </button>
+
+    <button
+      mat-raised-button
+      color="primary"
+      type="submit"
+      [disabled]="docenteForm.invalid || submitting"
+      (click)="onSubmit()"
+      class="submit-btn">
+      <mat-spinner *ngIf="submitting" diameter="16"></mat-spinner>
+      <mat-icon *ngIf="!submitting">{{ isEdit ? 'save' : 'add' }}</mat-icon>
+      {{ isEdit ? 'Actualizar' : 'Crear' }}
+    </button>
+  </mat-dialog-actions>
+</div>
+

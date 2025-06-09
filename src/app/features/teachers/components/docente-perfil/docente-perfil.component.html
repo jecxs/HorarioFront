@@ -1,0 +1,210 @@
+<div class="docente-perfil-container">
+  <!-- Header -->
+  <div class="perfil-header">
+    <button
+      mat-icon-button
+      (click)="navigateBack()"
+      class="back-button"
+      matTooltip="Volver a la lista de docentes">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="header-content">
+      <h1 class="page-title">
+        <mat-icon>person</mat-icon>
+        Perfil del Docente
+      </h1>
+      <p class="page-subtitle" *ngIf="docente">
+        {{ docente.fullName }}
+      </p>
+    </div>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Cargando información del docente...</p>
+  </div>
+
+  <!-- Content -->
+  <div *ngIf="!loading && docente" class="perfil-content">
+    <mat-card class="perfil-card">
+      <!-- Basic info section -->
+      <div class="perfil-basic-info">
+        <div class="info-avatar">
+          <div class="avatar-circle">
+            <span class="avatar-text">{{ docente.fullName | slice:0:2 | uppercase }}</span>
+          </div>
+          <div class="account-badge" [class.has-account]="docente.hasUserAccount">
+            <mat-icon>{{ docente.hasUserAccount ? 'check_circle' : 'cancel' }}</mat-icon>
+            <span>{{ docente.hasUserAccount ? 'Cuenta activa' : 'Sin cuenta' }}</span>
+          </div>
+        </div>
+
+        <div class="info-details">
+          <h2 class="info-name">{{ docente.fullName }}</h2>
+
+          <div class="info-row">
+            <mat-icon>email</mat-icon>
+            <span>{{ docente.email }}</span>
+          </div>
+
+          <div class="info-row" *ngIf="docente.phone">
+            <mat-icon>phone</mat-icon>
+            <span>{{ docente.phone }}</span>
+          </div>
+
+          <div class="info-row">
+            <mat-icon>business</mat-icon>
+            <span>{{ docente.department.name }}</span>
+          </div>
+
+          <div class="info-areas">
+            <span class="areas-label">Áreas de conocimiento:</span>
+            <mat-chip-set>
+              <mat-chip *ngFor="let area of docente.knowledgeAreas" class="area-chip">
+                {{ area.name }}
+              </mat-chip>
+            </mat-chip-set>
+          </div>
+        </div>
+
+        <div class="info-actions">
+          <button
+            mat-raised-button
+            color="primary"
+            (click)="editDocente()">
+            <mat-icon>edit</mat-icon>
+            Editar
+          </button>
+
+          <button
+            mat-raised-button
+            color="accent"
+            [disabled]="!docente.hasUserAccount"
+            (click)="viewCredentials()">
+            <mat-icon>vpn_key</mat-icon>
+            Ver Credenciales
+          </button>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Tabs section -->
+      <mat-tab-group [(selectedIndex)]="activeTab" animationDuration="300ms" class="perfil-tabs">
+        <!-- Información general -->
+        <mat-tab label="Información General">
+          <div class="tab-content">
+            <div class="info-section">
+              <h3 class="section-title">
+                <mat-icon>person</mat-icon>
+                Datos Personales
+              </h3>
+
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Nombre completo:</span>
+                  <span class="info-value">{{ docente.fullName }}</span>
+                </div>
+
+                <div class="info-item">
+                  <span class="info-label">Correo electrónico:</span>
+                  <span class="info-value">{{ docente.email }}</span>
+                </div>
+
+                <div class="info-item" *ngIf="docente.phone">
+                  <span class="info-label">Teléfono:</span>
+                  <span class="info-value">{{ docente.phone }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <h3 class="section-title">
+                <mat-icon>school</mat-icon>
+                Información Académica
+              </h3>
+
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Departamento:</span>
+                  <span class="info-value">{{ docente.department.name }}</span>
+                </div>
+
+                <div class="info-item" *ngIf="docente.department.code">
+                  <span class="info-label">Código del departamento:</span>
+                  <span class="info-value">{{ docente.department.code }}</span>
+                </div>
+
+                <div class="info-item areas-info">
+                  <span class="info-label">Áreas de conocimiento:</span>
+                  <div class="info-value areas-list">
+                    <ul>
+                      <li *ngFor="let area of docente.knowledgeAreas">
+                        {{ area.name }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <h3 class="section-title">
+                <mat-icon>account_circle</mat-icon>
+                Información de Cuenta
+              </h3>
+
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="info-label">Estado de cuenta:</span>
+                  <span class="info-value account-status"
+                        [class.active-account]="docente.hasUserAccount"
+                        [class.inactive-account]="!docente.hasUserAccount">
+                    {{ docente.hasUserAccount ? 'Cuenta activa' : 'No tiene cuenta de usuario' }}
+                  </span>
+                </div>
+
+                <div class="info-item" *ngIf="docente.hasUserAccount">
+                  <span class="info-label">Acciones:</span>
+                  <span class="info-value">
+                    <button
+                      mat-button
+                      color="primary"
+                      (click)="viewCredentials()">
+                      <mat-icon>vpn_key</mat-icon>
+                      Ver Credenciales
+                    </button>
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- Disponibilidad -->
+        <mat-tab label="Disponibilidad">
+          <div class="tab-content">
+            <app-disponibilidad-list
+              [docente]="docente"
+              (availabilityChange)="onAvailabilityChange($event)">
+            </app-disponibilidad-list>
+          </div>
+        </mat-tab>
+
+        <!-- Clases Asignadas (pendiente de implementar) -->
+        <mat-tab label="Clases Asignadas" [disabled]="true">
+          <div class="tab-content">
+            <div class="empty-state">
+              <mat-icon class="empty-icon">event_busy</mat-icon>
+              <h3>Funcionalidad en desarrollo</h3>
+              <p>La visualización de clases asignadas estará disponible próximamente.</p>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </mat-card>
+  </div>
+</div>
+```

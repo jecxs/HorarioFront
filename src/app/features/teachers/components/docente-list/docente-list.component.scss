@@ -1,0 +1,620 @@
+// src/app/features/docentes/components/docente-list/docente-list.component.scss
+
+// Variables
+$primary-color: #3f51b5;
+$accent-color: #ff4081;
+$warn-color: #f44336;
+$success-color: #4caf50;
+$background-color: #f5f7fa;
+$card-bg-color: #ffffff;
+$text-color: #333333;
+$light-text: #666666;
+$border-color: #e0e0e0;
+$shadow-color: rgba(0, 0, 0, 0.1);
+
+// Main container
+.docente-list-container {
+  padding: 24px;
+  background-color: $background-color;
+  min-height: 100%;
+}
+
+// Header section
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .header-content {
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      font-size: 28px;
+      color: $primary-color;
+
+      mat-icon {
+        font-size: 32px;
+        height: 32px;
+        width: 32px;
+      }
+    }
+
+    .page-subtitle {
+      margin: 8px 0 0 0;
+      color: $light-text;
+      font-size: 16px;
+    }
+  }
+
+  .add-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+// Filters section
+.filters-section {
+  margin-bottom: 24px;
+
+  .filters-card {
+    border-radius: 8px;
+    box-shadow: 0 4px 8px $shadow-color;
+    background-color: $card-bg-color;
+  }
+
+  .filters-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .filter-field {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .clear-filters-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    align-self: center;
+  }
+}
+
+// Content card
+.content-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 8px $shadow-color;
+  background-color: $card-bg-color;
+  padding: 8px;
+  overflow: hidden;
+}
+
+// Loading container
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+  color: $light-text;
+}
+
+// Table styles
+.docentes-content {
+  width: 100%;
+}
+
+.table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.docentes-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 8px;
+
+  .header-cell {
+    color: $light-text;
+    font-weight: 500;
+    padding: 12px 16px;
+    font-size: 14px;
+    background-color: #fafafa;
+    border-bottom: 2px solid $primary-color;
+    white-space: nowrap;
+
+    mat-icon {
+      vertical-align: middle;
+      margin-right: 8px;
+      font-size: 18px;
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  .table-row {
+    transition: background-color 0.2s;
+    box-shadow: 0 2px 4px $shadow-color;
+    border-radius: 4px;
+    background-color: $card-bg-color;
+
+    &:hover {
+      background-color: rgba($primary-color, 0.04);
+    }
+  }
+
+  .expanded-row {
+    background-color: rgba($primary-color, 0.04);
+  }
+
+  td {
+    padding: 16px;
+    border-bottom: none;
+    border-top: 1px solid $border-color;
+
+    &:first-child {
+      border-left: 1px solid $border-color;
+      border-top-left-radius: 4px;
+      border-bottom-left-radius: 4px;
+    }
+
+    &:last-child {
+      border-right: 1px solid $border-color;
+      border-top-right-radius: 4px;
+      border-bottom-right-radius: 4px;
+    }
+  }
+
+  // Specific cell styles
+  .name-cell, .email-cell, .department-cell, .areas-cell, .account-cell, .actions-cell {
+    vertical-align: middle;
+  }
+
+  .name-content {
+    font-weight: 500;
+    color: $text-color;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .email-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .email-text {
+      color: $text-color;
+    }
+
+    .phone-text {
+      color: $light-text;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      .phone-icon {
+        font-size: 14px;
+        height: 14px;
+        width: 14px;
+      }
+    }
+  }
+
+  .department-info {
+    display: flex;
+    flex-direction: column;
+
+    .department-name {
+      font-weight: 500;
+      color: $text-color;
+    }
+
+    .department-code {
+      font-size: 12px;
+      color: $light-text;
+    }
+  }
+
+  .areas-info {
+    .areas-count {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+      color: $light-text;
+    }
+
+    .areas-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+
+      .area-chip {
+        background-color: rgba($primary-color, 0.1);
+        color: $primary-color;
+        font-size: 12px;
+        height: 24px;
+      }
+
+      .more-chip {
+        background-color: rgba($light-text, 0.1);
+        color: $light-text;
+        font-size: 12px;
+        height: 24px;
+      }
+    }
+  }
+
+  .account-cell {
+    .account-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+
+      .active-account {
+        color: $success-color;
+      }
+
+      .inactive-account {
+        color: $light-text;
+      }
+    }
+  }
+
+  .actions-cell {
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+  }
+}
+
+// Expanded detail row
+.expanded-detail {
+  .detail-container {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    background-color: rgba($primary-color, 0.04);
+    border-radius: 4px;
+    margin: 0 4px 16px 4px;
+
+    &.visible {
+      max-height: 500px;
+      transition: max-height 0.5s ease-in;
+    }
+  }
+
+  .detail-content {
+    padding: 16px;
+  }
+
+  .detail-section {
+    background-color: $card-bg-color;
+    border-radius: 4px;
+    padding: 16px;
+    box-shadow: 0 2px 4px $shadow-color;
+  }
+
+  .detail-title {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: $primary-color;
+    border-bottom: 1px solid $border-color;
+    padding-bottom: 8px;
+  }
+
+  .detail-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+  }
+
+  .detail-column {
+    flex: 1;
+    min-width: 250px;
+  }
+
+  .detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    mat-icon {
+      color: $primary-color;
+      margin-top: 2px;
+    }
+
+    .detail-text {
+      flex: 1;
+
+      .detail-label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: $light-text;
+      }
+
+      .detail-value {
+        color: $text-color;
+      }
+
+      .account-status-detail {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+
+        &.active-account {
+          color: $success-color;
+        }
+
+        &.inactive-account {
+          color: $warn-color;
+        }
+      }
+    }
+  }
+
+  .detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .area-chip-detail {
+    background-color: rgba($primary-color, 0.1);
+    color: $primary-color;
+  }
+}
+
+// Empty state
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    height: 64px;
+    width: 64px;
+    color: $light-text;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    color: $text-color;
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    color: $light-text;
+  }
+
+  &.mobile {
+    padding: 32px 16px;
+
+    .empty-icon {
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+    }
+  }
+}
+
+// Mobile cards view
+.mobile-cards {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding: 8px;
+}
+
+.mobile-card {
+  .docente-card {
+    box-shadow: 0 2px 8px $shadow-color;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .card-header-content {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .card-icon {
+    font-size: 32px;
+    height: 32px;
+    width: 32px;
+    color: $primary-color;
+
+    &.has-account {
+      color: $success-color;
+    }
+  }
+
+  .card-title-section {
+    flex: 1;
+
+    h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 500;
+    }
+  }
+
+  .card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+
+    .email-badge, .account-badge {
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
+    .email-badge {
+      background-color: rgba($primary-color, 0.1);
+      color: $primary-color;
+    }
+
+    .account-badge {
+      background-color: rgba($success-color, 0.1);
+      color: $success-color;
+
+      &:not(.active-account) {
+        background-color: rgba($light-text, 0.1);
+        color: $light-text;
+      }
+    }
+  }
+
+  .card-info {
+    margin: 12px 0;
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: $light-text;
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 16px;
+        height: 16px;
+        width: 16px;
+      }
+    }
+  }
+
+  .areas-preview {
+    margin-top: 12px;
+
+    .areas-label {
+      font-size: 14px;
+      color: $light-text;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .areas-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+
+    .area-chip-mobile {
+      background-color: rgba($primary-color, 0.1);
+      color: $primary-color;
+      font-size: 12px;
+      height: 24px;
+    }
+
+    .more-chip-mobile {
+      background-color: rgba($light-text, 0.1);
+      color: $light-text;
+      font-size: 12px;
+      height: 24px;
+    }
+  }
+
+  .card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    padding: 8px;
+    gap: 8px;
+
+    button {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  .mobile-detail {
+    padding: 0 16px 16px 16px;
+
+    .mobile-detail-content {
+      padding-top: 16px;
+    }
+
+    h4 {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      color: $primary-color;
+    }
+
+    .mobile-detail-item {
+      margin-bottom: 12px;
+
+      strong {
+        font-weight: 500;
+        color: $text-color;
+      }
+
+      .mobile-areas-list {
+        margin-top: 4px;
+        font-size: 14px;
+      }
+
+      .active-account {
+        color: $success-color;
+      }
+
+      .inactive-account {
+        color: $light-text;
+      }
+    }
+  }
+}
+
+// Media queries
+@media (max-width: 960px) {
+  .list-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+
+    .add-btn {
+      align-self: stretch;
+    }
+  }
+
+  .filters-content {
+    flex-direction: column;
+  }
+
+  .hidden-mobile {
+    display: none;
+  }
+
+  .mobile-cards {
+    display: flex;
+  }
+
+  .detail-grid {
+    flex-direction: column;
+  }
+}

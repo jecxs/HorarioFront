@@ -1,0 +1,153 @@
+<div class="dashboard-home">
+  <!-- Sección de bienvenida -->
+  <div class="welcome-section">
+    <div class="welcome-content">
+      <h1 class="welcome-title">¡Bienvenido al Sistema de Horarios!</h1>
+      <p class="welcome-subtitle">
+        Gestiona de manera eficiente los horarios académicos de tu institución
+      </p>
+      <div class="current-time">
+        <mat-icon>access_time</mat-icon>
+        <span>{{ currentTime | date:'EEEE, d MMMM y - HH:mm':'es' }}</span>
+      </div>
+    </div>
+    <div class="welcome-illustration">
+      <mat-icon class="illustration-icon">schedule</mat-icon>
+    </div>
+  </div>
+
+  <!-- Acciones rápidas -->
+  <div class="quick-actions-section">
+    <h2 class="section-title">
+      <mat-icon>flash_on</mat-icon>
+      Acciones Rápidas
+    </h2>
+    <div class="quick-actions-grid">
+      <button
+        *ngFor="let action of quickActions"
+        mat-raised-button
+        [color]="action.color"
+        class="quick-action-btn"
+        (click)="onQuickAction(action)"
+        matRipple>
+        <mat-icon>{{ action.icon }}</mat-icon>
+        <span>{{ action.title }}</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Grid principal de funcionalidades -->
+  <div class="main-features-section">
+    <h2 class="section-title">
+      <mat-icon>apps</mat-icon>
+      Módulos del Sistema
+    </h2>
+
+    <mat-grid-list
+      [cols]="(isHandset$ | async) ? 1 : 4"
+      rowHeight="280px"
+      gutterSize="24px"
+      class="dashboard-grid">
+
+      <mat-grid-tile *ngFor="let card of dashboardCards">
+        <mat-card
+          class="dashboard-card"
+          [class]="'card-' + card.color"
+          [class.disabled]="card.disabled"
+          (click)="onCardClick(card)"
+          matRipple
+          [matRippleDisabled]="!!card.disabled">
+
+          <mat-card-header class="card-header">
+            <div class="card-icon-container">
+              <mat-icon class="card-icon">{{ card.icon }}</mat-icon>
+            </div>
+            <div class="card-header-text">
+              <mat-card-title class="card-title">{{ card.title }}</mat-card-title>
+              <mat-card-subtitle *ngIf="card.stats" class="card-stats">
+                {{ card.stats }}
+              </mat-card-subtitle>
+            </div>
+          </mat-card-header>
+
+          <mat-card-content class="card-content">
+            <p class="card-description">{{ card.description }}</p>
+          </mat-card-content>
+
+          <mat-card-actions class="card-actions">
+            <button mat-button [color]="card.color" [disabled]="card.disabled">
+              <span>ACCEDER</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+      </mat-grid-tile>
+    </mat-grid-list>
+  </div>
+
+  <!-- Sección de estadísticas rápidas -->
+  <div class="stats-section">
+    <h2 class="section-title">
+      <mat-icon>analytics</mat-icon>
+      Resumen Estadístico
+    </h2>
+
+    <div class="stats-cards">
+      <mat-card class="stat-card stat-primary">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-icon">
+              <mat-icon>school</mat-icon>
+            </div>
+            <div class="stat-info">
+              <h3 class="stat-number">25</h3>
+              <p class="stat-label">Docentes Activos</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card stat-accent">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-icon">
+              <mat-icon>groups</mat-icon>
+            </div>
+            <div class="stat-info">
+              <h3 class="stat-number">15</h3>
+              <p class="stat-label">Grupos Activos</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card stat-warn">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-icon">
+              <mat-icon>event</mat-icon>
+            </div>
+            <div class="stat-info">
+              <h3 class="stat-number">120</h3>
+              <p class="stat-label">Clases Programadas</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card stat-success">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-icon">
+              <mat-icon>room</mat-icon>
+            </div>
+            <div class="stat-info">
+              <h3 class="stat-number">20</h3>
+              <p class="stat-label">Ambientes Disponibles</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

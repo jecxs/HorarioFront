@@ -1,0 +1,293 @@
+// src/app/features/docentes/components/docente-perfil/docente-perfil.component.scss
+
+// Variables
+$primary-color: #3f51b5;
+$accent-color: #ff4081;
+$warn-color: #f44336;
+$success-color: #4caf50;
+$background-color: #f5f7fa;
+$card-bg-color: #ffffff;
+$text-color: #333333;
+$light-text: #666666;
+$border-color: #e0e0e0;
+$shadow-color: rgba(0, 0, 0, 0.1);
+
+.docente-perfil-container {
+  padding: 24px;
+  background-color: $background-color;
+  min-height: 100%;
+}
+
+// Header
+.perfil-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24px;
+
+  .back-button {
+    margin-right: 16px;
+  }
+
+  .header-content {
+    .page-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0;
+      font-size: 28px;
+      color: $primary-color;
+
+      mat-icon {
+        font-size: 32px;
+        height: 32px;
+        width: 32px;
+      }
+    }
+
+    .page-subtitle {
+      margin: 8px 0 0 0;
+      color: $light-text;
+      font-size: 16px;
+    }
+  }
+}
+
+// Loading
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  gap: 16px;
+  color: $light-text;
+}
+
+// Profile card
+.perfil-card {
+  border-radius: 8px;
+  box-shadow: 0 4px 8px $shadow-color;
+  overflow: hidden;
+}
+
+// Basic info section
+.perfil-basic-info {
+  padding: 24px;
+  display: flex;
+  gap: 24px;
+
+  .info-avatar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+
+    .avatar-circle {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background-color: $primary-color;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .avatar-text {
+        font-size: 36px;
+        font-weight: 500;
+        color: white;
+      }
+    }
+
+    .account-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 12px;
+      background-color: rgba($light-text, 0.1);
+      color: $light-text;
+
+      &.has-account {
+        background-color: rgba($success-color, 0.1);
+        color: $success-color;
+      }
+
+      mat-icon {
+        font-size: 16px;
+        height: 16px;
+        width: 16px;
+      }
+    }
+  }
+
+  .info-details {
+    flex: 1;
+
+    .info-name {
+      margin: 0 0 16px 0;
+      font-size: 24px;
+      font-weight: 500;
+      color: $text-color;
+    }
+
+    .info-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+
+      mat-icon {
+        color: $primary-color;
+      }
+    }
+
+    .info-areas {
+      margin-top: 16px;
+
+      .areas-label {
+        display: block;
+        margin-bottom: 8px;
+        color: $light-text;
+      }
+
+      .area-chip {
+        background-color: rgba($primary-color, 0.1);
+        color: $primary-color;
+        margin-right: 8px;
+        margin-bottom: 8px;
+      }
+    }
+  }
+
+  .info-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    button {
+      min-width: 160px;
+    }
+  }
+}
+
+// Tab content
+.perfil-tabs {
+  .tab-content {
+    padding: 24px;
+  }
+}
+
+// Info sections
+.info-section {
+  margin-bottom: 32px;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    color: $primary-color;
+    border-bottom: 1px solid $border-color;
+    padding-bottom: 8px;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .info-item {
+    .info-label {
+      display: block;
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: $light-text;
+    }
+
+    .info-value {
+      color: $text-color;
+    }
+
+    &.areas-info {
+      grid-column: 1 / -1;
+    }
+
+    .areas-list {
+      ul {
+        margin: 8px 0;
+        padding-left: 20px;
+
+        li {
+          margin-bottom: 4px;
+        }
+      }
+    }
+
+    .account-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      &.active-account {
+        color: $success-color;
+      }
+
+      &.inactive-account {
+        color: $light-text;
+      }
+    }
+  }
+}
+
+// Empty state for tabs
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  text-align: center;
+
+  .empty-icon {
+    font-size: 64px;
+    height: 64px;
+    width: 64px;
+    color: $light-text;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-weight: 500;
+    color: $text-color;
+  }
+
+  p {
+    margin: 0;
+    color: $light-text;
+  }
+}
+
+// Media queries
+@media (max-width: 768px) {
+  .perfil-basic-info {
+    flex-direction: column;
+
+    .info-avatar {
+      align-items: center;
+    }
+
+    .info-actions {
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

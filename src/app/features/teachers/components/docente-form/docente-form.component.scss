@@ -1,0 +1,193 @@
+// src/app/features/docentes/components/docente-form/docente-form.component.scss
+
+// Variables
+$primary-color: #3f51b5;
+$accent-color: #ff4081;
+$warn-color: #f44336;
+$success-color: #4caf50;
+$background-color: #f5f7fa;
+$card-bg-color: #ffffff;
+$text-color: #333333;
+$light-text: #666666;
+$border-color: #e0e0e0;
+$shadow-color: rgba(0, 0, 0, 0.1);
+$info-bg-color: #e8f0fe;
+
+// Main container
+.docente-form-container {
+  min-width: 500px;
+  max-width: 800px;
+  padding: 16px;
+}
+
+// Dialog title
+.form-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: $primary-color;
+  font-size: 24px;
+  margin-bottom: 16px;
+
+  mat-icon {
+    font-size: 28px;
+    height: 28px;
+    width: 28px;
+  }
+}
+
+// Dialog content
+.form-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+// Form
+.docente-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Form sections
+.form-section {
+  padding: 16px;
+  background-color: $background-color;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px $shadow-color;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  margin: 0 0 16px 0;
+  color: $primary-color;
+  border-bottom: 1px solid $border-color;
+  padding-bottom: 8px;
+}
+
+// Full width form fields
+.full-width {
+  width: 100%;
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+// Field with action button
+.field-with-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+// Nested forms for department and knowledge area creation
+.nested-form {
+  margin-bottom: 24px;
+
+  .nested-form-card {
+    border-left: 4px solid $primary-color;
+  }
+
+  .nested-form-content {
+    padding: 16px 0;
+  }
+}
+
+// Info section
+.info-section {
+  margin-top: 8px;
+
+  .info-card {
+    background-color: $info-bg-color;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .info-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background-color: darken($info-bg-color, 5%);
+    color: $primary-color;
+    font-weight: 500;
+  }
+
+  .info-content {
+    padding: 16px;
+
+    p {
+      margin: 0 0 8px 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    ul {
+      margin: 8px 0;
+      padding-left: 24px;
+
+      li {
+        margin-bottom: 4px;
+      }
+    }
+  }
+}
+
+// Dialog actions
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 0 0 0;
+  gap: 16px;
+}
+
+.cancel-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Loading spinner
+mat-progress-spinner {
+  display: inline-block;
+  margin-right: 8px;
+}
+
+// Media queries
+@media (max-width: 600px) {
+  .docente-form-container {
+    min-width: auto;
+    width: 100%;
+    padding: 8px;
+  }
+
+  .field-with-action {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+
+    button {
+      align-self: flex-end;
+    }
+  }
+}
