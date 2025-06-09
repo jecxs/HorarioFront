@@ -6,6 +6,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { formatTimeDisplay } from '../../utils/time.utils';
 
 interface TimeValue {
   hour: number;
@@ -155,17 +156,7 @@ export class ModernTimePickerComponent implements ControlValueAccessor {
 
   getDisplayValue(): string {
     if (!this.currentValue) return '';
-    return this.formatTimeDisplay(this.currentValue);
-  }
-
-  private formatTimeDisplay(time: string): string {
-    const [hourStr, minuteStr] = time.split(':');
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-
-    return `${displayHour}:${this.formatNumber(minute)} ${period}`;
+    return formatTimeDisplay(this.currentValue);
   }
 
   formatNumber(num: number): string {

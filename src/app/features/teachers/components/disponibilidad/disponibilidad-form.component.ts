@@ -17,6 +17,7 @@ import {
   DAYS_OF_WEEK
 } from '../../models/disponibilidad.model';
 import { ModernTimePickerComponent } from './modern-time-picker.component';
+import { calculateDuration } from '../../utils/time.utils';
 
 @Component({
   selector: 'app-disponibilidad-form',
@@ -270,7 +271,7 @@ export class DisponibilidadFormComponent implements OnInit {
     }
 
     // Calcular duración
-    this.calculateDuration(startTime, endTime);
+    this.calculatedDuration = calculateDuration(startTime, endTime);
 
     // Verificar solapamientos
     this.checkOverlaps(day, startTime, endTime);
@@ -284,23 +285,6 @@ export class DisponibilidadFormComponent implements OnInit {
     this.overlappingAvailabilities = [];
   }
 
-  private calculateDuration(startTime: string, endTime: string): void {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
-    const durationMinutes = endMinutes - startMinutes;
-
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-
-    if (hours > 0) {
-      this.calculatedDuration = `${hours}h ${minutes > 0 ? minutes + 'min' : ''}`;
-    } else {
-      this.calculatedDuration = `${minutes}min`;
-    }
-  }
 
   private checkOverlaps(day: DayOfWeek, startTime: string, endTime: string): void {
     this.overlappingAvailabilities = this.existingAvailabilities.filter(availability => {

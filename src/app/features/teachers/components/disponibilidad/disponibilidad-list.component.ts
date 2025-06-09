@@ -26,6 +26,7 @@ import {
 import { DisponibilidadService } from '../../services/disponibilidad.service';
 import { DisponibilidadCalendarComponent } from './disponibilidad-calendar.component';
 import { DisponibilidadFormComponent } from './disponibilidad-form.component';
+import { formatTimeDisplay, calculateDuration } from '../../utils/time.utils';
 
 @Component({
   selector: 'app-disponibilidad-list',
@@ -150,34 +151,10 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
   }
 
   formatTime(time: string): string {
-    return this.formatTimeDisplay(time);
+    return formatTimeDisplay(time);
   }
-
-  private formatTimeDisplay(time: string): string {
-    const [hourStr, minuteStr] = time.split(':');
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-
-    return `${displayHour}:${minuteStr} ${period}`;
-  }
-
   calculateDuration(startTime: string, endTime: string): string {
-    const [startHour, startMinute] = startTime.split(':').map(Number);
-    const [endHour, endMinute] = endTime.split(':').map(Number);
-
-    const startMinutes = startHour * 60 + startMinute;
-    const endMinutes = endHour * 60 + endMinute;
-    const durationMinutes = endMinutes - startMinutes;
-
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes > 0 ? minutes + 'min' : ''}`;
-    }
-    return `${minutes}min`;
+    return calculateDuration(startTime, endTime);
   }
 
   hasAvailabilities(): boolean {
