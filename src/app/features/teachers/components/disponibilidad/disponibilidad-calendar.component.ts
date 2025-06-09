@@ -3,6 +3,7 @@ import { Component, OnInit, Input, OnChanges, SimpleChanges } from '@angular/cor
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { formatTimeDisplay } from '../../utils/time.utils';
 
 import {
   TeacherAvailabilityResponse,
@@ -125,7 +126,7 @@ export class DisponibilidadCalendarComponent implements OnInit, OnChanges {
         const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
         slots.push({
           time,
-          displayTime: this.formatTimeDisplay(time),
+          displayTime: formatTimeDisplay(time),
           hour
         });
       }
@@ -134,15 +135,6 @@ export class DisponibilidadCalendarComponent implements OnInit, OnChanges {
     return slots;
   }
 
-  private formatTimeDisplay(time: string): string {
-    const [hourStr, minuteStr] = time.split(':');
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-
-    return `${displayHour}:${minuteStr} ${period}`;
-  }
 
   updateCalendarWithAvailabilities(): void {
     // Limpiar disponibilidades existentes

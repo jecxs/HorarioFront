@@ -19,7 +19,17 @@ interface ExtendedAvailabilityRequest extends TeacherAvailabilityRequest {
 })
 export class DisponibilidadService extends BaseApiService {
 
-  private readonly BASE_PATH = '/api/protected/teachers';
+  // Base path de la API para las operaciones de disponibilidad de docentes
+  // environment.apiBaseUrl ya incluye el prefijo '/api', por lo que
+  // aquí sólo indicamos la ruta protegida relativa
+  private readonly BASE_PATH = '/protected/teachers';
+
+  /**
+   * Normaliza una hora para asegurarnos de enviarla en formato HH:mm:ss
+   */
+  private normalizeTime(time: string): string {
+    return time.length === 5 ? `${time}:00` : time;
+  }
 
   /**
    * Obtiene todas las disponibilidades de un docente
@@ -59,8 +69,8 @@ export class DisponibilidadService extends BaseApiService {
       `${this.BASE_PATH}/${teacherUuid}/availabilities`,
       {
         dayOfWeek: availability.dayOfWeek,
-        startTime: availability.startTime,
-        endTime: availability.endTime
+        startTime: this.normalizeTime(availability.startTime),
+        endTime: this.normalizeTime(availability.endTime)
       }
     );
   }
@@ -74,7 +84,11 @@ export class DisponibilidadService extends BaseApiService {
   ): Observable<ApiResponse<TeacherAvailabilityResponse>> {
     return this.put<TeacherAvailabilityResponse>(
       `${this.BASE_PATH}/availabilities/${availabilityUuid}`,
-      availability
+      {
+        ...availability,
+        startTime: this.normalizeTime(availability.startTime),
+        endTime: this.normalizeTime(availability.endTime)
+      }
     );
   }
 
@@ -138,8 +152,8 @@ export class DisponibilidadService extends BaseApiService {
           `${this.BASE_PATH}/${teacherUuid}/availabilities`,
           {
             dayOfWeek: availability.dayOfWeek,
-            startTime: availability.startTime,
-            endTime: availability.endTime
+            startTime: this.normalizeTime(availability.startTime),
+            endTime: this.normalizeTime(availability.endTime)
           }
         );
       })
