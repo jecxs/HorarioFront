@@ -38,8 +38,17 @@ export const routes: Routes = [
       {
         path: 'docentes',
         loadChildren: () => import('./features/teachers/docentes.routes').then(routes => routes.DOCENTES_ROUTES)
+      },
+      {
+        path: 'periodos',
+        loadComponent: () =>
+          import('./features/periods/components/period-list.component').then(m => m.PeriodListComponent)
+      },
+      {
+        path: 'grupos',
+        loadComponent: () =>
+          import('./features/student-groups/components/student-groups.component').then(m => m.StudentGroupsComponent)
       }
-      // Carreras (para futuro desarrollo)
 
     ]
   },

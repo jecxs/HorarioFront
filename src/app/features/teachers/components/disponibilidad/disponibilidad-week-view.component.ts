@@ -156,10 +156,10 @@ export class DisponibilidadWeekViewComponent implements OnChanges {
   timeSlots: TimeSlot[] = [];
   selectedBlock: TeacherAvailabilityResponse | null = null;
 
-  // Configuración de la vista
+  // Configuración de la vista - REDUCIDO para ser más compacto
   readonly START_HOUR = 6;  // 6:00 AM
   readonly END_HOUR = 22;   // 10:00 PM
-  readonly HOUR_HEIGHT = 60; // pixels por hora
+  readonly HOUR_HEIGHT = 40; // pixels por hora (reducido de 60 a 40)
 
   private readonly daysOfWeek: { day: DayOfWeek; displayName: string; shortName: string }[] = [
     { day: 'MONDAY', displayName: 'Lunes', shortName: 'LUN' },

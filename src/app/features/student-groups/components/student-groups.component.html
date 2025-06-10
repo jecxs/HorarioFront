@@ -1,0 +1,210 @@
+<!-- src/app/features/student-groups/components/student-groups.component.html -->
+<div class="groups-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="page-title">
+          <mat-icon>groups</mat-icon>
+          Grupos de Estudiantes
+        </h1>
+        <p class="page-subtitle">
+          Gestiona las secciones de estudiantes organizadas por carreras y ciclos
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="openCreateDialog()"
+          class="create-button">
+          <mat-icon>add</mat-icon>
+          <span [class.hide-text]="isHandset$ | async">Crear Grupo</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Current Period Alert -->
+    <div class="period-info" *ngIf="currentPeriod">
+      <mat-icon>info</mat-icon>
+      <span>
+        Los grupos se crearán en el periodo:
+        <strong>{{ currentPeriod.name }}</strong>
+        ({{ currentPeriod.startDate | date }} - {{ currentPeriod.endDate | date }})
+      </span>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section" [class.mobile]="isHandset$ | async">
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ totalGroups }}</div>
+          <div class="stat-label">Total de Grupos</div>
+          <mat-icon class="stat-icon">groups</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card current-period" *ngIf="currentPeriod">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ groupsInCurrentPeriod }}</div>
+          <div class="stat-label">En Periodo Actual</div>
+          <mat-icon class="stat-icon">event</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ careers.length }}</div>
+          <div class="stat-label">Carreras Activas</div>
+          <mat-icon class="stat-icon">school</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filters Section -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-content" [class.mobile]="isHandset$ | async">
+        <div class="filters-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Filtrar por Carrera</mat-label>
+            <mat-select [formControl]="selectedCareerFilter" [value]="selectedCareerFilter.value">
+              <mat-option value="">Todas las carreras</mat-option>
+              <mat-option *ngFor="let career of careers" [value]="career.uuid">
+                {{ career.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Filtrar por Ciclo</mat-label>
+            <mat-select [formControl]="selectedCycleFilter" [value]="selectedCycleFilter.value">
+              <mat-option value="">Todos los ciclos</mat-option>
+              <mat-option *ngFor="let cycle of getAvailableCycles()" [value]="cycle">
+                Ciclo {{ cycle }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field search-field">
+            <mat-label>Buscar grupo</mat-label>
+            <input matInput [formControl]="searchFilter" placeholder="Nombre del grupo...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <button
+            mat-stroked-button
+            color="accent"
+            (click)="clearFilters()"
+            class="clear-filters-btn">
+            <mat-icon>clear</mat-icon>
+            <span [class.hide-text]="isHandset$ | async">Limpiar</span>
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Groups by Career -->
+  <div class="groups-content">
+    <div *ngIf="filteredGroupsByCareer.length === 0" class="no-data">
+      <mat-icon>info</mat-icon>
+      <h3>No se encontraron grupos</h3>
+      <p>No hay grupos que coincidan con los filtros aplicados.</p>
+      <button mat-button color="primary" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div *ngFor="let careerData of filteredGroupsByCareer" class="career-section">
+      <mat-card class="career-card">
+        <mat-card-header class="career-header">
+          <div class="career-info">
+            <div class="career-title">
+              <h2>{{ careerData.career.name }}</h2>
+              <mat-chip class="modality-chip">
+                {{ careerData.career.modality.name }}
+              </mat-chip>
+            </div>
+            <div class="career-stats">
+              <span class="group-count">
+                <mat-icon>groups</mat-icon>
+                {{ careerData.totalGroups }} grupos
+              </span>
+              <span class="cycles-info">
+                <mat-icon>layers</mat-icon>
+                {{ careerData.career.modality.durationYears * 2 }} ciclos
+              </span>
+            </div>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content class="groups-grid">
+          <div
+            *ngFor="let group of careerData.groups"
+            class="group-card"
+            [class.current-period]="isCurrentPeriodGroup(group)">
+
+            <div class="group-header">
+              <div class="group-name">
+                <h3>{{ group.name }}</h3>
+                <mat-chip
+                  class="period-chip"
+                  [class.current]="isCurrentPeriodGroup(group)">
+                  {{ group.periodName }}
+                </mat-chip>
+              </div>
+
+              <div class="group-actions">
+                <button
+                  mat-icon-button
+                  (click)="openEditDialog(group)"
+                  matTooltip="Editar grupo">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDelete(group)"
+                  matTooltip="Eliminar grupo">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="group-details">
+              <div class="detail-item">
+                <mat-icon>layers</mat-icon>
+                <span>Ciclo {{ group.cycleNumber }}</span>
+              </div>
+              <div class="detail-item">
+                <mat-icon>event</mat-icon>
+                <span>{{ group.periodName }}</span>
+              </div>
+            </div>
+
+            <!-- Badge para periodo actual -->
+            <div class="current-badge" *ngIf="isCurrentPeriodGroup(group)">
+              <mat-icon>star</mat-icon>
+              <span>Periodo Actual</span>
+            </div>
+          </div>
+
+          <!-- Placeholder para crear nuevo grupo en esta carrera -->
+          <div class="add-group-card" (click)="openCreateDialog()">
+            <mat-icon>add</mat-icon>
+            <span>Agregar grupo a {{ careerData.career.name }}</span>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

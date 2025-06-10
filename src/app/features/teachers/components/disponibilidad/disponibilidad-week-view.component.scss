@@ -65,9 +65,10 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 
       .schedule-grid {
         display: grid;
-        grid-template-columns: 80px repeat(7, 1fr);
-        min-width: 700px;
+        grid-template-columns: 60px repeat(7, 1fr); // Reducido el ancho de la columna de tiempo
+        min-width: 580px; // Reducido el ancho mínimo
         background-color: $card-bg-color;
+        font-size: 12px; // Reducido el tamaño de fuente general
 
         .time-header {
           background-color: $background-color;
@@ -76,14 +77,14 @@ $shadow-color: rgba(0, 0, 0, 0.1);
         }
 
         .day-header {
-          padding: 12px 8px;
+          padding: 8px 6px; // Reducido el padding
           background-color: $background-color;
           border-bottom: 2px solid $border-color;
           border-right: 1px solid $border-color;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 3px; // Reducido el gap
           position: relative;
           transition: background-color 0.2s ease;
 
@@ -96,50 +97,50 @@ $shadow-color: rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 2px;
+            gap: 1px; // Reducido el gap
 
             .day-name {
-              font-size: 13px;
+              font-size: 11px; // Reducido
               font-weight: 600;
               color: $text-color;
               text-align: center;
             }
 
             .day-short {
-              font-size: 11px;
+              font-size: 9px; // Reducido
               color: $light-text;
             }
 
             .availability-count {
-              font-size: 10px;
+              font-size: 8px; // Reducido
               color: $available-color;
               background-color: rgba($available-color, 0.1);
-              padding: 2px 6px;
-              border-radius: 8px;
-              margin-top: 2px;
+              padding: 1px 4px; // Reducido
+              border-radius: 6px; // Reducido
+              margin-top: 1px; // Reducido
             }
           }
 
           .add-day-button {
             position: absolute;
-            top: 4px;
-            right: 4px;
-            width: 20px;
-            height: 20px;
+            top: 2px; // Reducido
+            right: 2px; // Reducido
+            width: 16px; // Reducido
+            height: 16px; // Reducido
             opacity: 0;
             transition: opacity 0.2s ease;
 
             ::ng-deep .mat-mdc-button-base {
               min-width: unset;
-              width: 20px;
-              height: 20px;
+              width: 16px; // Reducido
+              height: 16px; // Reducido
               padding: 0;
             }
 
             mat-icon {
-              font-size: 14px;
-              height: 14px;
-              width: 14px;
+              font-size: 12px; // Reducido
+              height: 12px; // Reducido
+              width: 12px; // Reducido
             }
           }
 
@@ -149,7 +150,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
         }
 
         .time-slot {
-          padding: 8px 4px;
+          padding: 4px 3px; // Reducido el padding
           border-bottom: 1px solid rgba($border-color, 0.3);
           border-right: 1px solid $border-color;
           background-color: rgba($background-color, 0.5);
@@ -157,6 +158,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
           align-items: flex-start;
           justify-content: center;
           position: relative;
+          min-height: 40px; // HOUR_HEIGHT reducido
 
           &.major-hour {
             background-color: $background-color;
@@ -164,7 +166,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
           }
 
           .time-label {
-            font-size: 11px;
+            font-size: 9px; // Reducido
             color: $light-text;
             font-weight: 500;
             writing-mode: horizontal-tb;
@@ -172,7 +174,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
         }
 
         .day-slot {
-          min-height: 60px; // HOUR_HEIGHT
+          min-height: 40px; // HOUR_HEIGHT reducido
           border-bottom: 1px solid rgba($border-color, 0.3);
           border-right: 1px solid rgba($border-color, 0.5);
           position: relative;
@@ -184,10 +186,10 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 
           .availability-block {
             position: absolute;
-            left: 2px;
-            right: 2px;
+            left: 1px; // Reducido
+            right: 1px; // Reducido
             background: linear-gradient(135deg, rgba($available-color, 0.9), rgba($available-color, 0.7));
-            border-radius: 4px;
+            border-radius: 3px; // Reducido
             cursor: pointer;
             transition: all 0.2s ease;
             border: 1px solid rgba($available-color, 0.8);
@@ -200,7 +202,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
             }
 
             .block-content {
-              padding: 4px 6px;
+              padding: 2px 4px; // Reducido el padding
               height: 100%;
               display: flex;
               flex-direction: column;
@@ -208,29 +210,29 @@ $shadow-color: rgba(0, 0, 0, 0.1);
               position: relative;
 
               .block-time {
-                font-size: 10px;
+                font-size: 8px; // Reducido
                 font-weight: 600;
                 color: white;
                 line-height: 1;
               }
 
               .block-duration {
-                font-size: 9px;
+                font-size: 7px; // Reducido
                 color: rgba(white, 0.9);
                 line-height: 1;
               }
 
               .block-actions {
                 position: absolute;
-                top: 2px;
-                right: 2px;
+                top: 1px; // Reducido
+                right: 1px; // Reducido
                 opacity: 0;
                 transition: opacity 0.2s ease;
 
                 .action-icon {
-                  font-size: 12px;
-                  height: 12px;
-                  width: 12px;
+                  font-size: 10px; // Reducido
+                  height: 10px; // Reducido
+                  width: 10px; // Reducido
                   color: white;
                 }
               }
@@ -238,23 +240,6 @@ $shadow-color: rgba(0, 0, 0, 0.1);
 
             &:hover .block-actions {
               opacity: 1;
-            }
-          }
-
-          .quarter-indicators {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 100%;
-            pointer-events: none;
-
-            .quarter-line {
-              position: absolute;
-              left: 0;
-              right: 0;
-              height: 1px;
-              background-color: rgba($primary-color, 0.2);
             }
           }
         }
@@ -272,49 +257,49 @@ $shadow-color: rgba(0, 0, 0, 0.1);
   }
 }
 
-// Responsive
+// Responsive - Ajustado para el nuevo tamaño
 @media (max-width: 768px) {
   .week-view-container {
     .schedule-card .schedule-content {
       .schedule-grid {
-        grid-template-columns: 60px repeat(7, minmax(80px, 1fr));
-        min-width: 600px;
+        grid-template-columns: 50px repeat(7, minmax(65px, 1fr)); // Más compacto
+        min-width: 500px; // Reducido para mobile
 
         .day-header {
-          padding: 8px 4px;
+          padding: 6px 3px; // Más compacto
 
           .day-info {
             .day-name {
-              font-size: 11px;
-            }
-
-            .day-short {
               font-size: 10px;
             }
 
+            .day-short {
+              font-size: 8px;
+            }
+
             .availability-count {
-              font-size: 9px;
+              font-size: 7px;
             }
           }
         }
 
         .time-slot {
-          padding: 6px 2px;
+          padding: 3px 2px; // Más compacto
 
           .time-label {
-            font-size: 10px;
+            font-size: 8px;
           }
         }
 
         .day-slot .availability-block .block-content {
-          padding: 2px 4px;
+          padding: 1px 2px; // Más compacto
 
           .block-time {
-            font-size: 9px;
+            font-size: 7px;
           }
 
           .block-duration {
-            font-size: 8px;
+            font-size: 6px;
           }
         }
       }
@@ -327,7 +312,7 @@ $shadow-color: rgba(0, 0, 0, 0.1);
     .schedule-card {
       .schedule-header {
         flex-direction: column;
-        gap: 8px;
+        gap: 6px; // Reducido
         align-items: flex-start;
 
         .view-legend {
@@ -336,8 +321,8 @@ $shadow-color: rgba(0, 0, 0, 0.1);
       }
 
       .schedule-content .schedule-grid {
-        grid-template-columns: 50px repeat(7, minmax(70px, 1fr));
-        min-width: 540px;
+        grid-template-columns: 45px repeat(7, minmax(60px, 1fr)); // Aún más compacto
+        min-width: 470px; // Reducido para pantallas pequeñas
       }
     }
   }
