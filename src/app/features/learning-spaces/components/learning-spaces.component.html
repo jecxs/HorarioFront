@@ -1,0 +1,269 @@
+<!-- src/app/features/learning-spaces/components/learning-spaces.component.html -->
+<div class="spaces-container">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1 class="page-title">
+          <mat-icon>room</mat-icon>
+          Ambientes de Aprendizaje
+        </h1>
+        <p class="page-subtitle">
+          Gestiona las aulas, laboratorios y espacios educativos de la institución
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          mat-stroked-button
+          color="accent"
+          (click)="openCreateSpecialtyDialog()"
+          class="specialty-button">
+          <mat-icon>add_business</mat-icon>
+          <span [class.hide-text]="isHandset$ | async">Nueva Especialidad</span>
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="openCreateSpaceDialog()"
+          class="create-button">
+          <mat-icon>add</mat-icon>
+          <span [class.hide-text]="isHandset$ | async">Crear Ambiente</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section" [class.mobile]="isHandset$ | async">
+    <mat-card class="stat-card total">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ totalSpaces }}</div>
+          <div class="stat-label">Total Ambientes</div>
+          <mat-icon class="stat-icon">room</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card theoretical">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ theoreticalSpaces }}</div>
+          <div class="stat-label">Aulas Teóricas</div>
+          <mat-icon class="stat-icon">menu_book</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card practical">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ practicalSpaces }}</div>
+          <div class="stat-label">Laboratorios</div>
+          <mat-icon class="stat-icon">science</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="stat-card capacity">
+      <mat-card-content>
+        <div class="stat-content">
+          <div class="stat-number">{{ totalCapacity }}</div>
+          <div class="stat-label">Capacidad Total</div>
+          <mat-icon class="stat-icon">people</mat-icon>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Filters Section -->
+  <mat-card class="filters-card">
+    <mat-card-content>
+      <div class="filters-content" [class.mobile]="isHandset$ | async">
+        <div class="filters-row">
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Tipo de Ambiente</mat-label>
+            <mat-select [formControl]="selectedTypeFilter">
+              <mat-option value="">Todos los tipos</mat-option>
+              <mat-option *ngFor="let type of teachingTypes" [value]="type.name">
+                <div class="type-option">
+                  <mat-icon>{{ getTypeIcon(type.name) }}</mat-icon>
+                  {{ getTypeDisplayName(type.name) }}
+                </div>
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Especialidad</mat-label>
+            <mat-select [formControl]="selectedSpecialtyFilter">
+              <mat-option value="">Todas las especialidades</mat-option>
+              <mat-option *ngFor="let specialty of specialties" [value]="specialty.uuid">
+                {{ specialty.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field">
+            <mat-label>Capacidad mínima</mat-label>
+            <input matInput type="number" [formControl]="capacityFilter" placeholder="Ej: 20">
+            <mat-icon matSuffix>people</mat-icon>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter-field search-field">
+            <mat-label>Buscar ambiente</mat-label>
+            <input matInput [formControl]="searchFilter" placeholder="Nombre del ambiente...">
+            <mat-icon matSuffix>search</mat-icon>
+          </mat-form-field>
+
+          <button
+            mat-stroked-button
+            color="accent"
+            (click)="clearFilters()"
+            class="clear-filters-btn">
+            <mat-icon>clear</mat-icon>
+            <span [class.hide-text]="isHandset$ | async">Limpiar</span>
+          </button>
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Spaces by Type -->
+  <div class="spaces-content">
+    <div *ngIf="filteredSpacesByType.length === 0" class="no-data">
+      <mat-icon>info</mat-icon>
+      <h3>No se encontraron ambientes</h3>
+      <p>No hay ambientes que coincidan con los filtros aplicados.</p>
+      <button mat-button color="primary" (click)="clearFilters()">
+        Limpiar filtros
+      </button>
+    </div>
+
+    <div *ngFor="let typeData of filteredSpacesByType" class="type-section">
+      <mat-card class="type-card">
+        <mat-card-header class="type-header">
+          <div class="type-info">
+            <div class="type-title">
+              <h2>
+                <mat-icon [style.color]="getTypeColor(typeData.type.name) === 'primary' ? '#1976d2' : '#7b1fa2'">
+                  {{ getTypeIcon(typeData.type.name) }}
+                </mat-icon>
+                Ambientes {{ getTypeDisplayName(typeData.type.name) }}
+              </h2>
+            </div>
+            <div class="type-stats">
+              <span class="stat-item">
+                <mat-icon>room</mat-icon>
+                {{ typeData.totalSpaces }} ambientes
+              </span>
+              <span class="stat-item">
+                <mat-icon>people</mat-icon>
+                {{ typeData.totalCapacity }} personas
+              </span>
+              <span class="stat-item">
+                <mat-icon>trending_up</mat-icon>
+                Promedio: {{ typeData.averageCapacity }}
+              </span>
+            </div>
+          </div>
+        </mat-card-header>
+
+        <mat-card-content class="spaces-grid">
+          <div
+            *ngFor="let space of typeData.spaces"
+            class="space-card"
+            [class]="getTypeColor(typeData.type.name)">
+
+            <div class="space-header">
+              <div class="space-name">
+                <h3>{{ space.name }}</h3>
+                <div class="space-badges">
+                  <mat-chip
+                    class="capacity-chip"
+                    [color]="getCapacityRangeColor(space.capacity)">
+                    <mat-icon>people</mat-icon>
+                    {{ space.capacity }}
+                  </mat-chip>
+                  <mat-chip
+                    *ngIf="space.specialty"
+                    class="specialty-chip">
+                    {{ space.specialty.name }}
+                  </mat-chip>
+                </div>
+              </div>
+
+              <div class="space-actions">
+                <button
+                  mat-icon-button
+                  (click)="openEditSpaceDialog(space)"
+                  matTooltip="Editar ambiente">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmDeleteSpace(space)"
+                  matTooltip="Eliminar ambiente">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="space-details">
+              <div class="detail-row">
+                <div class="detail-item">
+                  <mat-icon>{{ getTypeIcon(space.teachingType.name) }}</mat-icon>
+                  <span>{{ getTypeDisplayName(space.teachingType.name) }}</span>
+                </div>
+                <div class="detail-item">
+                  <mat-icon>people</mat-icon>
+                  <span>{{ getCapacityRangeText(space.capacity) }} ({{ space.capacity }})</span>
+                </div>
+              </div>
+
+              <div class="detail-row" *ngIf="space.specialty">
+                <div class="detail-item specialty-detail">
+                  <mat-icon>precision_manufacturing</mat-icon>
+                  <div class="specialty-info">
+                    <span class="specialty-name">{{ space.specialty.name }}</span>
+                    <span class="specialty-desc" *ngIf="space.specialty.description">
+                      {{ space.specialty.description }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="detail-row" *ngIf="space.specialty && space.specialty.department">
+                <div class="detail-item">
+                  <mat-icon>business</mat-icon>
+                  <span>{{ space.specialty.department.name }}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicador visual del tipo -->
+            <div class="type-indicator" [class]="typeData.type.name.toLowerCase()">
+              <mat-icon>{{ getTypeIcon(typeData.type.name) }}</mat-icon>
+            </div>
+          </div>
+
+          <!-- Placeholder para crear nuevo ambiente de este tipo -->
+          <div class="add-space-card" (click)="openCreateSpaceDialog()">
+            <mat-icon>add</mat-icon>
+            <span>Agregar {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}</span>
+          </div>
+
+          <!-- Placeholder para crear por lotes -->
+          <div class="add-batch-card" (click)="openBatchCreateDialog()">
+            <mat-icon>playlist_add</mat-icon>
+            <span>Crear múltiples {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}</span>
+            <small>Crear varios ambientes con patrón de nombres</small>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+</div>

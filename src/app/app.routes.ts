@@ -48,7 +48,20 @@ export const routes: Routes = [
         path: 'grupos',
         loadComponent: () =>
           import('./features/student-groups/components/student-groups.component').then(m => m.StudentGroupsComponent)
-      }
+      },
+      {
+        path: 'ambientes',
+        loadComponent: () =>
+          import('./features/learning-spaces/components/learning-spaces.component').then(m => m.LearningSpacesComponent)
+      },
+      {
+        path: 'cursos', // 👈 NUEVA RUTA
+        loadChildren: () => import('./features/courses/courses.routes').then(routes => routes.COURSES_ROUTES)
+      },
+      {
+        path: 'turnos',
+        loadComponent: () => import('./features/time-slots/components/time-slots.component').then(m => m.TimeSlotsComponent)
+      },
 
     ]
   },
