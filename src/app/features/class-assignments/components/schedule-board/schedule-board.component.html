@@ -127,152 +127,215 @@
   </mat-card>
 
   <!-- Panel de asignación rápida -->
-  <mat-card class="quick-assign-panel">
+  <mat-card class="quick-assign-panel" *ngIf="isIntelliSenseEnabled">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>flash_on</mat-icon>
-        Asignación Rápida
+        Asignación Rápida Inteligente
       </mat-card-title>
+      <mat-card-subtitle>
+        Complete los campos para habilitar la selección de horas
+      </mat-card-subtitle>
     </mat-card-header>
 
     <mat-card-content>
       <form [formGroup]="quickAssignForm" class="quick-assign-form">
         <div class="form-row">
+          <!-- Grupo -->
           <mat-form-field appearance="outline" class="form-field">
-            <mat-label>Grupo</mat-label>
+            <mat-label>Grupo de Estudiantes</mat-label>
             <mat-select formControlName="group" required>
+              <mat-option value="">Seleccionar grupo</mat-option>
               <mat-option *ngFor="let group of studentGroups" [value]="group.uuid">
-                <div class="group-option">
-                  <div class="group-name">{{ group.name }}</div>
-                  <div class="group-cycle">{{ group.cycle.name }} - {{ group.cycle.career.name }}</div>
+                <div class="option-with-info">
+                  <span class="option-main">{{ group.name }}</span>
+                  <span class="option-sub">Ciclo {{ group.cycleNumber }}</span>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Seleccione el grupo de estudiantes</mat-hint>
+            <mat-hint>Seleccione el grupo para filtrar cursos compatibles</mat-hint>
           </mat-form-field>
 
+          <!-- Curso -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Curso</mat-label>
-            <mat-select formControlName="course" required>
+            <mat-select formControlName="course" [disabled]="!quickAssignForm.value.group" required>
+              <mat-option value="">Seleccionar curso</mat-option>
               <mat-option *ngFor="let course of availableCourses" [value]="course.uuid">
                 <div class="course-option">
-                  <div class="course-code">{{ course.code }}</div>
-                  <div class="course-name">{{ course.name }}</div>
-                  <mat-chip-set>
-                    <mat-chip [color]="getCourseTypeColor(course)" size="small">
-                      {{ getCourseTypeText(course) }}
+                  <div class="course-info">
+                    <span class="course-code">{{ course.code }}</span>
+                    <span class="course-name">{{ course.name }}</span>
+                  </div>
+                  <mat-chip-set class="course-chips">
+                    <mat-chip [color]="getCourseType(course) === 'THEORY' ? 'primary' : getCourseType(course) === 'PRACTICE' ? 'warn' : 'accent'">
+                      {{ getCourseType(course) === 'THEORY' ? 'Teórico' : getCourseType(course) === 'PRACTICE' ? 'Práctico' : 'Mixto' }}
                     </mat-chip>
-                    <mat-chip color="primary" size="small">
-                      {{ course.totalWeeklyHours }}h/sem
-                    </mat-chip>
+                    <mat-chip>{{ course.weeklyTheoryHours + course.weeklyPracticeHours }}h/sem</mat-chip>
                   </mat-chip-set>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Curso a asignar</mat-hint>
+            <mat-hint>Filtrado por ciclo del grupo seleccionado</mat-hint>
           </mat-form-field>
+        </div>
 
+        <div class="form-row">
+          <!-- Docente -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Docente</mat-label>
-            <mat-select formControlName="teacher" required>
+            <mat-select formControlName="teacher" [disabled]="!quickAssignForm.value.course" required>
+              <mat-option value="">Seleccionar docente</mat-option>
               <mat-option *ngFor="let teacher of eligibleTeachers" [value]="teacher.uuid">
                 <div class="teacher-option">
-                  <div class="teacher-name">{{ teacher.firstName }} {{ teacher.lastName }}</div>
-                  <div class="teacher-areas">
-                    {{ teacher.knowledgeAreas?.map(area => area.name).join(', ') || 'Sin áreas asignadas' }}
-                  </div>
-                  <mat-chip-set>
-                    <mat-chip color="accent" size="small">
-                      {{ teacher.academicDepartment?.name || 'Sin departamento' }}
-                    </mat-chip>
-                  </mat-chip-set>
+                  <span class="teacher-name">{{ teacher.fullName }}</span>
+                  <span class="teacher-areas">{{ teacher.knowledgeAreas[0]?.name }}</span>
+                  <mat-icon *ngIf="teacher.totalAvailabilities < 5"
+                            color="warn"
+                            matTooltip="Pocas horas disponibles">
+                    warning
+                  </mat-icon>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Docente responsable</mat-hint>
+            <mat-hint>Filtrado por área de conocimiento del curso</mat-hint>
           </mat-form-field>
-        </div>
 
-        <div class="form-row">
+          <!-- Aula -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Aula</mat-label>
-            <mat-select formControlName="space" required>
-              <mat-option *ngFor="let space of eligibleSpaces" [value]="space.uuid">
-                <div class="space-option">
-                  <div class="space-name">{{ space.name }}</div>
-                  <div class="space-capacity">Capacidad: {{ space.capacity }} estudiantes</div>
-                  <div class="space-specialty" *ngIf="space.specialty">
-                    Especialidad: {{ space.specialty.name }}
+            <mat-select formControlName="space" [disabled]="!quickAssignForm.value.course" required>
+              <mat-option value="">Seleccionar aula</mat-option>
+              <mat-optgroup *ngFor="let type of ['THEORY', 'PRACTICE']"
+                            [label]="type === 'THEORY' ? 'Aulas Teóricas' : 'Laboratorios'">
+                <mat-option *ngFor="let space of getSpacesByType(type)" [value]="space.uuid">
+                  <div class="space-option">
+                    <span class="space-name">{{ space.name }}</span>
+                    <span class="space-info">
+                    <mat-icon>people</mat-icon>
+                      {{ space.capacity }}
+                  </span>
+                    <mat-chip *ngIf="space.specialty" color="accent">
+                      {{ space.specialty.name }}
+                    </mat-chip>
                   </div>
-                  <mat-chip-set>
-                    <mat-chip [color]="space.teachingType?.name === 'PRACTICE' ? 'warn' : 'primary'" size="small">
-                      {{ space.teachingType?.name === 'PRACTICE' ? 'Laboratorio' : 'Teórico' }}
-                    </mat-chip>
-                    <mat-chip color="accent" size="small" *ngIf="space.hasProjector">
-                      <mat-icon fontIcon="videocam"></mat-icon>
-                      Proyector
-                    </mat-chip>
-                    <mat-chip color="accent" size="small" *ngIf="space.hasComputers">
-                      <mat-icon fontIcon="computer"></mat-icon>
-                      PC
-                    </mat-chip>
-                  </mat-chip-set>
-                </div>
-              </mat-option>
+                </mat-option>
+              </mat-optgroup>
             </mat-select>
-            <mat-hint>Aula o laboratorio</mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="form-field">
-            <mat-label>Día</mat-label>
-            <mat-select formControlName="dayOfWeek" required>
-              <mat-option *ngFor="let day of daysOfWeek" [value]="day">
-                {{ dayLabels[day] }}
-              </mat-option>
-            </mat-select>
-            <mat-hint>Día de la semana</mat-hint>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="form-field">
-            <mat-label>Turno</mat-label>
-            <mat-select formControlName="timeSlot" required>
-              <mat-option *ngFor="let timeSlot of timeSlots" [value]="timeSlot.uuid">
-                <div class="timeslot-option">
-                  <div class="slot-name">{{ timeSlot.name }}</div>
-                  <div class="slot-time">
-                    {{ timeSlot.startTime | slice:0:5 }} - {{ timeSlot.endTime | slice:0:5 }}
-                  </div>
-                </div>
-              </mat-option>
-            </mat-select>
-            <mat-hint>Horario de clase</mat-hint>
+            <mat-hint>Filtrado por tipo de curso y especialidad</mat-hint>
           </mat-form-field>
         </div>
 
         <div class="form-row">
-          <mat-form-field appearance="outline" class="form-field notes-field">
-            <mat-label>Notas (opcional)</mat-label>
-            <mat-input formControlName="notes" placeholder="Observaciones adicionales"></mat-input>
-            <mat-hint>Información adicional sobre la asignación</mat-hint>
+          <!-- Día -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Día de la Semana</mat-label>
+            <mat-select formControlName="dayOfWeek" required>
+              <mat-option value="">Seleccionar día</mat-option>
+              <mat-option *ngFor="let day of daysOfWeek" [value]="day">
+                <div class="day-option">
+                  <span>{{ dayLabels[day] }}</span>
+                  <mat-chip [color]="getDayOccupancy(day) > 70 ? 'warn' : 'primary'">
+                    {{ getDayOccupancy(day).toFixed(0) }}% ocupado
+                  </mat-chip>
+                </div>
+              </mat-option>
+            </mat-select>
           </mat-form-field>
 
-          <div class="assign-actions">
-            <button mat-raised-button
-                    color="primary"
-                    type="button"
-                    (click)="onQuickAssign()"
-                    [disabled]="quickAssignForm.invalid || loading">
-              <mat-icon>add_circle</mat-icon>
-              Asignar
-            </button>
+          <!-- Tipo de Sesión -->
+          <mat-form-field appearance="outline" class="form-field">
+            <mat-label>Tipo de Sesión</mat-label>
+            <mat-select formControlName="sessionType" required>
+              <mat-option value="">Seleccionar tipo</mat-option>
+              <mat-option *ngFor="let type of teachingTypes" [value]="type.uuid">
+                {{ type.name === 'THEORY' ? 'Teórica' : 'Práctica' }}
+              </mat-option>
+            </mat-select>
+            <mat-hint *ngIf="currentValidation?.suggestions?.length">
+              💡 {{ currentValidation.suggestions[0] }}
+            </mat-hint>
+          </mat-form-field>
+        </div>
 
-            <button mat-stroked-button
-                    type="button"
-                    (click)="quickAssignForm.reset()">
-              <mat-icon>clear</mat-icon>
-              Limpiar
-            </button>
-          </div>
+        <!-- Validación en tiempo real -->
+        <div class="validation-feedback" *ngIf="currentValidation">
+          <mat-expansion-panel [expanded]="!currentValidation.isValid">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon [color]="currentValidation.isValid ? 'primary' : 'warn'">
+                  {{ currentValidation.isValid ? 'check_circle' : 'error' }}
+                </mat-icon>
+                Estado de Validación
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="validation-content">
+              <!-- Errores -->
+              <div class="validation-section" *ngIf="currentValidation.errors.length > 0">
+                <h4 class="validation-title error">
+                  <mat-icon>error</mat-icon>
+                  Errores
+                </h4>
+                <mat-list>
+                  <mat-list-item *ngFor="let error of currentValidation.errors">
+                    <mat-icon matListItemIcon color="warn">cancel</mat-icon>
+                    <span matListItemTitle>{{ error }}</span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+
+              <!-- Advertencias -->
+              <div class="validation-section" *ngIf="currentValidation.warnings.length > 0">
+                <h4 class="validation-title warning">
+                  <mat-icon>warning</mat-icon>
+                  Advertencias
+                </h4>
+                <mat-list>
+                  <mat-list-item *ngFor="let warning of currentValidation.warnings">
+                    <mat-icon matListItemIcon color="accent">warning</mat-icon>
+                    <span matListItemTitle>{{ warning }}</span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+
+              <!-- Sugerencias -->
+              <div class="validation-section" *ngIf="currentValidation.suggestions && currentValidation.suggestions.length > 0">
+                <h4 class="validation-title suggestion">
+                  <mat-icon>lightbulb</mat-icon>
+                  Sugerencias
+                </h4>
+                <mat-list>
+                  <mat-list-item *ngFor="let suggestion of currentValidation.suggestions">
+                    <mat-icon matListItemIcon>tips_and_updates</mat-icon>
+                    <span matListItemTitle>{{ suggestion }}</span>
+                  </mat-list-item>
+                </mat-list>
+              </div>
+            </div>
+          </mat-expansion-panel>
+        </div>
+
+        <!-- Notas -->
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Notas (Opcional)</mat-label>
+          <textarea matInput formControlName="notes" rows="2"></textarea>
+        </mat-form-field>
+
+        <!-- Acciones -->
+        <div class="form-actions">
+          <button mat-button type="button" (click)="clearQuickAssign()">
+            <mat-icon>clear</mat-icon>
+            Limpiar
+          </button>
+          <button mat-raised-button
+                  color="primary"
+                  type="button"
+                  (click)="quickAssign()"
+                  [disabled]="!quickAssignForm.valid || selectedCells.length === 0 || (currentValidation && !currentValidation.isValid)">
+            <mat-icon>save</mat-icon>
+            Asignar {{ selectedCells.length }} hora(s)
+          </button>
         </div>
       </form>
     </mat-card-content>
@@ -327,97 +390,68 @@
           </div>
 
           <!-- Schedule cells -->
-          <div class="schedule-cell-container" *ngFor="let cell of row; let j = index">
-            <div
-              class="schedule-cell"
-              [ngClass]="getCellClasses(cell)"
-              [matTooltip]="getCellTooltip(cell)"
-              matTooltipPosition="above"
-              [matTooltipDisabled]="!scheduleView.showSuggestions"
-              (click)="onCellClick(cell)"
-              (mouseenter)="onCellHover(cell)"
-              (mouseleave)="onCellLeave()"
-              (contextmenu)="onCellSelect(cell, $event)"
-              cdkDrag
-              [cdkDragData]="cell.session"
-              [cdkDragDisabled]="!cell.session"
-              (cdkDragStarted)="onSessionDragStart(cell.session!)"
-              cdkDropList
-              (cdkDropListDropped)="onCellDrop($event, cell)">
+          <div class="schedule-cell"
+               *ngFor="let cell of row"
+               [class]="getCellClasses(cell).join(' ')"
+               [attr.data-day]="cell.dayOfWeek"
+               [attr.data-hour]="cell.teachingHour.uuid"
+               [matTooltip]="getCellTooltip(cell)"
+               matTooltipPosition="above"
+               (click)="onCellClick(cell)"
+               (mouseenter)="onCellHover(cell)"
+               (mouseleave)="onCellLeave()"
+               cdkDropList
+               [cdkDropListData]="[cell]"
+               (cdkDropListDropped)="onCellDrop($event, cell)">
 
-              <!-- Contenido de celda vacía -->
-              <div class="empty-cell" *ngIf="!cell.session">
-                <div class="cell-time">
-                  {{ cell.teachingHour.startTime | slice:0:5 }}
-                </div>
-
-                <!-- IntelliSense indicators -->
-                <div class="intellisense-indicators" *ngIf="isIntelliSenseEnabled && cell.intelliSenseData">
-                  <mat-icon class="available-icon"
-                            *ngIf="cell.intelliSenseData.eligibleTeachers.length > 0"
-                            [matBadge]="cell.intelliSenseData.eligibleTeachers.length"
-                            matBadgeSize="small">
-                    person
-                  </mat-icon>
-                  <mat-icon class="space-icon"
-                            *ngIf="cell.intelliSenseData.eligibleSpaces.length > 0"
-                            [matBadge]="cell.intelliSenseData.eligibleSpaces.length"
-                            matBadgeSize="small">
-                    room
-                  </mat-icon>
-                </div>
-
-                <!-- Suggestions indicator -->
-                <mat-icon class="suggestion-icon"
-                          *ngIf="scheduleView.showSuggestions && cell.suggestions.length > 0"
-                          [matBadge]="cell.suggestions.length"
-                          matBadgeSize="small"
-                          color="accent">
-                  lightbulb
+            <!-- Sesión existente -->
+            <div class="session-content" *ngIf="cell.session">
+              <div class="session-header">
+                <span class="course-code">{{ cell.session.course.code }}</span>
+                <mat-icon class="conflict-indicator"
+                          *ngIf="cell.hasConflict"
+                          color="warn"
+                          [matTooltip]="cell.conflicts.join('\n')">
+                  warning
                 </mat-icon>
               </div>
 
-              <!-- Contenido de celda ocupada -->
-              <div class="session-cell" *ngIf="cell.session">
-                <div class="session-header">
-                  <div class="course-code">{{ cell.session.course.code }}</div>
-                  <div class="session-actions">
-                    <button mat-icon-button
-                            size="small"
-                            (click)="editSession(cell.session!); $event.stopPropagation()"
-                            matTooltip="Editar sesión">
-                      <mat-icon>edit</mat-icon>
-                    </button>
-                    <button mat-icon-button
-                            size="small"
-                            color="warn"
-                            (click)="deleteSession(cell.session!, $event)"
-                            matTooltip="Eliminar sesión">
-                      <mat-icon>delete</mat-icon>
-                    </button>
-                  </div>
-                </div>
+              <div class="session-info">
+                <span class="teacher-name">{{ cell.session.teacher.fullName.split(' ')[0] }}</span>
+                <span class="space-name">{{ cell.session.learningSpace.name }}</span>
+              </div>
 
-                <div class="session-content">
-                  <div class="course-name">{{ cell.session.course.name }}</div>
-                  <div class="teacher-name">{{ cell.session.teacher.lastName }}</div>
-                  <div class="space-info">{{ cell.session.learningSpace.name }}</div>
-                  <div class="group-info">{{ cell.session.studentGroup.name }}</div>
+              <mat-chip class="session-type-chip"
+                        [color]="cell.session.sessionType.name === 'THEORY' ? 'primary' : 'warn'">
+                {{ cell.session.sessionType.name === 'THEORY' ? 'T' : 'P' }}
+              </mat-chip>
+            </div>
 
-                  <!-- Session type indicator -->
-                  <mat-chip class="session-type-chip"
-                            [color]="cell.session.sessionType.name === 'PRACTICE' ? 'warn' : 'primary'"
-                            size="small">
-                    <mat-icon>{{ cell.session.sessionType.name === 'PRACTICE' ? 'science' : 'menu_book' }}</mat-icon>
-                    {{ cell.session.sessionType.name === 'PRACTICE' ? 'Práctica' : 'Teoría' }}
-                  </mat-chip>
-                </div>
+            <!-- Celda vacía con indicadores -->
+            <div class="empty-cell-content" *ngIf="!cell.session">
+              <!-- Indicador de selección -->
+              <mat-icon class="selection-indicator" *ngIf="cell.isSelected" color="primary">
+                check_circle
+              </mat-icon>
 
-                <!-- Conflict indicator -->
-                <app-conflict-indicator
-                  *ngIf="scheduleView.showConflicts && cell.hasConflict"
-                  class="conflict-indicator">
-                </app-conflict-indicator>
+              <!-- Indicador de disponibilidad -->
+              <div class="availability-indicator" *ngIf="cell.isHighlighted && !cell.isSelected">
+                <mat-icon [color]="cell.isAvailable ? 'primary' : 'warn'">
+                  {{ cell.isAvailable ? 'event_available' : 'event_busy' }}
+                </mat-icon>
+              </div>
+
+              <!-- Tasa de ocupación -->
+              <div class="occupancy-indicator"
+                   *ngIf="scheduleView.showOccupancy && cell.occupancyRate !== undefined"
+                   [style.opacity]="cell.occupancyRate / 100">
+                <span class="occupancy-value">{{ cell.occupancyRate.toFixed(0) }}%</span>
+              </div>
+
+              <!-- Sugerencias en hover -->
+              <div class="cell-suggestions" *ngIf="hoveredCell === cell && cell.suggestions.length > 0">
+                <mat-icon>lightbulb</mat-icon>
+                <span>{{ cell.suggestions.length }} sugerencias</span>
               </div>
             </div>
           </div>

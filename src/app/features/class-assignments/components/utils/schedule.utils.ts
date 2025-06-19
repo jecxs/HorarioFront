@@ -1,5 +1,5 @@
 // src/app/features/class-assignments/utils/schedule.utils.ts
-import { TeachingHour, ClassSession, Teacher, LearningSpace, StudentGroup, Course } from '../services/class-assignment.service';
+import { TeachingHour, ClassSession, Teacher, LearningSpace, StudentGroup, Course } from '../../services/class-assignment.service';
 
 export class ScheduleUtils {
 
