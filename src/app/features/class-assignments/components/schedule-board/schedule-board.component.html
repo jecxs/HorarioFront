@@ -2,81 +2,132 @@
 <div class="schedule-board-container">
 
   <!-- Header con controles principales -->
-  <mat-card class="controls-header">
+  <mat-card class="header-card">
     <mat-card-header>
-      <mat-card-title>
-        <mat-icon>schedule</mat-icon>
-        Tablero de Asignación de Horarios
-      </mat-card-title>
-      <mat-card-subtitle>
-        Sistema inteligente de programación académica
-      </mat-card-subtitle>
-    </mat-card-header>
-
-    <mat-card-content>
-      <!-- Controles de vista -->
-      <div class="view-controls">
-        <mat-button-toggle-group [value]="scheduleView.mode" (change)="switchView($event.value)">
-          <mat-button-toggle value="GLOBAL">
-            <mat-icon>dashboard</mat-icon>
-            Vista Global
-          </mat-button-toggle>
-          <mat-button-toggle value="TEACHER">
-            <mat-icon>person</mat-icon>
-            Por Docente
-          </mat-button-toggle>
-          <mat-button-toggle value="GROUP">
-            <mat-icon>group</mat-icon>
-            Por Grupo
-          </mat-button-toggle>
-          <mat-button-toggle value="SPACE">
-            <mat-icon>room</mat-icon>
-            Por Aula
-          </mat-button-toggle>
-        </mat-button-toggle-group>
-
-        <div class="view-options">
-          <mat-slide-toggle
-            [checked]="scheduleView.showConflicts"
-            (change)="toggleConflictDisplay()"
-            color="warn">
-            <mat-icon>warning</mat-icon>
-            Mostrar Conflictos
-          </mat-slide-toggle>
-
-          <mat-slide-toggle
-            [checked]="scheduleView.showSuggestions"
-            (change)="toggleSuggestions()"
-            color="accent">
-            <mat-icon>lightbulb</mat-icon>
-            Sugerencias
-          </mat-slide-toggle>
-
-          <mat-slide-toggle
-            [checked]="isIntelliSenseEnabled"
-            (change)="toggleIntelliSense()"
-            color="primary">
-            <mat-icon>psychology</mat-icon>
-            IntelliSense
-          </mat-slide-toggle>
+      <div class="header-content">
+        <div class="title-section">
+          <mat-icon [color]="'primary'">{{ currentModeIcon }}</mat-icon>
+          <h2>{{ currentModeLabel }}</h2>
+          <mat-chip-set *ngIf="scheduleStatistics">
+            <mat-chip color="primary">
+              <mat-icon>schedule</mat-icon>
+              {{ scheduleStatistics.totalSessions }} sesiones
+            </mat-chip>
+            <mat-chip [color]="conflictsCount > 0 ? 'warn' : 'accent'">
+              <mat-icon>{{ conflictsCount > 0 ? 'warning' : 'check_circle' }}</mat-icon>
+              {{ conflictsCount }} conflictos
+            </mat-chip>
+            <mat-chip color="accent">
+              <mat-icon>pie_chart</mat-icon>
+              {{ occupancyPercentage }}% ocupación
+            </mat-chip>
+          </mat-chip-set>
         </div>
 
         <div class="action-buttons">
-          <button mat-raised-button color="primary" (click)="exportSchedule()">
+          <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="loading">
+            <mat-icon>refresh</mat-icon>
+            Actualizar
+          </button>
+
+          <button mat-stroked-button (click)="exportSchedule()">
             <mat-icon>download</mat-icon>
             Exportar
           </button>
+
           <button mat-stroked-button (click)="printSchedule()">
             <mat-icon>print</mat-icon>
             Imprimir
           </button>
+
+          <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="Opciones de vista">
+            <mat-icon>more_vert</mat-icon>
+          </button>
         </div>
       </div>
+    </mat-card-header>
+
+    <!-- Menú de opciones de vista -->
+    <mat-menu #viewMenu="matMenu">
+      <button mat-menu-item (click)="scheduleView.showConflicts = !scheduleView.showConflicts">
+        <mat-icon>{{ scheduleView.showConflicts ? 'visibility' : 'visibility_off' }}</mat-icon>
+        <span>{{ scheduleView.showConflicts ? 'Ocultar' : 'Mostrar' }} conflictos</span>
+      </button>
+      <button mat-menu-item (click)="scheduleView.showSuggestions = !scheduleView.showSuggestions">
+        <mat-icon>{{ scheduleView.showSuggestions ? 'lightbulb' : 'lightbulb_outline' }}</mat-icon>
+        <span>{{ scheduleView.showSuggestions ? 'Ocultar' : 'Mostrar' }} sugerencias</span>
+      </button>
+      <button mat-menu-item (click)="isIntelliSenseEnabled = !isIntelliSenseEnabled">
+        <mat-icon>{{ isIntelliSenseEnabled ? 'psychology' : 'psychology_alt' }}</mat-icon>
+        <span>{{ isIntelliSenseEnabled ? 'Desactivar' : 'Activar' }} IntelliSense</span>
+      </button>
+    </mat-menu>
+
+    <!-- Controles de vista -->
+    <mat-card-content>
+      <form [formGroup]="viewForm" class="view-controls">
+        <div class="control-row">
+          <mat-form-field appearance="outline" class="mode-field">
+            <mat-label>Modo de vista</mat-label>
+            <mat-select formControlName="mode">
+              <mat-option *ngFor="let mode of viewModes" [value]="mode.value">
+                <mat-icon>{{ mode.icon }}</mat-icon>
+                {{ mode.label }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="entity-field"
+                          *ngIf="scheduleView.mode !== 'GLOBAL'">
+            <mat-label>
+              {{ scheduleView.mode === 'TEACHER' ? 'Docente' :
+              scheduleView.mode === 'GROUP' ? 'Grupo' : 'Aula' }}
+            </mat-label>
+            <mat-select formControlName="selectedEntity">
+              <mat-option *ngFor="let teacher of eligibleTeachers"
+                          [value]="teacher"
+                          *ngIf="scheduleView.mode === 'TEACHER'">
+                {{ teacher.firstName }} {{ teacher.lastName }}
+                <span class="teacher-areas">
+                  - {{ teacher.knowledgeAreas?.map(area => area.name).join(', ') }}
+                </span>
+              </mat-option>
+              <mat-option *ngFor="let group of studentGroups"
+                          [value]="group"
+                          *ngIf="scheduleView.mode === 'GROUP'">
+                {{ group.name }} - {{ group.cycle.name }}
+              </mat-option>
+              <mat-option *ngFor="let space of eligibleSpaces"
+                          [value]="space"
+                          *ngIf="scheduleView.mode === 'SPACE'">
+                {{ space.name }} ({{ space.capacity }} estudiantes)
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <div class="toggle-controls">
+            <mat-slide-toggle formControlName="showConflicts" color="warn">
+              <mat-icon>warning</mat-icon>
+              Conflictos
+            </mat-slide-toggle>
+
+            <mat-slide-toggle formControlName="showSuggestions" color="accent">
+              <mat-icon>lightbulb</mat-icon>
+              Sugerencias
+            </mat-slide-toggle>
+
+            <mat-slide-toggle [(ngModel)]="isIntelliSenseEnabled" color="primary">
+              <mat-icon>psychology</mat-icon>
+              IntelliSense
+            </mat-slide-toggle>
+          </div>
+        </div>
+      </form>
     </mat-card-content>
   </mat-card>
 
   <!-- Panel de asignación rápida -->
-  <mat-card class="quick-assign-panel" *ngIf="isIntelliSenseEnabled">
+  <mat-card class="quick-assign-panel">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>flash_on</mat-icon>
@@ -87,121 +138,137 @@
     <mat-card-content>
       <form [formGroup]="quickAssignForm" class="quick-assign-form">
         <div class="form-row">
-          <!-- Grupo de estudiantes -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Grupo</mat-label>
-            <mat-select formControlName="group">
-              <mat-option value="">Seleccionar grupo</mat-option>
+            <mat-select formControlName="group" required>
               <mat-option *ngFor="let group of studentGroups" [value]="group.uuid">
                 <div class="group-option">
-                  <span class="group-name">{{ group.name }}</span>
-                  <span class="group-cycle">Ciclo {{ group.cycleNumber }}</span>
+                  <div class="group-name">{{ group.name }}</div>
+                  <div class="group-cycle">{{ group.cycle.name }} - {{ group.cycle.career.name }}</div>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Seleccione primero el grupo</mat-hint>
+            <mat-hint>Seleccione el grupo de estudiantes</mat-hint>
           </mat-form-field>
 
-          <!-- Curso -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Curso</mat-label>
-            <mat-select formControlName="course" [disabled]="!quickAssignForm.value.group">
-              <mat-option value="">Seleccionar curso</mat-option>
+            <mat-select formControlName="course" required>
               <mat-option *ngFor="let course of availableCourses" [value]="course.uuid">
                 <div class="course-option">
-                  <span class="course-code">{{ course.code }}</span>
-                  <span class="course-name">{{ course.name }}</span>
+                  <div class="course-code">{{ course.code }}</div>
+                  <div class="course-name">{{ course.name }}</div>
                   <mat-chip-set>
-                    <mat-chip [color]="getCourseType(course) === 'THEORY' ? 'primary' : getCourseType(course) === 'PRACTICE' ? 'warn' : 'accent'">
-                      {{ getCourseType(course) === 'THEORY' ? 'Teórico' : getCourseType(course) === 'PRACTICE' ? 'Práctico' : 'Mixto' }}
+                    <mat-chip [color]="getCourseTypeColor(course)" size="small">
+                      {{ getCourseTypeText(course) }}
+                    </mat-chip>
+                    <mat-chip color="primary" size="small">
+                      {{ course.totalWeeklyHours }}h/sem
                     </mat-chip>
                   </mat-chip-set>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Filtrado por ciclo del grupo</mat-hint>
+            <mat-hint>Curso a asignar</mat-hint>
           </mat-form-field>
 
-          <!-- Docente -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Docente</mat-label>
-            <mat-select formControlName="teacher" [disabled]="!quickAssignForm.value.course">
-              <mat-option value="">Seleccionar docente</mat-option>
+            <mat-select formControlName="teacher" required>
               <mat-option *ngFor="let teacher of eligibleTeachers" [value]="teacher.uuid">
                 <div class="teacher-option">
-                  <span class="teacher-name">{{ teacher.fullName }}</span>
-                  <span class="teacher-areas">{{ teacher.knowledgeAreas.map(area => area.name).join(', ') }}</span>
-                  <mat-icon *ngIf="teacher.totalAvailabilities < 5" color="warn" matTooltip="Pocas horas de disponibilidad">warning</mat-icon>
+                  <div class="teacher-name">{{ teacher.firstName }} {{ teacher.lastName }}</div>
+                  <div class="teacher-areas">
+                    {{ teacher.knowledgeAreas?.map(area => area.name).join(', ') || 'Sin áreas asignadas' }}
+                  </div>
+                  <mat-chip-set>
+                    <mat-chip color="accent" size="small">
+                      {{ teacher.academicDepartment?.name || 'Sin departamento' }}
+                    </mat-chip>
+                  </mat-chip-set>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Filtrado por área de conocimiento del curso</mat-hint>
+            <mat-hint>Docente responsable</mat-hint>
           </mat-form-field>
         </div>
 
         <div class="form-row">
-          <!-- Aula -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Aula</mat-label>
-            <mat-select formControlName="space" [disabled]="!quickAssignForm.value.course">
-              <mat-option value="">Seleccionar aula</mat-option>
+            <mat-select formControlName="space" required>
               <mat-option *ngFor="let space of eligibleSpaces" [value]="space.uuid">
                 <div class="space-option">
-                  <span class="space-name">{{ space.name }}</span>
-                  <span class="space-capacity">Cap: {{ space.capacity }}</span>
-                  <mat-chip [color]="space.teachingType.name === 'THEORY' ? 'primary' : 'warn'">
-                    {{ space.teachingType.name === 'THEORY' ? 'Teórica' : 'Práctica' }}
-                  </mat-chip>
-                  <span class="space-specialty" *ngIf="space.specialty">{{ space.specialty.name }}</span>
+                  <div class="space-name">{{ space.name }}</div>
+                  <div class="space-capacity">Capacidad: {{ space.capacity }} estudiantes</div>
+                  <div class="space-specialty" *ngIf="space.specialty">
+                    Especialidad: {{ space.specialty.name }}
+                  </div>
+                  <mat-chip-set>
+                    <mat-chip [color]="space.teachingType?.name === 'PRACTICE' ? 'warn' : 'primary'" size="small">
+                      {{ space.teachingType?.name === 'PRACTICE' ? 'Laboratorio' : 'Teórico' }}
+                    </mat-chip>
+                    <mat-chip color="accent" size="small" *ngIf="space.hasProjector">
+                      <mat-icon fontIcon="videocam"></mat-icon>
+                      Proyector
+                    </mat-chip>
+                    <mat-chip color="accent" size="small" *ngIf="space.hasComputers">
+                      <mat-icon fontIcon="computer"></mat-icon>
+                      PC
+                    </mat-chip>
+                  </mat-chip-set>
                 </div>
               </mat-option>
             </mat-select>
-            <mat-hint>Filtrado por tipo de curso y especialidad</mat-hint>
+            <mat-hint>Aula o laboratorio</mat-hint>
           </mat-form-field>
 
-          <!-- Día -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Día</mat-label>
-            <mat-select formControlName="dayOfWeek">
-              <mat-option value="">Seleccionar día</mat-option>
+            <mat-select formControlName="dayOfWeek" required>
               <mat-option *ngFor="let day of daysOfWeek" [value]="day">
                 {{ dayLabels[day] }}
               </mat-option>
             </mat-select>
+            <mat-hint>Día de la semana</mat-hint>
           </mat-form-field>
 
-          <!-- Turno -->
           <mat-form-field appearance="outline" class="form-field">
             <mat-label>Turno</mat-label>
-            <mat-select formControlName="timeSlot">
-              <mat-option value="">Cualquier turno</mat-option>
-              <mat-option *ngFor="let slot of timeSlots" [value]="slot.uuid">
+            <mat-select formControlName="timeSlot" required>
+              <mat-option *ngFor="let timeSlot of timeSlots" [value]="timeSlot.uuid">
                 <div class="timeslot-option">
-                  <span class="slot-name">{{ slot.name }}</span>
-                  <span class="slot-time">{{ slot.startTime }} - {{ slot.endTime }}</span>
+                  <div class="slot-name">{{ timeSlot.name }}</div>
+                  <div class="slot-time">
+                    {{ timeSlot.startTime | slice:0:5 }} - {{ timeSlot.endTime | slice:0:5 }}
+                  </div>
                 </div>
               </mat-option>
             </mat-select>
+            <mat-hint>Horario de clase</mat-hint>
           </mat-form-field>
         </div>
 
         <div class="form-row">
-          <!-- Notas -->
           <mat-form-field appearance="outline" class="form-field notes-field">
-            <mat-label>Notas adicionales</mat-label>
-            <textarea matInput formControlName="notes" rows="2" placeholder="Observaciones..."></textarea>
+            <mat-label>Notas (opcional)</mat-label>
+            <mat-input formControlName="notes" placeholder="Observaciones adicionales"></mat-input>
+            <mat-hint>Información adicional sobre la asignación</mat-hint>
           </mat-form-field>
 
           <div class="assign-actions">
-            <button
-              mat-raised-button
-              color="primary"
-              [disabled]="!quickAssignForm.valid || selectedCells.length === 0"
-              (click)="quickAssign()">
+            <button mat-raised-button
+                    color="primary"
+                    type="button"
+                    (click)="onQuickAssign()"
+                    [disabled]="quickAssignForm.invalid || loading">
               <mat-icon>add_circle</mat-icon>
-              Asignar Rápido
+              Asignar
             </button>
-            <button mat-button (click)="clearQuickAssign()">
+
+            <button mat-stroked-button
+                    type="button"
+                    (click)="quickAssignForm.reset()">
               <mat-icon>clear</mat-icon>
               Limpiar
             </button>
@@ -214,259 +281,247 @@
   <!-- Grid principal del horario -->
   <mat-card class="schedule-grid-container">
     <mat-card-header>
-      <mat-card-title>Horario Semanal</mat-card-title>
-      <div class="grid-legend">
-        <div class="legend-item available">
-          <div class="legend-color"></div>
-          <span>Disponible</span>
-        </div>
-        <div class="legend-item occupied">
-          <div class="legend-color"></div>
-          <span>Ocupado</span>
-        </div>
-        <div class="legend-item conflict">
-          <div class="legend-color"></div>
-          <span>Conflicto</span>
-        </div>
-        <div class="legend-item selected">
-          <div class="legend-color"></div>
-          <span>Seleccionado</span>
-        </div>
-      </div>
-    </mat-card-header>
-
-    <mat-card-content>
-      <div class="schedule-grid" #scheduleGrid [class.loading]="loading">
-
-        <!-- Spinner de carga -->
-        <div class="loading-overlay" *ngIf="loading">
-          <mat-spinner diameter="50"></mat-spinner>
-          <p>Cargando horario...</p>
-        </div>
-
-        <!-- Header con días de la semana -->
+      <mat-card-title>
         <div class="grid-header">
-          <div class="time-column-header">Horario</div>
-          <div class="day-header" *ngFor="let day of daysOfWeek">
-            <span class="day-name">{{ dayLabels[day] }}</span>
+          <div class="grid-title">
+            <mat-icon>calendar_view_week</mat-icon>
+            Horario Semanal
+          </div>
+          <div class="grid-stats" *ngIf="scheduleStatistics">
+            <mat-chip color="primary">{{ scheduleStatistics.totalHours }} horas totales</mat-chip>
+            <mat-chip color="accent">{{ scheduleStatistics.teachersCount }} docentes</mat-chip>
+            <mat-chip color="warn" *ngIf="conflictsCount > 0">{{ conflictsCount }} conflictos</mat-chip>
           </div>
         </div>
-
-        <!-- Filas del horario -->
-        <div class="grid-body">
-          <ng-container *ngFor="let row of scheduleMatrix; let rowIndex = index">
-            <div class="grid-row" [attr.data-row]="rowIndex">
-
-              <!-- Columna de tiempo -->
-              <div class="time-column">
-                <div class="time-slot-info">
-                  <span class="slot-name">{{ row[0].timeSlot.name }}</span>
-                  <span class="teaching-hour-info">
-                    Hora {{ row[0].teachingHour.orderInTimeSlot }}
-                  </span>
-                  <span class="time-range">
-                    {{ row[0].teachingHour.startTime }} - {{ row[0].teachingHour.endTime }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Celdas de cada día -->
-              <div
-                class="schedule-cell"
-                *ngFor="let cell of row"
-                [class]="getCellClasses(cell).join(' ')"
-                [attr.data-day]="cell.dayOfWeek"
-                [attr.data-hour]="cell.teachingHour.uuid"
-                (click)="onCellClick(cell)"
-                (mouseenter)="onCellHover(cell)"
-                (mouseleave)="onCellLeave()"
-                cdkDropList
-                [cdkDropListData]="[cell]"
-                (cdkDropListDropped)="onCellDrop($event, cell)"
-                matTooltip="{{ getScheduleCellTooltip(cell) }}"
-                matTooltipPosition="above"
-                [matTooltipDisabled]="!isIntelliSenseEnabled">
-
-                <!-- Sesión existente -->
-                <div
-                  class="session-card"
-                  *ngIf="cell.session"
-                  [class]="getSessionClasses(cell.session).join(' ')"
-                  cdkDrag
-                  [cdkDragData]="cell.session"
-                  (cdkDragStarted)="onSessionDragStart(cell.session)"
-                  matTooltip="{{ getSessionTooltipText(cell.session) }}"
-                  matTooltipPosition="above">
-
-                  <div class="session-header">
-                    <span class="course-code">{{ cell.session.course.code }}</span>
-                    <mat-icon
-                      class="session-menu"
-                      [matMenuTriggerFor]="sessionMenu"
-                      (click)="$event.stopPropagation()">
-                      more_vert
-                    </mat-icon>
-                  </div>
-
-                  <div class="session-content">
-                    <div class="course-name">{{ cell.session.course.name }}</div>
-                    <div class="teacher-name">{{ cell.session.teacher.fullName }}</div>
-                    <div class="space-name">{{ cell.session.learningSpace.name }}</div>
-                    <div class="group-name">Grupo: {{ cell.session.studentGroup.name }}</div>
-                  </div>
-
-                  <div class="session-footer">
-                    <mat-chip-set>
-                      <mat-chip
-                        [color]="getCourseType(cell.session.course) === 'THEORY' ? 'primary' : getCourseType(cell.session.course) === 'PRACTICE' ? 'warn' : 'accent'"
-                        class="session-type-chip">
-                        {{ cell.session.sessionType.name === 'THEORY' ? 'T' : 'P' }}
-                      </mat-chip>
-                    </mat-chip-set>
-                    <span class="hours-count">{{ cell.session.totalHours }}h</span>
-                  </div>
-
-                  <!-- Indicador de conflicto -->
-                  <app-conflict-indicator
-                    *ngIf="cell.hasConflict && scheduleView.showConflicts"
-                    [conflictType]="'MULTIPLE'"
-                    [message]="'Conflicto detectado'">
-                  </app-conflict-indicator>
-                </div>
-
-                <!-- Celda vacía con sugerencias -->
-                <div class="empty-cell" *ngIf="!cell.session">
-                  <div class="availability-indicator" *ngIf="cell.isAvailable && isIntelliSenseEnabled">
-                    <mat-icon>add_circle_outline</mat-icon>
-                    <span>Disponible</span>
-                  </div>
-
-                  <!-- Sugerencias inteligentes -->
-                  <div class="smart-suggestions" *ngIf="cell.suggestions.length > 0 && scheduleView.showSuggestions && hoveredCell === cell">
-                    <div class="suggestion-item" *ngFor="let suggestion of cell.suggestions">
-                      <mat-icon>lightbulb_outline</mat-icon>
-                      <span>{{ suggestion }}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Overlay de selección -->
-                <div class="selection-overlay" *ngIf="selectedCells.includes(cell)">
-                  <mat-icon>check_circle</mat-icon>
-                </div>
-              </div>
-            </div>
-          </ng-container>
-        </div>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Panel de información contextual -->
-  <mat-card class="context-panel" *ngIf="hoveredCell && isIntelliSenseEnabled">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>info</mat-icon>
-        Información Contextual
       </mat-card-title>
     </mat-card-header>
 
     <mat-card-content>
-      <div class="context-info">
-        <div class="info-section">
-          <h4>Horario</h4>
-          <p>{{ hoveredCell.timeSlot.name }} - Hora {{ hoveredCell.teachingHour.orderInTimeSlot }}</p>
-          <p>{{ hoveredCell.teachingHour.startTime }} - {{ hoveredCell.teachingHour.endTime }}</p>
-        </div>
+      <!-- Loading indicator -->
+      <div class="loading-container" *ngIf="loading">
+        <mat-spinner diameter="50"></mat-spinner>
+        <p>Cargando horario...</p>
+      </div>
 
-        <div class="info-section" *ngIf="hoveredCell.session">
-          <h4>Sesión Actual</h4>
-          <p><strong>Curso:</strong> {{ hoveredCell.session.course.name }}</p>
-          <p><strong>Docente:</strong> {{ hoveredCell.session.teacher.fullName }}</p>
-          <p><strong>Aula:</strong> {{ hoveredCell.session.learningSpace.name }}</p>
-          <p><strong>Grupo:</strong> {{ hoveredCell.session.studentGroup.name }}</p>
-        </div>
-
-        <div class="info-section" *ngIf="hoveredCell.isAvailable && !hoveredCell.session">
-          <h4>Disponibilidad</h4>
-          <p>Esta celda está disponible para asignación</p>
-          <div class="availability-stats">
-            <div class="stat-item">
-              <mat-icon>people</mat-icon>
-              <span>Docentes disponibles: {{ getAvailableTeachersCount(hoveredCell) }}</span>
-            </div>
-            <div class="stat-item">
-              <mat-icon>room</mat-icon>
-              <span>Aulas disponibles: {{ getAvailableSpacesCount(hoveredCell) }}</span>
-            </div>
+      <!-- Schedule grid -->
+      <div class="schedule-grid" #scheduleGrid *ngIf="!loading && scheduleMatrix.length > 0">
+        <!-- Header row with days -->
+        <div class="grid-header-row">
+          <div class="time-header">Horario</div>
+          <div class="day-header" *ngFor="let day of daysOfWeek">
+            {{ dayLabels[day] }}
           </div>
         </div>
 
-        <div class="info-section" *ngIf="hoveredCell.suggestions.length > 0">
-          <h4>Sugerencias</h4>
-          <div class="suggestions-list">
-            <div class="suggestion-item" *ngFor="let suggestion of hoveredCell.suggestions">
-              <mat-icon>lightbulb</mat-icon>
-              <span>{{ suggestion }}</span>
+        <!-- Schedule rows -->
+        <div class="grid-row" *ngFor="let row of scheduleMatrix; let i = index">
+          <!-- Time column -->
+          <div class="time-column">
+            <div class="time-slot-info">
+              <div class="time-range">
+                {{ row[0].teachingHour.startTime | slice:0:5 }} -
+                {{ row[0].teachingHour.endTime | slice:0:5 }}
+              </div>
+              <div class="time-slot-name">{{ row[0].timeSlot.name }}</div>
             </div>
           </div>
+
+          <!-- Schedule cells -->
+          <div class="schedule-cell-container" *ngFor="let cell of row; let j = index">
+            <div
+              class="schedule-cell"
+              [ngClass]="getCellClasses(cell)"
+              [matTooltip]="getCellTooltip(cell)"
+              matTooltipPosition="above"
+              [matTooltipDisabled]="!scheduleView.showSuggestions"
+              (click)="onCellClick(cell)"
+              (mouseenter)="onCellHover(cell)"
+              (mouseleave)="onCellLeave()"
+              (contextmenu)="onCellSelect(cell, $event)"
+              cdkDrag
+              [cdkDragData]="cell.session"
+              [cdkDragDisabled]="!cell.session"
+              (cdkDragStarted)="onSessionDragStart(cell.session!)"
+              cdkDropList
+              (cdkDropListDropped)="onCellDrop($event, cell)">
+
+              <!-- Contenido de celda vacía -->
+              <div class="empty-cell" *ngIf="!cell.session">
+                <div class="cell-time">
+                  {{ cell.teachingHour.startTime | slice:0:5 }}
+                </div>
+
+                <!-- IntelliSense indicators -->
+                <div class="intellisense-indicators" *ngIf="isIntelliSenseEnabled && cell.intelliSenseData">
+                  <mat-icon class="available-icon"
+                            *ngIf="cell.intelliSenseData.eligibleTeachers.length > 0"
+                            [matBadge]="cell.intelliSenseData.eligibleTeachers.length"
+                            matBadgeSize="small">
+                    person
+                  </mat-icon>
+                  <mat-icon class="space-icon"
+                            *ngIf="cell.intelliSenseData.eligibleSpaces.length > 0"
+                            [matBadge]="cell.intelliSenseData.eligibleSpaces.length"
+                            matBadgeSize="small">
+                    room
+                  </mat-icon>
+                </div>
+
+                <!-- Suggestions indicator -->
+                <mat-icon class="suggestion-icon"
+                          *ngIf="scheduleView.showSuggestions && cell.suggestions.length > 0"
+                          [matBadge]="cell.suggestions.length"
+                          matBadgeSize="small"
+                          color="accent">
+                  lightbulb
+                </mat-icon>
+              </div>
+
+              <!-- Contenido de celda ocupada -->
+              <div class="session-cell" *ngIf="cell.session">
+                <div class="session-header">
+                  <div class="course-code">{{ cell.session.course.code }}</div>
+                  <div class="session-actions">
+                    <button mat-icon-button
+                            size="small"
+                            (click)="editSession(cell.session!); $event.stopPropagation()"
+                            matTooltip="Editar sesión">
+                      <mat-icon>edit</mat-icon>
+                    </button>
+                    <button mat-icon-button
+                            size="small"
+                            color="warn"
+                            (click)="deleteSession(cell.session!, $event)"
+                            matTooltip="Eliminar sesión">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="session-content">
+                  <div class="course-name">{{ cell.session.course.name }}</div>
+                  <div class="teacher-name">{{ cell.session.teacher.lastName }}</div>
+                  <div class="space-info">{{ cell.session.learningSpace.name }}</div>
+                  <div class="group-info">{{ cell.session.studentGroup.name }}</div>
+
+                  <!-- Session type indicator -->
+                  <mat-chip class="session-type-chip"
+                            [color]="cell.session.sessionType.name === 'PRACTICE' ? 'warn' : 'primary'"
+                            size="small">
+                    <mat-icon>{{ cell.session.sessionType.name === 'PRACTICE' ? 'science' : 'menu_book' }}</mat-icon>
+                    {{ cell.session.sessionType.name === 'PRACTICE' ? 'Práctica' : 'Teoría' }}
+                  </mat-chip>
+                </div>
+
+                <!-- Conflict indicator -->
+                <app-conflict-indicator
+                  *ngIf="scheduleView.showConflicts && cell.hasConflict"
+                  class="conflict-indicator">
+                </app-conflict-indicator>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" *ngIf="!loading && scheduleMatrix.length === 0">
+        <mat-icon>calendar_month</mat-icon>
+        <h3>No hay datos de horario</h3>
+        <p>Configure los turnos y horas pedagógicas para comenzar</p>
+        <button mat-raised-button color="primary" (click)="refreshData()">
+          <mat-icon>refresh</mat-icon>
+          Recargar datos
+        </button>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Panel de estadísticas -->
+  <mat-card class="statistics-panel" *ngIf="scheduleStatistics">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>analytics</mat-icon>
+        Estadísticas del Horario
+      </mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <mat-icon color="primary">schedule</mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ scheduleStatistics.totalSessions }}</div>
+            <div class="stat-label">Sesiones totales</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <mat-icon color="accent">access_time</mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ scheduleStatistics.totalHours }}</div>
+            <div class="stat-label">Horas semanales</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <mat-icon color="primary">person</mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ scheduleStatistics.teachersCount }}</div>
+            <div class="stat-label">Docentes activos</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <mat-icon color="accent">room</mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ scheduleStatistics.spacesCount }}</div>
+            <div class="stat-label">Aulas utilizadas</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <mat-icon color="primary">group</mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ scheduleStatistics.groupsCount }}</div>
+            <div class="stat-label">Grupos activos</div>
+          </div>
+        </div>
+
+        <div class="stat-item">
+          <mat-icon [color]="conflictsCount > 0 ? 'warn' : 'accent'">
+            {{ conflictsCount > 0 ? 'warning' : 'check_circle' }}
+          </mat-icon>
+          <div class="stat-content">
+            <div class="stat-value">{{ conflictsCount }}</div>
+            <div class="stat-label">Conflictos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Distribution charts -->
+      <div class="distribution-charts" *ngIf="scheduleStatistics.theoryPercentage || scheduleStatistics.practicePercentage">
+        <h4>Distribución de horas</h4>
+        <div class="chart-item">
+          <span>Teoría:</span>
+          <div class="progress-bar">
+            <div class="progress-fill theory"
+                 [style.width.%]="scheduleStatistics.theoryPercentage">
+            </div>
+          </div>
+          <span>{{ scheduleStatistics.theoryPercentage | number:'1.1-1' }}%</span>
+        </div>
+        <div class="chart-item">
+          <span>Práctica:</span>
+          <div class="progress-bar">
+            <div class="progress-fill practice"
+                 [style.width.%]="scheduleStatistics.practicePercentage">
+            </div>
+          </div>
+          <span>{{ scheduleStatistics.practicePercentage | number:'1.1-1' }}%</span>
         </div>
       </div>
     </mat-card-content>
   </mat-card>
 
-  <!-- Menú contextual para sesiones -->
-  <mat-menu #sessionMenu="matMenu">
-    <button mat-menu-item (click)="editSession(hoveredCell?.session!)">
-      <mat-icon>edit</mat-icon>
-      <span>Editar sesión</span>
-    </button>
-    <button mat-menu-item (click)="duplicateSession(hoveredCell?.session!)">
-      <mat-icon>content_copy</mat-icon>
-      <span>Duplicar sesión</span>
-    </button>
-    <mat-divider></mat-divider>
-    <button mat-menu-item class="delete-option" (click)="deleteSession(hoveredCell?.session!)">
-      <mat-icon>delete</mat-icon>
-      <span>Eliminar sesión</span>
-    </button>
-  </mat-menu>
-
-  <!-- Panel de estadísticas rápidas -->
-  <div class="quick-stats" *ngIf="!loading">
-    <mat-card>
-      <mat-card-content>
-        <div class="stats-grid">
-          <div class="stat-item">
-            <mat-icon>schedule</mat-icon>
-            <div class="stat-info">
-              <span class="stat-number">{{ getTotalAssignedHours() }}</span>
-              <span class="stat-label">Horas Asignadas</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <mat-icon>warning</mat-icon>
-            <div class="stat-info">
-              <span class="stat-number">{{ getConflictsCount() }}</span>
-              <span class="stat-label">Conflictos</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <mat-icon>people</mat-icon>
-            <div class="stat-info">
-              <span class="stat-number">{{ getActiveTeachersCount() }}</span>
-              <span class="stat-label">Docentes Activos</span>
-            </div>
-          </div>
-          <div class="stat-item">
-            <mat-icon>room</mat-icon>
-            <div class="stat-info">
-              <span class="stat-number">{{ getOccupiedSpacesCount() }}</span>
-              <span class="stat-label">Aulas en Uso</span>
-            </div>
-          </div>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
 </div>

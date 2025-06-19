@@ -1,6 +1,7 @@
 // src/app/features/class-assignments/components/conflict-indicator/conflict-indicator.component.ts
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { MatDialog } from '@angular/material/dialog';
 
 // Material Imports
 import { MatIconModule } from '@angular/material/icon';
@@ -8,7 +9,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
+import { MatDialogModule } from '@angular/material/dialog';
+import { MatCardModule } from '@angular/material/card';
+import { MatListModule } from '@angular/material/list';
+import { MatDividerModule } from '@angular/material/divider';
 
 // Types
 import { ClassSession } from '../../services/class-assignment.service';
@@ -33,7 +37,10 @@ interface ConflictDetails {
     MatTooltipModule,
     MatBadgeModule,
     MatChipsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatCardModule,
+    MatListModule,
+    MatDividerModule
   ],
   template: `
     <div
@@ -61,315 +68,56 @@ interface ConflictDetails {
         <div class="conflict-description">
           {{ conflictDetails.message }}
         </div>
-
-        <!-- Chips de sesiones afectadas -->
-        <div class="affected-sessions" *ngIf="conflictDetails.affectedSessions.length > 0">
-          <mat-chip-set>
-            <mat-chip
-              *ngFor="let session of conflictDetails.affectedSessions.slice(0, 3)"
-              [color]="getSessionChipColor(session)"
-              class="session-chip">
-              {{ getSessionDisplayText(session) }}
-            </mat-chip>
-            <mat-chip
-              *ngIf="conflictDetails.affectedSessions.length > 3"
-              color="accent">
-              +{{ conflictDetails.affectedSessions.length - 3 }} más
-            </mat-chip>
-          </mat-chip-set>
-        </div>
-
-        <!-- Sugerencias rápidas -->
-        <div class="quick-suggestions" *ngIf="conflictDetails.suggestions.length > 0">
-          <div class="suggestion-item" *ngFor="let suggestion of conflictDetails.suggestions.slice(0, 2)">
-            <mat-icon>lightbulb</mat-icon>
-            <span>{{ suggestion }}</span>
-          </div>
-        </div>
-
-        <!-- Acciones -->
-        <div class="conflict-actions" *ngIf="showActions">
-          <button
-            mat-stroked-button
-            size="small"
-            (click)="$event.stopPropagation(); resolveConflict()"
-            [disabled]="!canResolve()">
-            <mat-icon>auto_fix_high</mat-icon>
-            Resolver
-          </button>
-          <button
-            mat-stroked-button
-            size="small"
-            (click)="$event.stopPropagation(); showDetails()">
-            <mat-icon>info</mat-icon>
-            Detalles
-          </button>
+        <div class="severity-indicator">
+          <mat-chip [color]="getSeverityColor()" size="small">
+            {{ getSeverityText() }}
+          </mat-chip>
         </div>
       </div>
-
-      <!-- Indicador de pulso para conflictos críticos -->
-      <div class="pulse-indicator" *ngIf="conflictDetails.severity === 'CRITICAL'"></div>
     </div>
   `,
-  styles: [`
-    .conflict-indicator {
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      border: 1px solid transparent;
-
-      &.low {
-        background: #fff3e0;
-        border-color: #ff9800;
-        color: #e65100;
-
-        &:hover {
-          background: #ffe0b2;
-          box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
-        }
-      }
-
-      &.medium {
-        background: #fff3e0;
-        border-color: #ff9800;
-        color: #e65100;
-
-        &:hover {
-          background: #ffe0b2;
-          box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
-        }
-      }
-
-      &.high {
-        background: #ffebee;
-        border-color: #f44336;
-        color: #c62828;
-
-        &:hover {
-          background: #ffcdd2;
-          box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
-        }
-      }
-
-      &.critical {
-        background: #ffebee;
-        border-color: #f44336;
-        color: #c62828;
-        animation: critical-pulse 2s infinite;
-
-        &:hover {
-          background: #ffcdd2;
-          box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
-        }
-      }
-
-      .conflict-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        mat-icon {
-          font-size: 20px;
-          width: 20px;
-          height: 20px;
-        }
-      }
-
-      .conflict-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-
-        .conflict-title {
-          font-weight: 600;
-          font-size: 12px;
-          line-height: 1.2;
-        }
-
-        .conflict-description {
-          font-size: 11px;
-          opacity: 0.9;
-          line-height: 1.3;
-        }
-
-        .affected-sessions {
-          .session-chip {
-            font-size: 9px;
-            height: 16px;
-            padding: 0 4px;
-          }
-        }
-
-        .quick-suggestions {
-          .suggestion-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            margin-bottom: 2px;
-
-            &:last-child {
-              margin-bottom: 0;
-            }
-
-            mat-icon {
-              font-size: 12px;
-              width: 12px;
-              height: 12px;
-              color: #ffc107;
-            }
-          }
-        }
-
-        .conflict-actions {
-          display: flex;
-          gap: 6px;
-          margin-top: 4px;
-
-          button {
-            font-size: 10px;
-            height: 24px;
-            padding: 0 8px;
-
-            mat-icon {
-              font-size: 12px;
-              width: 12px;
-              height: 12px;
-              margin-right: 2px;
-            }
-          }
-        }
-      }
-
-      .pulse-indicator {
-        position: absolute;
-        top: -2px;
-        right: -2px;
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #f44336;
-        animation: pulse 1.5s infinite;
-      }
-    }
-
-    @keyframes critical-pulse {
-      0%, 100% {
-        border-color: #f44336;
-        box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.4);
-      }
-      50% {
-        border-color: #ff5252;
-        box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.1);
-      }
-    }
-
-    @keyframes pulse {
-      0%, 100% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      50% {
-        opacity: 0.7;
-        transform: scale(1.2);
-      }
-    }
-
-    // Modo compacto
-    .conflict-indicator.compact {
-      padding: 4px 6px;
-
-      .conflict-info {
-        display: none;
-      }
-
-      .conflict-icon mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-    }
-
-    // Modo inline para tablas
-    .conflict-indicator.inline {
-      background: none;
-      border: none;
-      padding: 0;
-      gap: 4px;
-
-      .conflict-icon mat-icon {
-        font-size: 14px;
-        width: 14px;
-        height: 14px;
-      }
-
-      .conflict-info {
-        display: none;
-      }
-
-      &:hover .conflict-info {
-        display: block;
-        position: absolute;
-        z-index: 1000;
-        background: white;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-        padding: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        min-width: 200px;
-      }
-    }
-  `]
+  styleUrls: ['./conflict-indicator.component.scss']
 })
-export class ConflictIndicatorComponent {
-  @Input() conflictType: ConflictType = 'MULTIPLE';
-  @Input() message: string = '';
-  @Input() affectedSessions: ClassSession[] = [];
-  @Input() suggestions: string[] = [];
-  @Input() severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL' = 'MEDIUM';
-  @Input() showInfo: boolean = true;
-  @Input() showActions: boolean = true;
-  @Input() compact: boolean = false;
-  @Input() inline: boolean = false;
+export class ConflictIndicatorComponent implements OnInit {
+  @Input() conflictDetails!: ConflictDetails;
+  @Input() showInfo: boolean = false;
+  @Input() clickable: boolean = true;
 
-  @Output() resolveClicked = new EventEmitter<ConflictDetails>();
-  @Output() detailsClicked = new EventEmitter<ConflictDetails>();
+  @Output() conflictClick = new EventEmitter<ConflictDetails>();
+  @Output() resolveAttempt = new EventEmitter<ConflictDetails>();
 
   constructor(private dialog: MatDialog) {}
 
-  get conflictDetails(): ConflictDetails {
-    return {
-      type: this.conflictType,
-      message: this.message,
-      affectedSessions: this.affectedSessions,
-      severity: this.severity,
-      suggestions: this.suggestions
-    };
+  ngOnInit(): void {
+    if (!this.conflictDetails) {
+      // Crear datos de conflicto por defecto para testing
+      this.conflictDetails = {
+        type: 'MULTIPLE',
+        message: 'Conflicto de horario detectado',
+        affectedSessions: [],
+        severity: 'HIGH',
+        suggestions: ['Revisar asignaciones', 'Cambiar horario']
+      };
+    }
   }
 
   getConflictIcon(): string {
-    switch (this.conflictType) {
+    switch (this.conflictDetails.type) {
       case 'TEACHER':
         return 'person_off';
       case 'SPACE':
-        return 'meeting_room_off';
+        return 'room_service';
       case 'GROUP':
         return 'group_off';
       case 'MULTIPLE':
-        return 'error_outline';
-      default:
         return 'warning';
+      default:
+        return 'error';
     }
   }
 
   getConflictTitle(): string {
-    switch (this.conflictType) {
+    switch (this.conflictDetails.type) {
       case 'TEACHER':
         return 'Conflicto de Docente';
       case 'SPACE':
@@ -377,86 +125,329 @@ export class ConflictIndicatorComponent {
       case 'GROUP':
         return 'Conflicto de Grupo';
       case 'MULTIPLE':
-        return 'Múltiples Conflictos';
+        return 'Conflictos Múltiples';
       default:
         return 'Conflicto Detectado';
     }
   }
 
+  getSeverityColor(): string {
+    switch (this.conflictDetails.severity) {
+      case 'LOW':
+        return 'primary';
+      case 'MEDIUM':
+        return 'accent';
+      case 'HIGH':
+        return 'warn';
+      case 'CRITICAL':
+        return 'warn';
+      default:
+        return 'warn';
+    }
+  }
+
+  getSeverityText(): string {
+    switch (this.conflictDetails.severity) {
+      case 'LOW':
+        return 'Bajo';
+      case 'MEDIUM':
+        return 'Medio';
+      case 'HIGH':
+        return 'Alto';
+      case 'CRITICAL':
+        return 'Crítico';
+      default:
+        return 'Desconocido';
+    }
+  }
+
   getTooltipText(): string {
-    let tooltip = `${this.getConflictTitle()}\n${this.message}`;
+    let tooltip = `${this.getConflictTitle()}\n`;
+    tooltip += `Severidad: ${this.getSeverityText()}\n`;
+    tooltip += `${this.conflictDetails.message}\n`;
 
-    if (this.affectedSessions.length > 0) {
-      tooltip += `\n\nSesiones afectadas (${this.affectedSessions.length}):`;
-      this.affectedSessions.slice(0, 3).forEach(session => {
-        tooltip += `\n• ${this.getSessionDisplayText(session)}`;
-      });
-
-      if (this.affectedSessions.length > 3) {
-        tooltip += `\n• ... y ${this.affectedSessions.length - 3} más`;
-      }
+    if (this.conflictDetails.affectedSessions.length > 0) {
+      tooltip += `\nSesiones afectadas: ${this.conflictDetails.affectedSessions.length}`;
     }
 
-    if (this.suggestions.length > 0) {
-      tooltip += '\n\nSugerencias:';
-      this.suggestions.slice(0, 2).forEach(suggestion => {
-        tooltip += `\n💡 ${suggestion}`;
-      });
+    if (this.conflictDetails.suggestions.length > 0) {
+      tooltip += `\n\nSugerencias:\n• ${this.conflictDetails.suggestions.join('\n• ')}`;
     }
 
     return tooltip;
   }
 
-  getSessionDisplayText(session: ClassSession): string {
-    return `${session.course.code} - ${session.teacher.fullName}`;
-  }
+  showDetails(): void {
+    if (!this.clickable) return;
 
-  getSessionChipColor(session: ClassSession): string {
-    // Color basado en el tipo de curso o prioridad
-    const courseType = this.getCourseType(session);
-    switch (courseType) {
-      case 'THEORY':
-        return 'primary';
-      case 'PRACTICE':
-        return 'warn';
-      case 'MIXED':
-        return 'accent';
-      default:
-        return 'default';
+    this.conflictClick.emit(this.conflictDetails);
+
+    const dialogRef = this.dialog.open(ConflictDetailsDialogComponent, {
+      width: '600px',
+      data: this.conflictDetails
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.action === 'resolve') {
+        this.resolveAttempt.emit(this.conflictDetails);
+      }
+    });
+  }
+}
+
+// ====== DIALOG COMPONENT ======
+
+@Component({
+  selector: 'app-conflict-details-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatListModule,
+    MatChipsModule,
+    MatDividerModule
+  ],
+  template: `
+    <h2 mat-dialog-title>
+      <mat-icon color="warn">{{ getConflictIcon() }}</mat-icon>
+      Detalles del Conflicto
+    </h2>
+
+    <mat-dialog-content>
+      <div class="conflict-details">
+        <!-- Información general -->
+        <mat-card class="conflict-summary">
+          <mat-card-header>
+            <mat-card-title>{{ getConflictTitle() }}</mat-card-title>
+            <mat-card-subtitle>
+              <mat-chip [color]="getSeverityColor()" size="small">
+                <mat-icon>{{ getSeverityIcon() }}</mat-icon>
+                {{ getSeverityText() }}
+              </mat-chip>
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <p>{{ data.message }}</p>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Sesiones afectadas -->
+        <mat-card class="affected-sessions" *ngIf="data.affectedSessions.length > 0">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>list</mat-icon>
+              Sesiones Afectadas ({{ data.affectedSessions.length }})
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              <mat-list-item *ngFor="let session of data.affectedSessions">
+                <mat-icon matListItemIcon>class</mat-icon>
+                <div matListItemTitle>{{ session.course.name }}</div>
+                <div matListItemLine>
+                  <span class="session-details">
+                    {{ session.teacher.firstName }} {{ session.teacher.lastName }} •
+                    {{ session.learningSpace.name }} •
+                    {{ session.studentGroup.name }}
+                  </span>
+                </div>
+                <mat-chip matListItemMeta
+                         [color]="session.sessionType.name === 'PRACTICE' ? 'warn' : 'primary'"
+                         size="small">
+                  {{ session.sessionType.name === 'PRACTICE' ? 'Práctica' : 'Teoría' }}
+                </mat-chip>
+              </mat-list-item>
+              <mat-divider *ngIf="data.affectedSessions.length > 1"></mat-divider>
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Sugerencias de resolución -->
+        <mat-card class="suggestions" *ngIf="data.suggestions.length > 0">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>lightbulb</mat-icon>
+              Sugerencias para Resolver
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              <mat-list-item *ngFor="let suggestion of data.suggestions">
+                <mat-icon matListItemIcon color="accent">arrow_forward</mat-icon>
+                <div matListItemTitle>{{ suggestion }}</div>
+              </mat-list-item>
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Acciones recomendadas -->
+        <mat-card class="recommended-actions">
+          <mat-card-header>
+            <mat-card-title>
+              <mat-icon>build</mat-icon>
+              Acciones Recomendadas
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <div class="action-buttons">
+              <button mat-raised-button color="primary" (click)="resolveConflict()">
+                <mat-icon>auto_fix_high</mat-icon>
+                Resolver Automáticamente
+              </button>
+
+              <button mat-stroked-button (click)="editSession()">
+                <mat-icon>edit</mat-icon>
+                Editar Sesión
+              </button>
+
+              <button mat-stroked-button (click)="showAlternatives()">
+                <mat-icon>compare_arrows</mat-icon>
+                Ver Alternativas
+              </button>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-dialog-content>
+
+    <mat-dialog-actions align="end">
+      <button mat-button mat-dialog-close>Cerrar</button>
+      <button mat-raised-button
+              color="warn"
+              [mat-dialog-close]="{ action: 'resolve' }"
+              *ngIf="canAutoResolve()">
+        <mat-icon>auto_fix_high</mat-icon>
+        Resolver
+      </button>
+    </mat-dialog-actions>
+  `,
+  styles: [`
+    .conflict-details {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      max-width: 100%;
+
+      mat-card {
+        margin: 0;
+
+        mat-card-header {
+          mat-card-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1.1rem;
+          }
+        }
+      }
+
+      .conflict-summary {
+        background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+        border-left: 4px solid #ff9800;
+      }
+
+      .affected-sessions {
+        .session-details {
+          font-size: 0.9rem;
+          color: #666;
+        }
+      }
+
+      .suggestions {
+        background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+        border-left: 4px solid #4caf50;
+      }
+
+      .recommended-actions {
+        .action-buttons {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+
+          button {
+            min-width: 140px;
+          }
+        }
+      }
+    }
+  `]
+})
+export class ConflictDetailsDialogComponent {
+  constructor(
+    @Inject(MAT_DIALOG_DATA) public data: ConflictDetails,
+    private dialogRef: MatDialogRef<ConflictDetailsDialogComponent>
+  ) {}
+
+  getConflictIcon(): string {
+    switch (this.data.type) {
+      case 'TEACHER': return 'person_off';
+      case 'SPACE': return 'room_service';
+      case 'GROUP': return 'group_off';
+      case 'MULTIPLE': return 'warning';
+      default: return 'error';
     }
   }
 
-  private getCourseType(session: ClassSession): 'THEORY' | 'PRACTICE' | 'MIXED' {
-    const hasTheory = session.course.weeklyTheoryHours > 0;
-    const hasPractice = session.course.weeklyPracticeHours > 0;
-
-    if (hasTheory && hasPractice) return 'MIXED';
-    if (hasTheory) return 'THEORY';
-    if (hasPractice) return 'PRACTICE';
-    return 'THEORY';
+  getConflictTitle(): string {
+    switch (this.data.type) {
+      case 'TEACHER': return 'Conflicto de Docente';
+      case 'SPACE': return 'Conflicto de Aula';
+      case 'GROUP': return 'Conflicto de Grupo';
+      case 'MULTIPLE': return 'Conflictos Múltiples';
+      default: return 'Conflicto Detectado';
+    }
   }
 
-  canResolve(): boolean {
-    // Determinar si el conflicto puede resolverse automáticamente
-    return this.suggestions.length > 0 && this.severity !== 'CRITICAL';
+  getSeverityColor(): string {
+    switch (this.data.severity) {
+      case 'LOW': return 'primary';
+      case 'MEDIUM': return 'accent';
+      case 'HIGH': return 'warn';
+      case 'CRITICAL': return 'warn';
+      default: return 'warn';
+    }
+  }
+
+  getSeverityText(): string {
+    switch (this.data.severity) {
+      case 'LOW': return 'Bajo';
+      case 'MEDIUM': return 'Medio';
+      case 'HIGH': return 'Alto';
+      case 'CRITICAL': return 'Crítico';
+      default: return 'Desconocido';
+    }
+  }
+
+  getSeverityIcon(): string {
+    switch (this.data.severity) {
+      case 'LOW': return 'info';
+      case 'MEDIUM': return 'warning';
+      case 'HIGH': return 'error';
+      case 'CRITICAL': return 'dangerous';
+      default: return 'help';
+    }
+  }
+
+  canAutoResolve(): boolean {
+    return this.data.severity !== 'CRITICAL' && this.data.suggestions.length > 0;
   }
 
   resolveConflict(): void {
-    this.resolveClicked.emit(this.conflictDetails);
+    this.dialogRef.close({ action: 'resolve' });
   }
 
-  showDetails(): void {
-    this.detailsClicked.emit(this.conflictDetails);
-
-    // También podríamos abrir un dialog con detalles
-    // this.openConflictDetailsDialog();
+  editSession(): void {
+    this.dialogRef.close({ action: 'edit' });
   }
 
-  private openConflictDetailsDialog(): void {
-    // Implementar dialog de detalles del conflicto
-    // const dialogRef = this.dialog.open(ConflictDetailsDialogComponent, {
-    //   width: '600px',
-    //   data: this.conflictDetails
-    // });
+  showAlternatives(): void {
+    this.dialogRef.close({ action: 'alternatives' });
   }
 }
+
+// Required imports for dialog
+import { Inject } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';

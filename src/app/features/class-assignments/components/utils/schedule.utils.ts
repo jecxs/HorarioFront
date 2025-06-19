@@ -1,5 +1,5 @@
 // src/app/features/class-assignments/utils/schedule.utils.ts
-import { TeachingHour, ClassSession, Teacher, LearningSpace, StudentGroup } from '../services/class-assignment.service';
+import { TeachingHour, ClassSession, Teacher, LearningSpace, StudentGroup, Course } from '../services/class-assignment.service';
 
 export class ScheduleUtils {
 
@@ -161,7 +161,8 @@ export class ScheduleUtils {
     return {
       totalHours,
       sessionsCount: teacherSessions.length,
-      averageHoursPerSession: teacherSessions.length > 0 ? totalHours / teacherSessions.length : 0,
+      averageHoursPerSession: teacherSessions.length > 0 ?
+        Math.round((totalHours / teacherSessions.length) * 100) / 100 : 0,
       daysWithClasses: daysSet.size
     };
   }
@@ -186,7 +187,7 @@ export class ScheduleUtils {
     return {
       totalHours,
       sessionsCount: spaceSessions.length,
-      occupancyRate: Math.min(100, occupancyRate),
+      occupancyRate: Math.min(100, Math.round(occupancyRate * 100) / 100),
       daysOccupied: daysSet.size
     };
   }
@@ -286,59 +287,72 @@ export class ScheduleUtils {
   /**
    * Genera sugerencias para resolver conflictos
    */
-  static generateConflictSuggestions(
-    conflictType: 'TEACHER' | 'SPACE' | 'GROUP',
-    conflictingSessions: ClassSession[]
+  static generateSuggestions(
+    course: Course,
+    group: StudentGroup,
+    space: LearningSpace,
+    sessions: ClassSession[]
   ): string[] {
     const suggestions: string[] = [];
 
-    switch (conflictType) {
-      case 'TEACHER':
-        suggestions.push('Cambiar el horario de una de las sesiones');
-        suggestions.push('Asignar un docente diferente');
-        suggestions.push('Dividir la sesión en múltiples bloques');
-        break;
+    // Verificar compatibilidad de tipo de curso y aula
+    const courseType = this.getCourseType(course.weeklyTheoryHours, course.weeklyPracticeHours);
 
-      case 'SPACE':
-        suggestions.push('Cambiar el aula de una de las sesiones');
-        suggestions.push('Modificar el horario para usar el aula en diferentes momentos');
-        suggestions.push('Buscar un aula alternativa del mismo tipo');
-        break;
+    if (courseType === 'PRACTICE' && space.teachingType?.name !== 'PRACTICE') {
+      suggestions.push('Recomendado: Usar un laboratorio para cursos prácticos');
+    }
 
-      case 'GROUP':
-        suggestions.push('Cambiar el horario de una de las clases');
-        suggestions.push('Reorganizar el cronograma del grupo');
-        suggestions.push('Coordinar con otros docentes del mismo grupo');
-        break;
+    if (courseType === 'MIXED' && space.teachingType?.name === 'THEORY') {
+      suggestions.push('Recomendado: Usar un aula con equipamiento práctico');
+    }
+
+    // Verificar capacidad
+    const estimatedStudents = 30; // Esto debería venir de datos reales del grupo
+    if (space.capacity < estimatedStudents) {
+      suggestions.push(`Advertencia: El aula podría ser pequeña (capacidad: ${space.capacity})`);
+    }
+
+    // Verificar carga del grupo
+    const groupWorkload = this.calculateGroupWorkload(group, sessions);
+    if (groupWorkload.totalHours > 30) {
+      suggestions.push('Advertencia: El grupo podría tener sobrecarga de horas');
     }
 
     return suggestions;
   }
 
   /**
-   * Valida la compatibilidad entre entidades
+   * Valida asignación completa
    */
-  static validateSessionCompatibility(
-    course: any,
+  static validateAssignment(
+    course: Course,
     teacher: Teacher,
+    group: StudentGroup,
     space: LearningSpace,
-    group: StudentGroup
+    hours: TeachingHour[]
   ): { isValid: boolean; errors: string[]; warnings: string[] } {
     const errors: string[] = [];
     const warnings: string[] = [];
 
-    // Validar docente-curso
-    const hasCompatibleArea = teacher.knowledgeAreas.some(
-      area => area.uuid === course.teachingKnowledgeArea.uuid
-    );
-    if (!hasCompatibleArea) {
-      errors.push(`El docente no tiene el área de conocimiento requerida: ${course.teachingKnowledgeArea.name}`);
+    // Validar que las horas sean consecutivas si hay más de una
+    if (hours.length > 1 && !this.areHoursConsecutive(hours)) {
+      warnings.push('Las horas pedagógicas no son consecutivas');
     }
 
-    // Validar aula-curso
+    // Validar duración mínima y máxima
+    const totalDuration = this.calculateTotalDuration(hours);
+    if (totalDuration < 45) {
+      errors.push('La sesión debe durar al menos 45 minutos');
+    }
+    if (totalDuration > 180) {
+      warnings.push('Sesiones largas (>3 horas) pueden afectar el rendimiento');
+    }
+
+    // Validar tipo de curso vs aula
     const courseType = this.getCourseType(course.weeklyTheoryHours, course.weeklyPracticeHours);
-    if (courseType === 'PRACTICE' && space.teachingType.name !== 'PRACTICE') {
-      errors.push('Se requiere un laboratorio para cursos prácticos');
+
+    if (courseType === 'PRACTICE' && space.teachingType?.name !== 'PRACTICE') {
+      warnings.push('Se requiere un laboratorio para cursos prácticos');
     }
 
     // Validar especialidad de aula
@@ -347,7 +361,7 @@ export class ScheduleUtils {
     }
 
     // Validar grupo-curso
-    if (group.cycleUuid !== course.cycle.uuid) {
+    if (group.cycle.uuid !== course.cycle.uuid) {
       errors.push('El curso debe pertenecer al mismo ciclo que el grupo');
     }
 
@@ -401,7 +415,8 @@ export class ScheduleUtils {
   } {
     const totalSessions = sessions.length;
     const totalHours = sessions.reduce((sum, session) => sum + session.totalHours, 0);
-    const averageSessionDuration = totalSessions > 0 ? totalHours / totalSessions : 0;
+    const averageSessionDuration = totalSessions > 0 ?
+      Math.round((totalHours / totalSessions) * 100) / 100 : 0;
 
     const theoryHours = sessions
       .filter(s => s.sessionType.name === 'THEORY')
@@ -411,8 +426,10 @@ export class ScheduleUtils {
       .filter(s => s.sessionType.name === 'PRACTICE')
       .reduce((sum, session) => sum + session.totalHours, 0);
 
-    const theoryPercentage = totalHours > 0 ? (theoryHours / totalHours) * 100 : 0;
-    const practicePercentage = totalHours > 0 ? (practiceHours / totalHours) * 100 : 0;
+    const theoryPercentage = totalHours > 0 ?
+      Math.round((theoryHours / totalHours) * 10000) / 100 : 0;
+    const practicePercentage = totalHours > 0 ?
+      Math.round((practiceHours / totalHours) * 10000) / 100 : 0;
 
     const teachersSet = new Set(sessions.map(s => s.teacher.uuid));
     const spacesSet = new Set(sessions.map(s => s.learningSpace.uuid));
@@ -426,4 +443,121 @@ export class ScheduleUtils {
     return {
       totalSessions,
       totalHours,
-      averageSessionDuration: Math
+      averageSessionDuration,
+      theoryPercentage,
+      practicePercentage,
+      teachersCount: teachersSet.size,
+      spacesCount: spacesSet.size,
+      groupsCount: groupsSet.size,
+      conflictsCount
+    };
+  }
+
+  /**
+   * Obtiene el texto de severidad de conflicto
+   */
+  static getConflictSeverityText(severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'): string {
+    switch (severity) {
+      case 'LOW': return 'Bajo';
+      case 'MEDIUM': return 'Medio';
+      case 'HIGH': return 'Alto';
+      case 'CRITICAL': return 'Crítico';
+      default: return 'Desconocido';
+    }
+  }
+
+  /**
+   * Obtiene el color del indicador de severidad
+   */
+  static getSeverityColor(severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'): string {
+    switch (severity) {
+      case 'LOW': return '#4CAF50';     // Verde
+      case 'MEDIUM': return '#FF9800';  // Naranja
+      case 'HIGH': return '#F44336';    // Rojo
+      case 'CRITICAL': return '#9C27B0'; // Púrpura
+      default: return '#757575';         // Gris
+    }
+  }
+
+  /**
+   * Determina si es un horario pedagógicamente óptimo
+   */
+  static isOptimalTime(hour: TeachingHour): boolean {
+    const startHour = parseInt(hour.startTime.split(':')[0]);
+    // Horario óptimo: 8:00 AM - 4:00 PM
+    return startHour >= 8 && startHour <= 16;
+  }
+
+  /**
+   * Calcula puntuación de compatibilidad entre docente y curso
+   */
+  static calculateTeacherCourseCompatibility(teacher: Teacher, course: Course): number {
+    let score = 0;
+
+    // Verificar áreas de conocimiento compatibles
+    const teacherAreas = teacher.knowledgeAreas || [];
+    if (course.knowledgeArea && teacherAreas.some(area => area.uuid === course.knowledgeArea.uuid)) {
+      score += 50; // 50% por área de conocimiento compatible
+    }
+
+    // Verificar departamento académico
+    if (teacher.academicDepartment && course.knowledgeArea?.academicDepartment &&
+      teacher.academicDepartment.uuid === course.knowledgeArea.academicDepartment.uuid) {
+      score += 30; // 30% por departamento académico compatible
+    }
+
+    // Puntuación adicional por experiencia (simulado)
+    score += 20; // 20% base por competencia general
+
+    return Math.min(100, score);
+  }
+
+  /**
+   * Genera colores para el horario
+   */
+  static generateScheduleColors(): { [key: string]: string } {
+    return {
+      'MONDAY': '#2196F3',    // Azul
+      'TUESDAY': '#4CAF50',   // Verde
+      'WEDNESDAY': '#FF9800', // Naranja
+      'THURSDAY': '#9C27B0',  // Púrpura
+      'FRIDAY': '#F44336',    // Rojo
+      'SATURDAY': '#607D8B',  // Azul gris
+      'SUNDAY': '#795548'     // Marrón
+    };
+  }
+
+  /**
+   * Formatea información del docente para visualización
+   */
+  static formatTeacherDisplay(teacher: Teacher): string {
+    const areas = teacher.knowledgeAreas?.map(area => area.name).join(', ') || 'Sin áreas';
+    return `${teacher.firstName} ${teacher.lastName} - ${areas}`;
+  }
+
+  /**
+   * Formatea información del aula para visualización
+   */
+  static formatSpaceDisplay(space: LearningSpace): string {
+    const specialty = space.specialty?.name || 'General';
+    const type = space.teachingType?.name || 'Teórico';
+    return `${space.name} (${specialty} - ${type}) - Cap: ${space.capacity}`;
+  }
+
+  /**
+   * Convierte minutos a formato HH:mm
+   */
+  static minutesToTimeFormat(minutes: number): string {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Calcula el tiempo total de una sesión basado en sus horas pedagógicas
+   */
+  static calculateSessionTotalTime(teachingHours: TeachingHour[]): string {
+    const totalMinutes = this.calculateTotalDuration(teachingHours);
+    return this.minutesToTimeFormat(totalMinutes);
+  }
+}

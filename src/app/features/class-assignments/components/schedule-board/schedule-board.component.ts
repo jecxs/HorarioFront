@@ -1,9 +1,9 @@
 // src/app/features/class-assignments/components/schedule-board/schedule-board.component.ts
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, FormGroup } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, combineLatest, debounceTime, distinctUntilChanged, startWith } from 'rxjs';
+import { Subject, takeUntil, combineLatest, debounceTime, distinctUntilChanged, startWith, switchMap, of } from 'rxjs';
 
 // Material Imports
 import { MatCardModule } from '@angular/material/card';
@@ -22,6 +22,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 
 // CDK
 import { DragDropModule, CdkDragDrop, moveItemInArray, transferArrayItem } from '@angular/cdk/drag-drop';
@@ -37,7 +38,8 @@ import {
   TimeSlot,
   LearningSpace,
   TeachingHour,
-  ValidationResult
+  ValidationResult,
+  IntelliSenseResult
 } from '../../services/class-assignment.service';
 
 // Components
@@ -56,6 +58,9 @@ interface ScheduleCell {
   isAvailable: boolean;
   hasConflict: boolean;
   suggestions: string[];
+  isHighlighted: boolean;
+  isSelected: boolean;
+  intelliSenseData?: IntelliSenseResult;
 }
 
 interface ScheduleView {
@@ -64,6 +69,7 @@ interface ScheduleView {
   weekView: boolean;
   showConflicts: boolean;
   showSuggestions: boolean;
+  showIntelliSense: boolean;
 }
 
 @Component({
@@ -88,6 +94,7 @@ interface ScheduleView {
     MatProgressSpinnerModule,
     MatMenuModule,
     MatDividerModule,
+    MatButtonToggleModule,
     DragDropModule,
     OverlayModule,
     SmartFiltersComponent,
@@ -105,6 +112,7 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private cdr = inject(ChangeDetectorRef);
 
   // Forms
   viewForm!: FormGroup;
@@ -118,13 +126,15 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
   eligibleTeachers: Teacher[] = [];
   eligibleSpaces: LearningSpace[] = [];
   studentGroups: StudentGroup[] = [];
+  teachingHours: TeachingHour[] = [];
 
   // View configuration
   scheduleView: ScheduleView = {
     mode: 'GLOBAL',
     weekView: true,
     showConflicts: true,
-    showSuggestions: true
+    showSuggestions: true,
+    showIntelliSense: true
   };
 
   // State
@@ -134,6 +144,10 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
   hoveredCell: ScheduleCell | null = null;
   selectedCells: ScheduleCell[] = [];
   validationResults: Map<string, ValidationResult> = new Map();
+  intelliSenseCache: Map<string, IntelliSenseResult> = new Map();
+
+  // Statistics
+  scheduleStatistics: any = {};
 
   // Constants
   readonly daysOfWeek = [
@@ -148,11 +162,19 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
     'FRIDAY': 'Viernes'
   };
 
+  readonly viewModes = [
+    { value: 'GLOBAL', label: 'Vista Global', icon: 'dashboard' },
+    { value: 'TEACHER', label: 'Por Docente', icon: 'person' },
+    { value: 'GROUP', label: 'Por Grupo', icon: 'group' },
+    { value: 'SPACE', label: 'Por Aula', icon: 'room' }
+  ];
+
   ngOnInit(): void {
     this.initializeForms();
     this.loadInitialData();
     this.setupIntelliSense();
     this.setupRealTimeValidation();
+    this.loadStatistics();
   }
 
   ngOnDestroy(): void {
@@ -167,19 +189,32 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
       periodFilter: [''],
       showConflicts: [true],
       showSuggestions: [true],
+      showIntelliSense: [true],
       weekView: [true]
     });
 
     this.quickAssignForm = this.fb.group({
-      course: [''],
-      teacher: [''],
-      group: [''],
-      space: [''],
-      dayOfWeek: [''],
-      timeSlot: [''],
-      sessionType: [''],
+      course: ['', Validators.required],
+      teacher: ['', Validators.required],
+      group: ['', Validators.required],
+      space: ['', Validators.required],
+      dayOfWeek: ['', Validators.required],
+      timeSlot: ['', Validators.required],
+      sessionType: ['', Validators.required],
       notes: ['']
     });
+
+    // Escuchar cambios en el formulario de vista
+    this.viewForm.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(values => {
+        this.scheduleView = { ...this.scheduleView, ...values };
+        this.refreshScheduleView();
+      });
   }
 
   private loadInitialData(): void {
@@ -189,100 +224,62 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
       this.classAssignmentService.getAllTimeSlots(),
       this.classAssignmentService.getAllClassSessions(),
       this.classAssignmentService.getAllStudentGroups(),
-      this.classAssignmentService.getAllCourses()
+      this.classAssignmentService.getAllCourses(),
+      this.classAssignmentService.getAllTeachers(),
+      this.classAssignmentService.getAllLearningSpaces(),
+      this.classAssignmentService.getAllTeachingHours()
     ]).pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ([timeSlotsRes, sessionsRes, groupsRes, coursesRes]) => {
-          this.timeSlots = Array.isArray(timeSlotsRes.data) ? timeSlotsRes.data : [timeSlotsRes.data];
-          this.classSessions = Array.isArray(sessionsRes.data) ? sessionsRes.data : [sessionsRes.data];
-          this.studentGroups = Array.isArray(groupsRes.data) ? groupsRes.data : [groupsRes.data];
-          this.availableCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [coursesRes.data];
+        next: ([timeSlotsRes, sessionsRes, groupsRes, coursesRes, teachersRes, spacesRes, hoursRes]) => {
+          this.timeSlots = this.extractData(timeSlotsRes);
+          this.classSessions = this.extractData(sessionsRes);
+          this.studentGroups = this.extractData(groupsRes);
+          this.availableCourses = this.extractData(coursesRes);
+          this.eligibleTeachers = this.extractData(teachersRes);
+          this.eligibleSpaces = this.extractData(spacesRes);
+          this.teachingHours = this.extractData(hoursRes);
 
           this.buildScheduleMatrix();
           this.loading = false;
+          this.cdr.detectChanges();
         },
         error: (error) => {
-          console.error('Error al cargar datos:', error);
-          this.snackBar.open('Error al cargar los datos del horario', 'Cerrar', { duration: 3000 });
+          console.error('Error al cargar datos iniciales:', error);
+          this.snackBar.open('Error al cargar los datos', 'Cerrar', { duration: 3000 });
           this.loading = false;
         }
       });
   }
 
-  private setupIntelliSense(): void {
-    // Configurar filtros inteligentes basados en selecciones
-    this.quickAssignForm.get('course')?.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(courseUuid => {
-        if (courseUuid) {
-          this.onCourseSelected(courseUuid);
-        }
-      });
-
-    // Escuchar cambios en el grupo para filtrar cursos compatibles
-    this.quickAssignForm.get('group')?.valueChanges
-      .pipe(
-        debounceTime(300),
-        distinctUntilChanged(),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(groupUuid => {
-        if (groupUuid) {
-          this.onGroupSelected(groupUuid);
-        }
-      });
-
-    // IntelliSense para día y turno
-    this.quickAssignForm.get('dayOfWeek')?.valueChanges
-      .pipe(
-        debounceTime(300),
-        takeUntil(this.destroy$)
-      )
-      .subscribe(() => {
-        this.updateAvailableHours();
-      });
-  }
-
-  private setupRealTimeValidation(): void {
-    // Validación en tiempo real de toda la asignación
-    combineLatest([
-      this.quickAssignForm.get('course')!.valueChanges.pipe(startWith('')),
-      this.quickAssignForm.get('teacher')!.valueChanges.pipe(startWith('')),
-      this.quickAssignForm.get('space')!.valueChanges.pipe(startWith('')),
-      this.quickAssignForm.get('group')!.valueChanges.pipe(startWith('')),
-      this.quickAssignForm.get('dayOfWeek')!.valueChanges.pipe(startWith(''))
-    ]).pipe(
-      debounceTime(500),
-      takeUntil(this.destroy$)
-    ).subscribe(([courseUuid, teacherUuid, spaceUuid, groupUuid, dayOfWeek]) => {
-      if (courseUuid && teacherUuid && spaceUuid && groupUuid && dayOfWeek) {
-        this.validateCurrentSelection();
-      }
-    });
+  private extractData<T>(response: any): T[] {
+    if (response?.success) {
+      return Array.isArray(response.data) ? response.data : [response.data];
+    }
+    return [];
   }
 
   private buildScheduleMatrix(): void {
     this.scheduleMatrix = [];
 
     this.timeSlots.forEach(timeSlot => {
-      timeSlot.teachingHours.forEach(teachingHour => {
+      const timeSlotHours = this.teachingHours.filter(hour => hour.timeSlot.uuid === timeSlot.uuid);
+
+      timeSlotHours.forEach(hour => {
         const row: ScheduleCell[] = [];
 
-        this.daysOfWeek.forEach(dayOfWeek => {
-          const existingSession = this.findSessionInCell(dayOfWeek, teachingHour);
+        this.daysOfWeek.forEach(day => {
+          const existingSession = this.findSessionForCell(day, hour);
 
           const cell: ScheduleCell = {
             timeSlot,
-            teachingHour,
-            dayOfWeek,
+            teachingHour: hour,
+            dayOfWeek: day,
             session: existingSession,
             isAvailable: !existingSession,
-            hasConflict: false,
-            suggestions: []
+            hasConflict: this.checkCellConflict(day, hour, existingSession),
+            suggestions: this.generateCellSuggestions(day, hour, existingSession),
+            isHighlighted: false,
+            isSelected: false
           };
 
           row.push(cell);
@@ -291,278 +288,282 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
         this.scheduleMatrix.push(row);
       });
     });
-
-    this.detectConflicts();
   }
 
-  private findSessionInCell(dayOfWeek: string, teachingHour: TeachingHour): ClassSession | undefined {
+  private findSessionForCell(dayOfWeek: string, hour: TeachingHour): ClassSession | undefined {
     return this.classSessions.find(session =>
       session.dayOfWeek === dayOfWeek &&
-      session.teachingHours.some(hour => hour.uuid === teachingHour.uuid)
+      session.teachingHours.some(sessionHour => sessionHour.uuid === hour.uuid)
     );
   }
 
-  private detectConflicts(): void {
-    this.scheduleMatrix.forEach(row => {
-      row.forEach(cell => {
-        if (cell.session) {
-          // Verificar conflictos básicos
-          cell.hasConflict = this.hasScheduleConflict(cell);
-        }
-      });
-    });
-  }
+  private checkCellConflict(dayOfWeek: string, hour: TeachingHour, session?: ClassSession): boolean {
+    if (!session) return false;
 
-  private hasScheduleConflict(cell: ScheduleCell): boolean {
-    if (!cell.session) return false;
-
-    // Buscar otras sesiones en el mismo horario
-    const conflictingSessions = this.classSessions.filter(session =>
-      session.uuid !== cell.session!.uuid &&
-      session.dayOfWeek === cell.dayOfWeek &&
-      (
-        // Mismo docente
-        session.teacher.uuid === cell.session!.teacher.uuid ||
-        // Mismo aula
-        session.learningSpace.uuid === cell.session!.learningSpace.uuid ||
-        // Mismo grupo
-        session.studentGroup.uuid === cell.session!.studentGroup.uuid
+    // Buscar conflictos de tiempo con otras sesiones
+    const conflictingSessions = this.classSessions.filter(otherSession =>
+      otherSession.uuid !== session.uuid &&
+      otherSession.dayOfWeek === dayOfWeek &&
+      otherSession.teachingHours.some(otherHour =>
+        ScheduleUtils.doTimeRangesOverlap(
+          hour.startTime, hour.endTime,
+          otherHour.startTime, otherHour.endTime
+        )
       ) &&
-      // Misma hora pedagógica
-      session.teachingHours.some(hour =>
-        cell.session!.teachingHours.some(cellHour => cellHour.uuid === hour.uuid)
+      (
+        otherSession.teacher.uuid === session.teacher.uuid ||
+        otherSession.learningSpace.uuid === session.learningSpace.uuid ||
+        otherSession.studentGroup.uuid === session.studentGroup.uuid
       )
     );
 
     return conflictingSessions.length > 0;
   }
 
-  // === EVENT HANDLERS ===
-
-  private onCourseSelected(courseUuid: string): void {
-    const course = this.availableCourses.find(c => c.uuid === courseUuid);
-    if (!course) return;
-
-    // Filtrar docentes elegibles
-    this.classAssignmentService.getEligibleTeachers(course)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(teachers => {
-        this.eligibleTeachers = teachers;
-
-        // Auto-seleccionar si solo hay uno
-        if (teachers.length === 1) {
-          this.quickAssignForm.patchValue({ teacher: teachers[0].uuid });
-        }
-      });
-
-    // Filtrar espacios elegibles
-    this.classAssignmentService.getEligibleLearningSpaces(course)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(spaces => {
-        this.eligibleSpaces = spaces;
-
-        // Auto-seleccionar si solo hay uno del tipo requerido
-        if (spaces.length === 1) {
-          this.quickAssignForm.patchValue({ space: spaces[0].uuid });
-        }
-      });
-
-    // Sugerir tipo de sesión
-    const courseType = this.getCourseType(course);
-    if (courseType === 'THEORY') {
-      this.quickAssignForm.patchValue({ sessionType: 'THEORY' });
-    } else if (courseType === 'PRACTICE') {
-      this.quickAssignForm.patchValue({ sessionType: 'PRACTICE' });
-    }
-  }
-
-  private onGroupSelected(groupUuid: string): void {
-    const group = this.studentGroups.find(g => g.uuid === groupUuid);
-    if (!group) return;
-
-    // Filtrar cursos del mismo ciclo
-    const compatibleCourses = this.availableCourses.filter(course =>
-      course.cycle.uuid === group.cycleUuid
-    );
-
-    this.availableCourses = compatibleCourses;
-  }
-
-  private updateAvailableHours(): void {
-    const formValue = this.quickAssignForm.value;
-
-    if (formValue.teacher && formValue.space && formValue.group && formValue.dayOfWeek) {
-      this.classAssignmentService.getAvailableTeachingHours(
-        formValue.teacher,
-        formValue.space,
-        formValue.group,
-        formValue.dayOfWeek
-      ).pipe(takeUntil(this.destroy$))
-        .subscribe(hours => {
-          this.highlightAvailableHours(hours);
-        });
-    }
-  }
-
-  private highlightAvailableHours(availableHours: TeachingHour[]): void {
-    this.scheduleMatrix.forEach(row => {
-      row.forEach(cell => {
-        const isAvailable = availableHours.some(hour => hour.uuid === cell.teachingHour.uuid);
-        cell.isAvailable = isAvailable && !cell.session;
-
-        // Generar sugerencias para celdas disponibles
-        if (isAvailable && !cell.session) {
-          cell.suggestions = this.generateCellSuggestions(cell);
-        }
-      });
-    });
-  }
-
-  private generateCellSuggestions(cell: ScheduleCell): string[] {
+  private generateCellSuggestions(dayOfWeek: string, hour: TeachingHour, session?: ClassSession): string[] {
     const suggestions: string[] = [];
-    const formValue = this.quickAssignForm.value;
 
-    if (formValue.course && formValue.teacher) {
-      suggestions.push(`Disponible para ${this.getCourseDisplayName(formValue.course)}`);
-      suggestions.push(`Docente libre: ${this.getTeacherDisplayName(formValue.teacher)}`);
-    }
+    if (!session) {
+      // Sugerencias para celdas vacías
+      if (ScheduleUtils.isOptimalTime(hour)) {
+        suggestions.push('Horario pedagógicamente óptimo');
+      }
 
-    // Agregar sugerencias basadas en patrones de horario
-    if (cell.timeSlot.name.includes('MAÑANA')) {
-      suggestions.push('Horario matutino - Ideal para cursos teóricos');
+      const availableTeachersCount = this.getAvailableTeachersForHour(dayOfWeek, hour).length;
+      if (availableTeachersCount > 0) {
+        suggestions.push(`${availableTeachersCount} docentes disponibles`);
+      }
+    } else {
+      // Sugerencias para celdas ocupadas
+      const workload = ScheduleUtils.calculateTeacherWorkload(session.teacher, this.classSessions);
+      if (workload.totalHours > 20) {
+        suggestions.push('Docente con alta carga horaria');
+      }
+
+      const spaceOccupancy = ScheduleUtils.calculateSpaceOccupancy(session.learningSpace, this.classSessions);
+      if (spaceOccupancy.occupancyRate > 80) {
+        suggestions.push('Aula con alta ocupación');
+      }
     }
 
     return suggestions;
   }
 
-  private validateCurrentSelection(): void {
-    const formValue = this.quickAssignForm.value;
-    const selectedHours = this.getSelectedTeachingHours();
-
-    if (selectedHours.length === 0) return;
-
-    this.classAssignmentService.validateAssignmentInRealTime(
-      formValue.course,
-      formValue.teacher,
-      formValue.space,
-      formValue.group,
-      formValue.dayOfWeek,
-      selectedHours.map(h => h.uuid)
-    ).pipe(takeUntil(this.destroy$))
-      .subscribe(result => {
-        this.showValidationFeedback(result);
-      });
+  private getAvailableTeachersForHour(dayOfWeek: string, hour: TeachingHour): Teacher[] {
+    return this.eligibleTeachers.filter(teacher => {
+      // Verificar si el docente no tiene clases en esta hora
+      const hasConflict = this.classSessions.some(session =>
+        session.teacher.uuid === teacher.uuid &&
+        session.dayOfWeek === dayOfWeek &&
+        session.teachingHours.some(sessionHour => sessionHour.uuid === hour.uuid)
+      );
+      return !hasConflict;
+    });
   }
 
-  private showValidationFeedback(result: ValidationResult): void {
-    // Mostrar errores inmediatamente
-    if (result.errors.length > 0) {
-      this.snackBar.open(
-        `⚠️ ${result.errors[0]}`,
-        'Cerrar',
-        {
-          duration: 5000,
-          panelClass: ['error-snackbar']
+  private setupIntelliSense(): void {
+    // Configurar IntelliSense reactivo
+    combineLatest([
+      this.quickAssignForm.get('course')!.valueChanges.pipe(startWith('')),
+      this.quickAssignForm.get('group')!.valueChanges.pipe(startWith('')),
+      this.quickAssignForm.get('dayOfWeek')!.valueChanges.pipe(startWith('')),
+      this.quickAssignForm.get('timeSlot')!.valueChanges.pipe(startWith(''))
+    ]).pipe(
+      debounceTime(500),
+      distinctUntilChanged(),
+      switchMap(([courseUuid, groupUuid, dayOfWeek, timeSlotUuid]) => {
+        if (courseUuid || groupUuid || (dayOfWeek && timeSlotUuid)) {
+          return this.classAssignmentService.getIntelliSense(courseUuid, groupUuid, dayOfWeek, timeSlotUuid);
         }
+        return of(null);
+      }),
+      takeUntil(this.destroy$)
+    ).subscribe(intelliSense => {
+      if (intelliSense) {
+        this.updateIntelliSenseResults(intelliSense);
+      }
+    });
+  }
+
+  private updateIntelliSenseResults(intelliSense: IntelliSenseResult): void {
+    // Actualizar docentes elegibles
+    if (intelliSense.eligibleTeachers) {
+      this.eligibleTeachers = intelliSense.eligibleTeachers;
+    }
+
+    // Actualizar aulas elegibles
+    if (intelliSense.eligibleSpaces) {
+      this.eligibleSpaces = intelliSense.eligibleSpaces;
+    }
+
+    // Mostrar recomendaciones
+    if (intelliSense.recommendations && intelliSense.recommendations.length > 0) {
+      this.snackBar.open(
+        `💡 ${intelliSense.recommendations[0]}`,
+        'Cerrar',
+        { duration: 4000, panelClass: 'snack-info' }
       );
     }
 
     // Mostrar advertencias
-    if (result.warnings.length > 0) {
+    if (intelliSense.warnings && intelliSense.warnings.length > 0) {
       this.snackBar.open(
-        `⚡ ${result.warnings[0]}`,
-        'Entendido',
-        {
-          duration: 3000,
-          panelClass: ['warning-snackbar']
-        }
+        `⚠️ ${intelliSense.warnings[0]}`,
+        'Cerrar',
+        { duration: 5000, panelClass: 'snack-warning' }
       );
     }
 
-    // Mostrar sugerencias
-    if (result.suggestions && result.suggestions.length > 0) {
+    this.cdr.detectChanges();
+  }
+
+  private setupRealTimeValidation(): void {
+    // Validación en tiempo real del formulario de asignación rápida
+    this.quickAssignForm.valueChanges
+      .pipe(
+        debounceTime(800),
+        distinctUntilChanged(),
+        switchMap(formValue => {
+          if (this.isFormReadyForValidation(formValue)) {
+            return this.classAssignmentService.validateAssignmentInRealTime(
+              formValue.course,
+              formValue.teacher,
+              formValue.space,
+              formValue.group,
+              formValue.dayOfWeek,
+              [formValue.timeSlot] // Simplificado para el ejemplo
+            );
+          }
+          return of(null);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(validation => {
+        if (validation) {
+          this.handleValidationResult(validation);
+        }
+      });
+  }
+
+  private isFormReadyForValidation(formValue: any): boolean {
+    return formValue.course && formValue.teacher && formValue.space &&
+      formValue.group && formValue.dayOfWeek && formValue.timeSlot;
+  }
+
+  private handleValidationResult(validation: ValidationResult): void {
+    // Limpiar validaciones previas
+    this.clearValidationMessages();
+
+    if (!validation.isValid && validation.errors.length > 0) {
       this.snackBar.open(
-        `💡 ${result.suggestions[0]}`,
+        `❌ ${validation.errors[0]}`,
+        'Cerrar',
+        { duration: 4000, panelClass: 'snack-error' }
+      );
+    }
+
+    if (validation.warnings.length > 0) {
+      this.snackBar.open(
+        `⚠️ ${validation.warnings[0]}`,
         'Ver más',
-        {
-          duration: 4000,
-          panelClass: ['suggestion-snackbar']
-        }
+        { duration: 6000, panelClass: 'snack-warning' }
+      );
+    }
+
+    if (validation.suggestions.length > 0) {
+      this.snackBar.open(
+        `💡 ${validation.suggestions[0]}`,
+        'Cerrar',
+        { duration: 5000, panelClass: 'snack-info' }
       );
     }
   }
 
-  // === DRAG & DROP ===
-
-  onSessionDragStart(session: ClassSession): void {
-    this.draggedSession = session;
+  private clearValidationMessages(): void {
+    this.snackBar.dismiss();
   }
 
-  onCellDrop(event: CdkDragDrop<ScheduleCell[]>, targetCell: ScheduleCell): void {
-    if (!this.draggedSession || targetCell.session) return;
-
-    // Validar si se puede mover a esta celda
-    this.validateSessionMove(this.draggedSession, targetCell)
-      .then(isValid => {
-        if (isValid) {
-          this.moveSession(this.draggedSession!, targetCell);
-        } else {
-          this.snackBar.open('No se puede mover la sesión a esta ubicación', 'Cerrar', { duration: 3000 });
-        }
-        this.draggedSession = null;
-      });
-  }
-
-  private async validateSessionMove(session: ClassSession, targetCell: ScheduleCell): Promise<boolean> {
-    // Implementar validación de movimiento
-    return new Promise(resolve => {
-      this.classAssignmentService.validateAssignmentInRealTime(
-        session.course.uuid,
-        session.teacher.uuid,
-        session.learningSpace.uuid,
-        session.studentGroup.uuid,
-        targetCell.dayOfWeek,
-        [targetCell.teachingHour.uuid]
-      ).pipe(takeUntil(this.destroy$))
-        .subscribe(result => {
-          resolve(result.isValid);
-        });
-    });
-  }
-
-  private moveSession(session: ClassSession, targetCell: ScheduleCell): void {
-    // Actualizar la sesión con nuevos datos
-    const updateData = {
-      studentGroupUuid: session.studentGroup.uuid,
-      courseUuid: session.course.uuid,
-      teacherUuid: session.teacher.uuid,
-      learningSpaceUuid: session.learningSpace.uuid,
-      dayOfWeek: targetCell.dayOfWeek,
-      sessionTypeUuid: session.sessionType.uuid,
-      teachingHourUuids: [targetCell.teachingHour.uuid],
-      notes: session.notes
-    };
-
-    this.classAssignmentService.updateClassSession(session.uuid, updateData)
+  private loadStatistics(): void {
+    this.classAssignmentService.getScheduleStatistics()
       .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.snackBar.open('Sesión movida exitosamente', 'Cerrar', { duration: 2000 });
-          this.loadInitialData(); // Recargar datos
-        },
-        error: (error) => {
-          console.error('Error al mover sesión:', error);
-          this.snackBar.open('Error al mover la sesión', 'Cerrar', { duration: 3000 });
-        }
+      .subscribe(stats => {
+        this.scheduleStatistics = stats;
+        this.cdr.detectChanges();
       });
   }
 
-  // === CELL INTERACTIONS ===
+  private refreshScheduleView(): void {
+    // Filtrar datos según el modo de vista seleccionado
+    switch (this.scheduleView.mode) {
+      case 'TEACHER':
+        if (this.scheduleView.selectedEntity) {
+          this.filterByTeacher(this.scheduleView.selectedEntity as Teacher);
+        }
+        break;
+      case 'GROUP':
+        if (this.scheduleView.selectedEntity) {
+          this.filterByGroup(this.scheduleView.selectedEntity as StudentGroup);
+        }
+        break;
+      case 'SPACE':
+        if (this.scheduleView.selectedEntity) {
+          this.filterBySpace(this.scheduleView.selectedEntity as LearningSpace);
+        }
+        break;
+      default:
+        this.buildScheduleMatrix();
+    }
+  }
+
+  private filterByTeacher(teacher: Teacher): void {
+    const teacherSessions = this.classSessions.filter(session =>
+      session.teacher.uuid === teacher.uuid
+    );
+    this.highlightSessions(teacherSessions);
+  }
+
+  private filterByGroup(group: StudentGroup): void {
+    const groupSessions = this.classSessions.filter(session =>
+      session.studentGroup.uuid === group.uuid
+    );
+    this.highlightSessions(groupSessions);
+  }
+
+  private filterBySpace(space: LearningSpace): void {
+    const spaceSessions = this.classSessions.filter(session =>
+      session.learningSpace.uuid === space.uuid
+    );
+    this.highlightSessions(spaceSessions);
+  }
+
+  private highlightSessions(sessions: ClassSession[]): void {
+    // Limpiar highlights previos
+    this.scheduleMatrix.forEach(row => {
+      row.forEach(cell => {
+        cell.isHighlighted = false;
+      });
+    });
+
+    // Aplicar nuevos highlights
+    sessions.forEach(session => {
+      this.scheduleMatrix.forEach(row => {
+        row.forEach(cell => {
+          if (cell.session?.uuid === session.uuid) {
+            cell.isHighlighted = true;
+          }
+        });
+      });
+    });
+
+    this.cdr.detectChanges();
+  }
+
+  // ====== EVENT HANDLERS ======
 
   onCellClick(cell: ScheduleCell): void {
     if (cell.session) {
       this.editSession(cell.session);
-    } else if (cell.isAvailable) {
+    } else {
       this.createSessionInCell(cell);
     }
   }
@@ -570,8 +571,8 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
   onCellHover(cell: ScheduleCell): void {
     this.hoveredCell = cell;
 
-    if (this.isIntelliSenseEnabled && cell.isAvailable) {
-      this.showCellTooltip(cell);
+    if (this.isIntelliSenseEnabled && !cell.session) {
+      this.loadCellIntelliSense(cell);
     }
   }
 
@@ -579,23 +580,66 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
     this.hoveredCell = null;
   }
 
-  private showCellTooltip(cell: ScheduleCell): void {
-    // Implementar tooltip inteligente
-    // Se puede usar Angular CDK Overlay para crear tooltips dinámicos
+  onCellSelect(cell: ScheduleCell, event: MouseEvent): void {
+    if (event.ctrlKey || event.metaKey) {
+      // Selección múltiple
+      const index = this.selectedCells.findIndex(c =>
+        c.dayOfWeek === cell.dayOfWeek && c.teachingHour.uuid === cell.teachingHour.uuid
+      );
+
+      if (index > -1) {
+        this.selectedCells.splice(index, 1);
+        cell.isSelected = false;
+      } else {
+        this.selectedCells.push(cell);
+        cell.isSelected = true;
+      }
+    } else {
+      // Selección única
+      this.clearSelection();
+      this.selectedCells = [cell];
+      cell.isSelected = true;
+    }
   }
 
-  private createSessionInCell(cell: ScheduleCell): void {
+  private clearSelection(): void {
+    this.selectedCells.forEach(cell => cell.isSelected = false);
+    this.selectedCells = [];
+  }
+
+  private loadCellIntelliSense(cell: ScheduleCell): void {
+    const cacheKey = `${cell.dayOfWeek}-${cell.teachingHour.uuid}`;
+
+    if (this.intelliSenseCache.has(cacheKey)) {
+      cell.intelliSenseData = this.intelliSenseCache.get(cacheKey);
+      return;
+    }
+
+    this.classAssignmentService.getIntelliSense(
+      undefined, // courseUuid
+      undefined, // groupUuid
+      cell.dayOfWeek,
+      cell.timeSlot.uuid
+    ).subscribe(intelliSense => {
+      cell.intelliSenseData = intelliSense;
+      this.intelliSenseCache.set(cacheKey, intelliSense);
+      this.cdr.detectChanges();
+    });
+  }
+
+  // ====== SESSION MANAGEMENT ======
+
+  createSessionInCell(cell: ScheduleCell): void {
     const dialogRef = this.dialog.open(ClassSessionDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
+      width: '90vw',
+      maxWidth: '1200px',
+      height: '80vh',
       data: {
         isNew: true,
         prefilledData: {
           dayOfWeek: cell.dayOfWeek,
           timeSlot: cell.timeSlot,
-          teachingHour: cell.teachingHour,
-          ...this.quickAssignForm.value
+          teachingHour: cell.teachingHour
         }
       }
     });
@@ -607,14 +651,14 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private editSession(session: ClassSession): void {
+  editSession(session: ClassSession): void {
     const dialogRef = this.dialog.open(ClassSessionDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
+      width: '90vw',
+      maxWidth: '1200px',
+      height: '80vh',
       data: {
         isNew: false,
-        session
+        session: session
       }
     });
 
@@ -625,193 +669,224 @@ export class ScheduleBoardComponent implements OnInit, OnDestroy {
     });
   }
 
-  // === CRUD OPERATIONS ===
-
   private createSession(sessionData: any): void {
+    this.loading = true;
+
     this.classAssignmentService.createClassSession(sessionData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.snackBar.open('Sesión creada exitosamente', 'Cerrar', { duration: 2000 });
-          this.loadInitialData();
+        next: (response) => {
+          if (response.success) {
+            this.snackBar.open('✅ Sesión creada exitosamente', 'Cerrar', { duration: 2000 });
+            this.loadInitialData();
+          }
         },
         error: (error) => {
           console.error('Error al crear sesión:', error);
           this.snackBar.open(
-            error.error?.error || 'Error al crear la sesión',
+            `❌ ${error.error?.message || 'Error al crear la sesión'}`,
             'Cerrar',
-            { duration: 3000 }
+            { duration: 4000 }
           );
+          this.loading = false;
         }
       });
   }
 
   private updateSession(uuid: string, sessionData: any): void {
+    this.loading = true;
+
     this.classAssignmentService.updateClassSession(uuid, sessionData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: () => {
-          this.snackBar.open('Sesión actualizada exitosamente', 'Cerrar', { duration: 2000 });
-          this.loadInitialData();
+        next: (response) => {
+          if (response.success) {
+            this.snackBar.open('✅ Sesión actualizada exitosamente', 'Cerrar', { duration: 2000 });
+            this.loadInitialData();
+          }
         },
         error: (error) => {
           console.error('Error al actualizar sesión:', error);
           this.snackBar.open(
-            error.error?.error || 'Error al actualizar la sesión',
+            `❌ ${error.error?.message || 'Error al actualizar la sesión'}`,
             'Cerrar',
-            { duration: 3000 }
+            { duration: 4000 }
           );
+          this.loading = false;
         }
       });
   }
 
-  deleteSession(session: ClassSession): void {
-    if (confirm(`¿Está seguro de eliminar la sesión de ${session.course.name}?`)) {
+  deleteSession(session: ClassSession, event: Event): void {
+    event.stopPropagation();
+
+    const confirmation = confirm(
+      `¿Está seguro de eliminar la sesión de ${session.course.name}?\n\n` +
+      `Docente: ${session.teacher.firstName} ${session.teacher.lastName}\n` +
+      `Día: ${this.dayLabels[session.dayOfWeek as keyof typeof this.dayLabels]}\n` +
+      `Aula: ${session.learningSpace.name}`
+    );
+
+    if (confirmation) {
       this.classAssignmentService.deleteClassSession(session.uuid)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
-          next: () => {
-            this.snackBar.open('Sesión eliminada exitosamente', 'Cerrar', { duration: 2000 });
-            this.loadInitialData();
+          next: (response) => {
+            if (response.success) {
+              this.snackBar.open('✅ Sesión eliminada exitosamente', 'Cerrar', { duration: 2000 });
+              this.loadInitialData();
+            }
           },
           error: (error) => {
             console.error('Error al eliminar sesión:', error);
-            this.snackBar.open('Error al eliminar la sesión', 'Cerrar', { duration: 3000 });
+            this.snackBar.open('❌ Error al eliminar la sesión', 'Cerrar', { duration: 3000 });
           }
         });
     }
   }
 
-  // === UTILITY METHODS ===
+  // ====== DRAG & DROP ======
 
-  private getCourseType(course: Course): 'THEORY' | 'PRACTICE' | 'MIXED' {
+  onSessionDragStart(session: ClassSession): void {
+    this.draggedSession = session;
+  }
+
+  onCellDrop(event: CdkDragDrop<any>, targetCell: ScheduleCell): void {
+    if (this.draggedSession && !targetCell.session) {
+      this.moveSessionToCell(this.draggedSession, targetCell);
+    }
+    this.draggedSession = null;
+  }
+
+  private moveSessionToCell(session: ClassSession, targetCell: ScheduleCell): void {
+    const updatedSession = {
+      ...session,
+      dayOfWeek: targetCell.dayOfWeek,
+      teachingHourUuids: [targetCell.teachingHour.uuid]
+    };
+
+    this.updateSession(session.uuid, updatedSession);
+  }
+
+  // ====== QUICK ASSIGN ======
+
+  onQuickAssign(): void {
+    if (this.quickAssignForm.valid) {
+      const formValue = this.quickAssignForm.value;
+
+      const sessionData = {
+        courseUuid: formValue.course,
+        teacherUuid: formValue.teacher,
+        learningSpaceUuid: formValue.space,
+        studentGroupUuid: formValue.group,
+        sessionTypeUuid: formValue.sessionType,
+        dayOfWeek: formValue.dayOfWeek,
+        teachingHourUuids: [formValue.timeSlot],
+        notes: formValue.notes || ''
+      };
+
+      this.createSession(sessionData);
+      this.quickAssignForm.reset();
+    } else {
+      this.snackBar.open('⚠️ Complete todos los campos requeridos', 'Cerrar', { duration: 3000 });
+    }
+  }
+
+  // ====== UTILITY METHODS ======
+
+  getCellTooltip(cell: ScheduleCell): string {
+    if (cell.session) {
+      const session = cell.session;
+      return `${session.course.name}\n` +
+        `${session.teacher.firstName} ${session.teacher.lastName}\n` +
+        `${session.learningSpace.name}\n` +
+        `${ScheduleUtils.formatTimeRange(cell.teachingHour.startTime, cell.teachingHour.endTime)}`;
+    } else {
+      let tooltip = `${this.dayLabels[cell.dayOfWeek as keyof typeof this.dayLabels]}\n`;
+      tooltip += `${ScheduleUtils.formatTimeRange(cell.teachingHour.startTime, cell.teachingHour.endTime)}\n`;
+
+      if (cell.suggestions.length > 0) {
+        tooltip += `\n💡 ${cell.suggestions.join('\n💡 ')}`;
+      }
+
+      return tooltip;
+    }
+  }
+
+  getCellClasses(cell: ScheduleCell): string {
+    const classes = ['schedule-cell'];
+
+    if (cell.session) {
+      classes.push('occupied');
+      classes.push(`course-${cell.session.sessionType.name.toLowerCase()}`);
+    } else {
+      classes.push('available');
+    }
+
+    if (cell.hasConflict) classes.push('conflict');
+    if (cell.isHighlighted) classes.push('highlighted');
+    if (cell.isSelected) classes.push('selected');
+    if (cell.isAvailable && ScheduleUtils.isOptimalTime(cell.teachingHour)) {
+      classes.push('optimal-time');
+    }
+
+    return classes.join(' ');
+  }
+
+  getSessionDisplayText(session: ClassSession): string {
+    return `${session.course.code}\n${session.teacher.lastName}`;
+  }
+
+  getCourseTypeColor(course: Course): string {
     const hasTheory = course.weeklyTheoryHours > 0;
     const hasPractice = course.weeklyPracticeHours > 0;
 
-    if (hasTheory && hasPractice) return 'MIXED';
-    if (hasTheory) return 'THEORY';
-    if (hasPractice) return 'PRACTICE';
-    return 'THEORY';
+    if (hasTheory && hasPractice) return 'accent';
+    if (hasPractice) return 'warn';
+    return 'primary';
   }
 
-  private getSelectedTeachingHours(): TeachingHour[] {
-    return this.selectedCells.map(cell => cell.teachingHour);
+  getCourseTypeText(course: Course): string {
+    const hasTheory = course.weeklyTheoryHours > 0;
+    const hasPractice = course.weeklyPracticeHours > 0;
+
+    if (hasTheory && hasPractice) return 'Mixto';
+    if (hasPractice) return 'Práctico';
+    return 'Teórico';
   }
 
-  private getCourseDisplayName(courseUuid: string): string {
-    const course = this.availableCourses.find(c => c.uuid === courseUuid);
-    return course ? `${course.code} - ${course.name}` : '';
+  refreshData(): void {
+    this.loadInitialData();
+    this.loadStatistics();
   }
-
-  private getTeacherDisplayName(teacherUuid: string): string {
-    const teacher = this.eligibleTeachers.find(t => t.uuid === teacherUuid);
-    return teacher ? teacher.fullName : '';
-  }
-
-  // === VIEW MANAGEMENT ===
-
-  switchView(mode: 'TEACHER' | 'GROUP' | 'SPACE' | 'GLOBAL'): void {
-    this.scheduleView.mode = mode;
-    this.viewForm.patchValue({ mode });
-    this.buildScheduleMatrix();
-  }
-
-  toggleWeekView(): void {
-    this.scheduleView.weekView = !this.scheduleView.weekView;
-  }
-
-  toggleConflictDisplay(): void {
-    this.scheduleView.showConflicts = !this.scheduleView.showConflicts;
-  }
-
-  toggleSuggestions(): void {
-    this.scheduleView.showSuggestions = !this.scheduleView.showSuggestions;
-  }
-
-  toggleIntelliSense(): void {
-    this.isIntelliSenseEnabled = !this.isIntelliSenseEnabled;
-  }
-
-  // === QUICK ACTIONS ===
-
-  quickAssign(): void {
-    const formValue = this.quickAssignForm.value;
-
-    if (!this.quickAssignForm.valid) {
-      this.snackBar.open('Complete todos los campos requeridos', 'Cerrar', { duration: 3000 });
-      return;
-    }
-
-    const selectedHours = this.getSelectedTeachingHours();
-    if (selectedHours.length === 0) {
-      this.snackBar.open('Seleccione al menos una hora pedagógica', 'Cerrar', { duration: 3000 });
-      return;
-    }
-
-    const sessionData = {
-      studentGroupUuid: formValue.group,
-      courseUuid: formValue.course,
-      teacherUuid: formValue.teacher,
-      learningSpaceUuid: formValue.space,
-      dayOfWeek: formValue.dayOfWeek,
-      sessionTypeUuid: formValue.sessionType,
-      teachingHourUuids: selectedHours.map(h => h.uuid),
-      notes: formValue.notes
-    };
-
-    this.createSession(sessionData);
-  }
-
-  clearQuickAssign(): void {
-    this.quickAssignForm.reset();
-    this.selectedCells = [];
-    this.eligibleTeachers = [];
-    this.eligibleSpaces = [];
-  }
-
-  // === EXPORT/IMPORT ===
 
   exportSchedule(): void {
     // Implementar exportación del horario
-    this.snackBar.open('Función de exportación en desarrollo', 'Cerrar', { duration: 3000 });
+    this.snackBar.open('🚧 Función de exportación en desarrollo', 'Cerrar', { duration: 3000 });
   }
 
   printSchedule(): void {
     window.print();
   }
 
-  // === HELPERS FOR TEMPLATE ===
+  // ====== GETTERS FOR TEMPLATE ======
 
-  getSessionDisplayText(session: ClassSession): string {
-    return `${session.course.code}\n${session.teacher.fullName}`;
+  get currentModeLabel(): string {
+    return this.viewModes.find(mode => mode.value === this.scheduleView.mode)?.label || 'Vista Global';
   }
 
-  getSessionTooltipText(session: ClassSession): string {
-    return `${session.course.name}\nDocente: ${session.teacher.fullName}\nAula: ${session.learningSpace.name}\nGrupo: ${session.studentGroup.name}`;
+  get currentModeIcon(): string {
+    return this.viewModes.find(mode => mode.value === this.scheduleView.mode)?.icon || 'dashboard';
   }
 
-  getCellClasses(cell: ScheduleCell): string[] {
-    const classes = ['schedule-cell'];
-
-    if (cell.session) classes.push('occupied');
-    if (cell.isAvailable) classes.push('available');
-    if (cell.hasConflict) classes.push('conflict');
-    if (this.selectedCells.includes(cell)) classes.push('selected');
-    if (cell === this.hoveredCell) classes.push('hovered');
-
-    return classes;
+  get conflictsCount(): number {
+    return this.scheduleMatrix.flat().filter(cell => cell.hasConflict).length;
   }
 
-  getSessionClasses(session: ClassSession): string[] {
-    const classes = ['session-card'];
-
-    const courseType = this.getCourseType(session.course);
-    classes.push(`type-${courseType.toLowerCase()}`);
-
-    if (this.hasScheduleConflict({ session } as ScheduleCell)) {
-      classes.push('has-conflict');
-    }
-
-    return classes;
+  get occupancyPercentage(): number {
+    const totalCells = this.scheduleMatrix.flat().length;
+    const occupiedCells = this.scheduleMatrix.flat().filter(cell => cell.session).length;
+    return totalCells > 0 ? Math.round((occupiedCells / totalCells) * 100) : 0;
   }
 }
+
