@@ -6,29 +6,33 @@
     <mat-card-header>
       <div class="header-content">
         <div class="title-section">
-          <mat-icon [color]="'primary'">{{ currentModeIcon }}</mat-icon>
-          <h2>{{ currentModeLabel }}</h2>
-          <mat-chip-set *ngIf="scheduleStatistics">
+          <mat-icon [color]="'primary'">
+            {{ scheduleView.mode === 'GLOBAL' ? 'calendar_view_week' :
+               scheduleView.mode === 'TEACHER' ? 'person' :
+               scheduleView.mode === 'GROUP' ? 'groups' : 'location_on' }}
+          </mat-icon>
+          <h2>
+            {{ scheduleView.mode === 'GLOBAL' ? 'Vista Global' :
+               scheduleView.mode === 'TEACHER' ? 'Por Docente' :
+               scheduleView.mode === 'GROUP' ? 'Por Grupo' : 'Por Aula' }}
+          </h2>
+          <mat-chip-set>
             <mat-chip color="primary">
               <mat-icon>schedule</mat-icon>
-              {{ scheduleStatistics.totalSessions }} sesiones
+              {{ classSessions.length }} sesiones
             </mat-chip>
-            <mat-chip [color]="conflictsCount > 0 ? 'warn' : 'accent'">
-              <mat-icon>{{ conflictsCount > 0 ? 'warning' : 'check_circle' }}</mat-icon>
-              {{ conflictsCount }} conflictos
+            <mat-chip [color]="getConflictCount() > 0 ? 'warn' : 'accent'">
+              <mat-icon>{{ getConflictCount() > 0 ? 'warning' : 'check_circle' }}</mat-icon>
+              {{ getConflictCount() }} conflictos
             </mat-chip>
             <mat-chip color="accent">
               <mat-icon>pie_chart</mat-icon>
-              {{ occupancyPercentage }}% ocupación
+              {{ getOccupancyPercentage() | number:'1.0-0' }}% ocupación
             </mat-chip>
           </mat-chip-set>
         </div>
 
         <div class="action-buttons">
-          <button mat-raised-button color="primary" (click)="refreshData()" [disabled]="loading">
-            <mat-icon>refresh</mat-icon>
-            Actualizar
-          </button>
 
           <button mat-stroked-button (click)="exportSchedule()">
             <mat-icon>download</mat-icon>
@@ -70,9 +74,21 @@
           <mat-form-field appearance="outline" class="mode-field">
             <mat-label>Modo de vista</mat-label>
             <mat-select formControlName="mode">
-              <mat-option *ngFor="let mode of viewModes" [value]="mode.value">
-                <mat-icon>{{ mode.icon }}</mat-icon>
-                {{ mode.label }}
+              <mat-option value="GLOBAL">
+                <mat-icon>calendar_view_week</mat-icon>
+                Vista Global
+              </mat-option>
+              <mat-option value="TEACHER">
+                <mat-icon>person</mat-icon>
+                Docentes
+              </mat-option>
+              <mat-option value="GROUP">
+                <mat-icon>groups</mat-icon>
+                Grupos
+              </mat-option>
+              <mat-option value="SPACE">
+                <mat-icon>location_on</mat-icon>
+                Aulas
               </mat-option>
             </mat-select>
           </mat-form-field>
@@ -167,12 +183,12 @@
                     <span class="course-code">{{ course.code }}</span>
                     <span class="course-name">{{ course.name }}</span>
                   </div>
-                  <mat-chip-set class="course-chips">
-                    <mat-chip [color]="getCourseType(course) === 'THEORY' ? 'primary' : getCourseType(course) === 'PRACTICE' ? 'warn' : 'accent'">
-                      {{ getCourseType(course) === 'THEORY' ? 'Teórico' : getCourseType(course) === 'PRACTICE' ? 'Práctico' : 'Mixto' }}
-                    </mat-chip>
-                    <mat-chip>{{ course.weeklyTheoryHours + course.weeklyPracticeHours }}h/sem</mat-chip>
-                  </mat-chip-set>
+                    <mat-chip-set class="course-chips">
+                      <mat-chip [color]="(course.weeklyTheoryHours > 0 && course.weeklyPracticeHours > 0) ? 'accent' : (course.weeklyTheoryHours > 0 ? 'primary' : 'warn')">
+                        {{ (course.weeklyTheoryHours > 0 && course.weeklyPracticeHours > 0) ? 'Mixto' : (course.weeklyTheoryHours > 0 ? 'Teórico' : 'Práctico') }}
+                      </mat-chip>
+                      <mat-chip>{{ course.weeklyTheoryHours + course.weeklyPracticeHours }}h/sem</mat-chip>
+                    </mat-chip-set>
                 </div>
               </mat-option>
             </mat-select>
@@ -208,18 +224,20 @@
               <mat-option value="">Seleccionar aula</mat-option>
               <mat-optgroup *ngFor="let type of ['THEORY', 'PRACTICE']"
                             [label]="type === 'THEORY' ? 'Aulas Teóricas' : 'Laboratorios'">
-                <mat-option *ngFor="let space of getSpacesByType(type)" [value]="space.uuid">
-                  <div class="space-option">
-                    <span class="space-name">{{ space.name }}</span>
-                    <span class="space-info">
-                    <mat-icon>people</mat-icon>
-                      {{ space.capacity }}
-                  </span>
-                    <mat-chip *ngIf="space.specialty" color="accent">
-                      {{ space.specialty.name }}
-                    </mat-chip>
-                  </div>
-                </mat-option>
+                <ng-container *ngFor="let space of eligibleSpaces">
+                  <mat-option *ngIf="space.teachingType.name === type" [value]="space.uuid">
+                    <div class="space-option">
+                      <span class="space-name">{{ space.name }}</span>
+                      <span class="space-info">
+                        <mat-icon>people</mat-icon>
+                        {{ space.capacity }}
+                      </span>
+                      <mat-chip *ngIf="space.specialty" color="accent">
+                        {{ space.specialty.name }}
+                      </mat-chip>
+                    </div>
+                  </mat-option>
+                </ng-container>
               </mat-optgroup>
             </mat-select>
             <mat-hint>Filtrado por tipo de curso y especialidad</mat-hint>
@@ -235,9 +253,6 @@
               <mat-option *ngFor="let day of daysOfWeek" [value]="day">
                 <div class="day-option">
                   <span>{{ dayLabels[day] }}</span>
-                  <mat-chip [color]="getDayOccupancy(day) > 70 ? 'warn' : 'primary'">
-                    {{ getDayOccupancy(day).toFixed(0) }}% ocupado
-                  </mat-chip>
                 </div>
               </mat-option>
             </mat-select>
@@ -350,11 +365,6 @@
             <mat-icon>calendar_view_week</mat-icon>
             Horario Semanal
           </div>
-          <div class="grid-stats" *ngIf="scheduleStatistics">
-            <mat-chip color="primary">{{ scheduleStatistics.totalHours }} horas totales</mat-chip>
-            <mat-chip color="accent">{{ scheduleStatistics.teachersCount }} docentes</mat-chip>
-            <mat-chip color="warn" *ngIf="conflictsCount > 0">{{ conflictsCount }} conflictos</mat-chip>
-          </div>
         </div>
       </mat-card-title>
     </mat-card-header>
@@ -459,102 +469,11 @@
       </div>
 
       <!-- Empty state -->
-      <div class="empty-state" *ngIf="!loading && scheduleMatrix.length === 0">
-        <mat-icon>calendar_month</mat-icon>
-        <h3>No hay datos de horario</h3>
-        <p>Configure los turnos y horas pedagógicas para comenzar</p>
-        <button mat-raised-button color="primary" (click)="refreshData()">
-          <mat-icon>refresh</mat-icon>
-          Recargar datos
-        </button>
-      </div>
-    </mat-card-content>
-  </mat-card>
-
-  <!-- Panel de estadísticas -->
-  <mat-card class="statistics-panel" *ngIf="scheduleStatistics">
-    <mat-card-header>
-      <mat-card-title>
-        <mat-icon>analytics</mat-icon>
-        Estadísticas del Horario
-      </mat-card-title>
-    </mat-card-header>
-
-    <mat-card-content>
-      <div class="stats-grid">
-        <div class="stat-item">
-          <mat-icon color="primary">schedule</mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ scheduleStatistics.totalSessions }}</div>
-            <div class="stat-label">Sesiones totales</div>
-          </div>
+        <div class="empty-state" *ngIf="!loading && scheduleMatrix.length === 0">
+          <mat-icon>calendar_month</mat-icon>
+          <h3>No hay datos de horario</h3>
+          <p>Configure los turnos y horas pedagógicas para comenzar</p>
         </div>
-
-        <div class="stat-item">
-          <mat-icon color="accent">access_time</mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ scheduleStatistics.totalHours }}</div>
-            <div class="stat-label">Horas semanales</div>
-          </div>
-        </div>
-
-        <div class="stat-item">
-          <mat-icon color="primary">person</mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ scheduleStatistics.teachersCount }}</div>
-            <div class="stat-label">Docentes activos</div>
-          </div>
-        </div>
-
-        <div class="stat-item">
-          <mat-icon color="accent">room</mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ scheduleStatistics.spacesCount }}</div>
-            <div class="stat-label">Aulas utilizadas</div>
-          </div>
-        </div>
-
-        <div class="stat-item">
-          <mat-icon color="primary">group</mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ scheduleStatistics.groupsCount }}</div>
-            <div class="stat-label">Grupos activos</div>
-          </div>
-        </div>
-
-        <div class="stat-item">
-          <mat-icon [color]="conflictsCount > 0 ? 'warn' : 'accent'">
-            {{ conflictsCount > 0 ? 'warning' : 'check_circle' }}
-          </mat-icon>
-          <div class="stat-content">
-            <div class="stat-value">{{ conflictsCount }}</div>
-            <div class="stat-label">Conflictos</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Distribution charts -->
-      <div class="distribution-charts" *ngIf="scheduleStatistics.theoryPercentage || scheduleStatistics.practicePercentage">
-        <h4>Distribución de horas</h4>
-        <div class="chart-item">
-          <span>Teoría:</span>
-          <div class="progress-bar">
-            <div class="progress-fill theory"
-                 [style.width.%]="scheduleStatistics.theoryPercentage">
-            </div>
-          </div>
-          <span>{{ scheduleStatistics.theoryPercentage | number:'1.1-1' }}%</span>
-        </div>
-        <div class="chart-item">
-          <span>Práctica:</span>
-          <div class="progress-bar">
-            <div class="progress-fill practice"
-                 [style.width.%]="scheduleStatistics.practicePercentage">
-            </div>
-          </div>
-          <span>{{ scheduleStatistics.practicePercentage | number:'1.1-1' }}%</span>
-        </div>
-      </div>
     </mat-card-content>
   </mat-card>
 
