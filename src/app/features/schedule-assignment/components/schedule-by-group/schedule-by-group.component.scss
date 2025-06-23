@@ -1,0 +1,275 @@
+// schedule-by-group.component.scss - Versión Minimalista
+
+// ===== VARIABLES MINIMALISTAS =====
+:root {
+  --schedule-primary: #3b82f6;
+  --schedule-secondary: #8b5cf6;
+  --schedule-border: #e2e8f0;
+  --schedule-bg: #f8fafc;
+}
+
+// ===== ANIMACIONES SUTILES =====
+@keyframes subtle-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes gentle-scale {
+  from { transform: scale(0.98); }
+  to { transform: scale(1); }
+}
+
+// ===== EFECTOS MINIMALISTAS =====
+.animate-fade-in {
+  animation: subtle-fade 0.3s ease-out;
+}
+
+// ===== TARJETAS DE SESIÓN SIMPLES =====
+.session-card-theory {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+
+  &:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+  }
+}
+
+.session-card-practice {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+
+  &:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
+  }
+}
+
+// ===== MEJORAS PARA ANGULAR MATERIAL =====
+::ng-deep {
+
+  // Form fields compactos
+  .compact-select {
+    .mat-mdc-text-field-wrapper {
+      background: #f8fafc;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      height: 40px;
+
+      &:hover {
+        border-color: #cbd5e1;
+        background: #f1f5f9;
+      }
+    }
+
+    &.mat-focused .mat-mdc-text-field-wrapper {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .mat-mdc-form-field-label {
+      color: #64748b;
+      font-size: 14px;
+    }
+
+    .mdc-notched-outline {
+      display: none;
+    }
+  }
+
+  // Panel de selección simple
+  .mat-mdc-select-panel {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  // Opciones simples
+  .mat-mdc-option {
+    border-radius: 4px;
+    margin: 2px 4px;
+    padding: 8px 12px;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    &.mat-mdc-option-active {
+      background: #eff6ff;
+      color: #1e40af;
+    }
+  }
+
+  // Botones simples
+  .mat-mdc-raised-button {
+    border-radius: 8px;
+    font-weight: 500;
+    text-transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      transform: translateY(-1px);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  // Icon buttons simples
+  .mat-mdc-icon-button {
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.1);
+      transform: scale(1.05);
+    }
+  }
+
+  // Tooltips simples
+  .mat-mdc-tooltip {
+    background: rgba(30, 41, 59, 0.9);
+    color: white;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    max-width: 250px;
+    line-height: 1.3;
+  }
+
+  // Snackbars simples
+  .mat-mdc-snack-bar-container {
+    border-radius: 8px;
+
+    &.success-snackbar {
+      background: #059669;
+    }
+
+    &.error-snackbar {
+      background: #dc2626;
+    }
+
+    &.warning-snackbar {
+      background: #d97706;
+    }
+
+    &.info-snackbar {
+      background: #2563eb;
+    }
+  }
+
+  // Progress spinner simple
+  .mat-mdc-progress-spinner {
+    svg circle {
+      stroke: #3b82f6;
+    }
+  }
+}
+
+// ===== RESPONSIVE COMPACTO =====
+@media (max-width: 1024px) {
+  .grid-cols-\[220px_repeat\(6\,1fr\)\] {
+    grid-template-columns: 200px repeat(6, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .min-w-\[1200px\] {
+    min-width: 1000px;
+  }
+
+  .grid-cols-\[220px_repeat\(6\,1fr\)\] {
+    grid-template-columns: 180px repeat(6, 1fr);
+  }
+
+  .session-card-theory,
+  .session-card-practice {
+    h6 {
+      font-size: 0.65rem;
+      line-height: 1.2;
+    }
+  }
+}
+
+// ===== UTILIDADES DE TEXTO =====
+.truncate-name {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// ===== ACCESIBILIDAD =====
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+// Focus states simples
+button:focus-visible,
+.mat-mdc-option:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+// ===== SCROLLBAR SIMPLE =====
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #94a3b8;
+    }
+  }
+}
+
+// ===== BORDES Y SEPARADORES =====
+.time-slot-separator {
+  border-top: 2px solid #e2e8f0;
+  margin-top: 1px;
+}
+
+// ===== ESTADOS DE HOVER SUTILES =====
+.hover\:bg-slate-50\/50:hover {
+  background-color: rgba(248, 250, 252, 0.5);
+}
+
+// ===== EFECTOS DE TRANSICIÓN SIMPLES =====
+.transition-all {
+  transition: all 0.2s ease;
+}
+
+.transition-colors {
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.transition-transform {
+  transition: transform 0.2s ease;
+}
+
+.transition-opacity {
+  transition: opacity 0.2s ease;
+}

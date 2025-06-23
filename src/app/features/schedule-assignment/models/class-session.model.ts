@@ -69,7 +69,6 @@ export interface CourseResponse {
   modality: BaseUuidEntity;
 }
 
-// ✅ MODELO CORREGIDO (COMPLETO)
 export interface StudentGroupResponse {
   uuid: string;
   name: string;
@@ -77,11 +76,10 @@ export interface StudentGroupResponse {
   cycleNumber: number;
   periodUuid: string;
   periodName: string;
-  // ✅ AGREGAR: Información de la carrera
-  careerUuid: string;        // UUID de la carrera
-  careerName: string;        // Nombre de la carrera (opcional, para mostrar)
-  modalityUuid?: string;     // UUID de la modalidad (opcional)
-  modalityName?: string;     // Nombre de la modalidad (opcional)
+  careerUuid: string;
+  careerName: string;
+  modalityUuid?: string;
+  modalityName?: string;
 }
 
 export interface LearningSpaceResponse {
@@ -130,7 +128,6 @@ export interface ValidationResult {
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
-// 2. ✅ Actualizar el modelo ClassSessionValidation
 export interface ClassSessionValidation {
   courseUuid: string;
   teacherUuid: string;
@@ -138,7 +135,7 @@ export interface ClassSessionValidation {
   studentGroupUuid: string;
   dayOfWeek: string;
   teachingHourUuids: string[];
-  sessionUuid?: string; // ✅ AGREGAR para modo edición
+  sessionUuid?: string; // Para modo edición
 }
 
 // Filtros
@@ -153,7 +150,7 @@ export interface ClassSessionFilter {
   sessionTypeUuid?: string;
 }
 
-// Modelo para el tablero de horarios
+// ✅ MODELO ACTUALIZADO: Una celda por hora pedagógica individual
 export interface ScheduleCell {
   teachingHour: TeachingHourResponse;
   session?: ClassSessionResponse;
@@ -162,6 +159,24 @@ export interface ScheduleCell {
   conflicts?: string[];
 }
 
+// ✅ NUEVO: Modelo mejorado para filas individuales por hora pedagógica
+export interface ScheduleHourRow {
+  teachingHour: TeachingHourResponse;
+  timeSlot: {
+    uuid: string;
+    name: string;
+    startTime: string;
+    endTime: string;
+  };
+  isFirstHourOfTimeSlot: boolean; // Para mostrar el separador del turno
+  isLastHourOfTimeSlot: boolean;  // Para el espaciado
+  hourIndexInTimeSlot: number;    // Posición dentro del turno (0, 1, 2...)
+  totalHoursInTimeSlot: number;   // Total de horas en el turno
+  cells: { [key in DayOfWeek]?: ScheduleCell }; // UNA celda por día, no array
+}
+
+// ✅ MANTENER COMPATIBILIDAD: Modelo anterior (deprecated)
+/** @deprecated Use ScheduleHourRow instead. This model groups multiple hours per row which causes alignment issues. */
 export interface ScheduleRow {
   timeSlot: {
     uuid: string;
@@ -181,7 +196,6 @@ export interface AssignmentState {
   currentWeek?: Date;
 }
 
-// models/class-session.model.ts
 export interface TeacherEligibilityResponse {
   uuid: string;
   fullName: string;
@@ -193,6 +207,125 @@ export interface TeacherEligibilityResponse {
   availabilityStatus: 'AVAILABLE' | 'NOT_AVAILABLE' | 'TIME_CONFLICT' | 'NO_SCHEDULE_CONFIGURED' | 'ERROR';
   availabilitiesForDay: any[];
   recommendedTimeSlots: string;
+}
+
+// ✅ NUEVAS INTERFACES DE UTILIDAD PARA EL TABLERO MEJORADO
+
+// Información de TimeSlot del backend
+export interface TimeSlotResponse {
+  uuid: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  teachingHours: TeachingHourResponse[];
+}
+
+// Información procesada para el tablero
+export interface ProcessedTimeSlot extends TimeSlotResponse {
+  sortedHours: TeachingHourResponse[];
+  sortOrder: number; // Para ordenamiento por startTime
+}
+
+// Configuración del tablero
+export interface ScheduleConfig {
+  showTimeSlotNames: boolean;
+  showHourNumbers: boolean;
+  allowMultipleSelection: boolean;
+  highlightConflicts: boolean;
+  autoSave: boolean;
+}
+
+// Estado del tablero
+export interface ScheduleBoardState {
+  selectedCells: Set<string>; // Set de "day-hourUuid"
+  hoveredCell?: string;
+  draggedCell?: string;
+  validationErrors: Map<string, string[]>;
+  warnings: Map<string, string[]>;
+}
+
+// ✅ HELPERS Y UTILIDADES
+
+// Helpers para TimeSlots
+export class TimeSlotHelper {
+  /**
+   * Ordena TimeSlots por hora de inicio
+   */
+  static sortTimeSlots(timeSlots: TimeSlotResponse[]): ProcessedTimeSlot[] {
+    return timeSlots
+      .map((ts, index) => ({
+        ...ts,
+        sortedHours: [...ts.teachingHours].sort((a, b) => a.orderInTimeSlot - b.orderInTimeSlot),
+        sortOrder: TimeSlotHelper.timeStringToMinutes(ts.startTime)
+      }))
+      .sort((a, b) => a.sortOrder - b.sortOrder);
+  }
+
+  /**
+   * Convierte string de tiempo a minutos para ordenamiento
+   */
+  static timeStringToMinutes(timeString: string): number {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+  }
+
+  /**
+   * Verifica si dos rangos de tiempo se solapan
+   */
+  static timesOverlap(
+    start1: string, end1: string,
+    start2: string, end2: string
+  ): boolean {
+    const start1Min = TimeSlotHelper.timeStringToMinutes(start1);
+    const end1Min = TimeSlotHelper.timeStringToMinutes(end1);
+    const start2Min = TimeSlotHelper.timeStringToMinutes(start2);
+    const end2Min = TimeSlotHelper.timeStringToMinutes(end2);
+
+    return start1Min < end2Min && start2Min < end1Min;
+  }
+}
+
+// Helpers para el tablero
+export class ScheduleHelper {
+  /**
+   * Genera clave única para una celda
+   */
+  static getCellKey(day: DayOfWeek, hourUuid: string): string {
+    return `${day}-${hourUuid}`;
+  }
+
+  /**
+   * Parsea clave de celda
+   */
+  static parseCellKey(key: string): { day: DayOfWeek; hourUuid: string } | null {
+    const parts = key.split('-');
+    if (parts.length !== 2) return null;
+
+    const day = parts[0] as DayOfWeek;
+    const hourUuid = parts[1];
+
+    if (!Object.values(DayOfWeek).includes(day)) return null;
+
+    return { day, hourUuid };
+  }
+
+  /**
+   * Verifica si una sesión se extiende por múltiples horas
+   */
+  static isMultiHourSession(session: ClassSessionResponse): boolean {
+    return session.teachingHours.length > 1;
+  }
+
+  /**
+   * Obtiene el rango de horas de una sesión
+   */
+  static getSessionTimeRange(session: ClassSessionResponse): { start: string; end: string } {
+    const sortedHours = [...session.teachingHours].sort((a, b) => a.orderInTimeSlot - b.orderInTimeSlot);
+    return {
+      start: sortedHours[0].startTime,
+      end: sortedHours[sortedHours.length - 1].endTime
+    };
+  }
 }
 
 // Helpers
@@ -214,3 +347,14 @@ export const WORKING_DAYS = [
   DayOfWeek.FRIDAY,
   DayOfWeek.SATURDAY
 ];
+
+// ✅ CONSTANTES PARA EL TABLERO CORREGIDAS
+export const SCHEDULE_CONSTANTS = {
+  MIN_HOUR_DURATION: 30, // minutos
+  MAX_HOUR_DURATION: 180, // minutos
+  MAX_CONSECUTIVE_HOURS: 4,
+  DEFAULT_BREAK_DURATION: 10, // minutos
+  CELL_HEIGHT: 80, // px
+  TIME_CELL_WIDTH: 220, // px - ✅ Aumentado para evitar overflow
+  DAY_CELL_MIN_WIDTH: 180 // px
+} as const;
