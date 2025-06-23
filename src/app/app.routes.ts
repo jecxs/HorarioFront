@@ -62,6 +62,13 @@ export const routes: Routes = [
         path: 'turnos',
         loadComponent: () => import('./features/time-slots/components/time-slots.component').then(m => m.TimeSlotsComponent)
       },
+      {
+        path: 'horarios',
+        loadChildren: () =>
+          import('./features/schedule-assignment/schedule-assignment.routes')
+            .then(routes => routes.SCHEDULE_ASSIGNMENT_ROUTES)
+      }
+
 
     ]
   },

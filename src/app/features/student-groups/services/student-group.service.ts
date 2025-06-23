@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { BaseApiService } from '../../../shared/services/base-api.service';
 
+
 export interface StudentGroup {
   uuid: string;
   name: string;
@@ -10,6 +11,10 @@ export interface StudentGroup {
   cycleNumber: number;
   periodUuid: string;
   periodName: string;
+  careerUuid: string;        // ✅ AGREGAR
+  careerName: string;        // ✅ AGREGAR
+  modalityUuid?: string;     // ✅ AGREGAR (opcional)
+  modalityName?: string;     // ✅ AGREGAR (opcional)
 }
 
 export interface StudentGroupRequest {
