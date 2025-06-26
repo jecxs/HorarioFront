@@ -157,18 +157,12 @@ export class ClassSessionService extends BaseApiService {
   // === MÉTODOS AUXILIARES PARA OBTENER DATOS RELACIONADOS ===
 
   // class-session.service.ts
-  getEligibleTeachersDetailed(courseUuid: string, dayOfWeek?: string, timeSlotUuid?: string):
-    Observable<ApiResponse<TeacherEligibilityResponse[]>> {
-    const params = this.createParams({ dayOfWeek, timeSlotUuid });
-    return this.get<TeacherEligibilityResponse[]>(`/protected/teachers/eligible-detailed/${courseUuid}`, params);
-  }
-
-  getEligibleSpaces(
+  getEligibleTeachersDetailed(
     courseUuid: string,
     dayOfWeek?: string,
     timeSlotUuid?: string,
-    teachingHourUuids?: string[]  // ✅ NUEVO PARÁMETRO
-  ): Observable<ApiResponse<LearningSpaceResponse[]>> {
+    teachingHourUuids?: string[] // ✅ NUEVO PARÁMETRO
+  ): Observable<ApiResponse<TeacherEligibilityResponse[]>> {
 
     const params = this.createParams({
       dayOfWeek,
@@ -177,7 +171,37 @@ export class ClassSessionService extends BaseApiService {
       teachingHourUuids: teachingHourUuids?.length ? teachingHourUuids.join(',') : undefined
     });
 
-    return this.get<LearningSpaceResponse[]>(`/protected/learning-space/eligible/${courseUuid}`, params);
+    return this.get<TeacherEligibilityResponse[]>(`/protected/teachers/eligible-detailed/${courseUuid}`, params);
+  }
+
+  getEligibleSpaces(
+    courseUuid: string,
+    dayOfWeek?: string,
+    timeSlotUuid?: string,
+    teachingHourUuids?: string[],
+    sessionType?: 'THEORY' | 'PRACTICE'
+  ): Observable<ApiResponse<LearningSpaceResponse[]>> {
+    // ✅ Usar el método createParams consistente con el resto del servicio
+    const params = this.createParams({
+      dayOfWeek,
+      timeSlotUuid,
+      // ✅ CAMBIO PRINCIPAL: Enviar horas específicas si están disponibles
+      teachingHourUuids: teachingHourUuids?.length ? teachingHourUuids.join(',') : undefined,
+      sessionType
+    });
+
+    console.log('=== ELIGIBLE SPACES REQUEST ===');
+    console.log('Course UUID:', courseUuid);
+    console.log('Day of Week:', dayOfWeek);
+    console.log('TimeSlot UUID:', timeSlotUuid);
+    console.log('Teaching Hour UUIDs:', teachingHourUuids);
+    console.log('Session Type:', sessionType);
+    console.log('Final params:', params);
+
+    return this.get<LearningSpaceResponse[]>(
+      `/protected/learning-space/eligible/${courseUuid}`,
+      params // ✅ Pasar params directamente, no como objeto
+    );
   }
 
 

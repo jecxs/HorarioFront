@@ -1,9 +1,9 @@
-// schedule-by-group.component.ts - Versión Minimalista
+// schedule-by-group.component.ts - Versión Mejorada
 import { Component, OnInit, OnDestroy, inject, Inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
-import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged, combineLatest } from 'rxjs';
 
 // Angular Material
 import { MatButtonModule } from '@angular/material/button';
@@ -21,6 +21,13 @@ import { StudentGroupService, StudentGroup } from '../../../student-groups/servi
 import { TimeSlotService, TimeSlot } from '../../../time-slots/services/time-slot.service';
 import { PeriodService } from '../../../periods/services/period.service';
 
+// Agregar estos imports a los existentes
+import { CourseService } from '../../../courses/services/course.service';
+import { CourseMetadataService } from '../../services/course-metadata.service';
+import { CourseMetadataHeaderComponent } from '../course-metadata-header/course-metadata-header.component';
+import { CourseResponse } from '../../models/class-session.model';
+
+
 // Models
 import {
   ClassSessionResponse,
@@ -30,7 +37,8 @@ import {
   ScheduleHourRow,
   ScheduleCell,
   TeachingHourResponse,
-  TimeSlotHelper
+  TimeSlotHelper,
+
 } from '../../models/class-session.model';
 
 // Components
@@ -50,7 +58,8 @@ import { AssignmentDialogComponent, AssignmentDialogData } from '../assignment-d
     MatTooltipModule,
     MatSnackBarModule,
     MatDialogModule,
-    MatFormFieldModule
+    MatFormFieldModule,
+    CourseMetadataHeaderComponent
   ],
   templateUrl: './schedule-by-group.component.html',
   styleUrls: ['./schedule-by-group.component.scss']
@@ -64,6 +73,12 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   private studentGroupService = inject(StudentGroupService);
   private timeSlotService = inject(TimeSlotService);
   private periodService = inject(PeriodService);
+  private courseService = inject(CourseService); // ✅ AGREGAR
+  private courseMetadataService = inject(CourseMetadataService); // ✅ AGREGAR
+
+  // ✅ NUEVAS PROPIEDADES para colapsar turnos
+  collapsedTimeSlots: Set<string> = new Set(); // UUIDs de turnos colapsados
+  showCollapseControls = true; // Para mostrar/ocultar controles
 
   // Form controls
   groupControl = new FormControl<string>('');
@@ -73,6 +88,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   timeSlots: TimeSlot[] = [];
   sessions: ClassSessionResponse[] = [];
   scheduleHourRows: ScheduleHourRow[] = [];
+  groupCourses: CourseResponse[] = []; // ✅ AGREGAR
+  loadingCourses = false; // ✅ AGREGAR
 
   // State
   selectedGroup: StudentGroup | null = null;
@@ -87,6 +104,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    // ✅ Limpiar metadatos al destruir el componente
+    this.courseMetadataService.clearMetadata();
   }
 
   private loadInitialData(): void {
@@ -130,36 +149,134 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     this.groupControl.valueChanges
       .pipe(
         distinctUntilChanged(),
-        debounceTime(150), // Reducido para ser más responsivo
+        debounceTime(150),
         takeUntil(this.destroy$)
       )
       .subscribe(groupUuid => {
         if (groupUuid) {
           this.selectedGroup = this.studentGroups.find(g => g.uuid === groupUuid) || null;
           if (this.selectedGroup) {
-            this.loadGroupSchedule(groupUuid);
+            // ✅ Cargar datos del grupo Y sus cursos
+            this.loadGroupData(groupUuid);
           }
+        } else {
+          // ✅ Limpiar cuando no hay grupo seleccionado
+          this.clearGroupData();
         }
       });
   }
 
-  private loadGroupSchedule(groupUuid: string): void {
+  // ✅ NUEVO MÉTODO: Cargar todos los datos del grupo de manera coordinada
+  private loadGroupData(groupUuid: string): void {
     this.loading = true;
-    this.classSessionService.getSessionsByGroup(groupUuid)
-      .pipe(takeUntil(this.destroy$))
+    this.loadingCourses = true;
+
+    console.log('🔄 Loading complete group data for:', groupUuid);
+
+    // Combinar carga de sesiones y cursos
+    combineLatest([
+      this.classSessionService.getSessionsByGroup(groupUuid),
+      this.loadGroupCourses(groupUuid)
+    ]).pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.sessions = Array.isArray(response.data) ? response.data : [response.data];
+        next: ([sessionsResponse, courses]: [any, CourseResponse[]]) => { // ✅ TIPADO CORRECTO
+          console.log('📚 Group data loaded successfully');
+
+          // Actualizar sesiones
+          this.sessions = Array.isArray(sessionsResponse.data) ? sessionsResponse.data : [sessionsResponse.data];
+
+          // Actualizar cursos
+          this.groupCourses = courses;
+
+          // ✅ CALCULAR Y ACTUALIZAR METADATOS
+          this.updateMetadata();
+
+          // Construir grid
           this.buildScheduleGrid();
+
           this.loading = false;
+          this.loadingCourses = false;
+
+          console.log('✅ Group data processing complete');
         },
-        error: (error) => {
-          console.error('Error loading schedule:', error);
-          this.showSnackBar('Error al cargar el horario', 'error');
+        error: (error: any) => { // ✅ TIPADO CORRECTO
+          console.error('❌ Error loading group data:', error);
+          this.showSnackBar('Error al cargar los datos del grupo', 'error');
           this.loading = false;
+          this.loadingCourses = false;
         }
       });
   }
+
+// ✅ NUEVO MÉTODO: Cargar cursos del grupo seleccionado
+  // ✅ NUEVO MÉTODO: Cargar cursos del grupo seleccionado
+  private loadGroupCourses(groupUuid: string): Promise<CourseResponse[]> {
+    return new Promise((resolve, reject) => {
+      if (!this.selectedGroup) {
+        resolve([]);
+        return;
+      }
+
+      console.log('📖 Loading courses for group:', this.selectedGroup.name);
+      console.log('   - Cycle:', this.selectedGroup.cycleNumber);
+      console.log('   - Career UUID:', this.selectedGroup.careerUuid);
+
+      this.courseService.getAllCourses()
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (response: any) => { // ✅ TIPADO CORRECTO
+            const allCourses = Array.isArray(response.data) ? response.data : [response.data];
+
+            // ✅ Filtrar cursos por ciclo Y carrera
+            const filteredCourses = allCourses.filter((course: CourseResponse) => { // ✅ TIPADO CORRECTO
+              const sameCycleNumber = course.cycle.number === this.selectedGroup?.cycleNumber;
+              const sameCareer = course.career.uuid === this.selectedGroup?.careerUuid;
+              return sameCycleNumber && sameCareer;
+            });
+
+            console.log(`📚 Found ${filteredCourses.length} courses for this group`);
+            filteredCourses.forEach((course: CourseResponse) => { // ✅ TIPADO CORRECTO
+              console.log(`   - ${course.name} (${course.weeklyTheoryHours}h teoría, ${course.weeklyPracticeHours}h práctica)`);
+            });
+
+            resolve(filteredCourses);
+          },
+          error: (error: any) => { // ✅ TIPADO CORRECTO
+            console.error('Error loading courses:', error);
+            reject(error);
+          }
+        });
+    });
+  }
+
+// ✅ NUEVO MÉTODO: Actualizar metadatos cuando cambian los datos
+  private updateMetadata(): void {
+    if (!this.selectedGroup || !this.groupCourses) {
+      console.log('⚠️ Cannot update metadata: missing group or courses');
+      return;
+    }
+
+    console.log('📊 Updating course metadata...');
+    console.log('   - Group:', this.selectedGroup.name);
+    console.log('   - Courses:', this.groupCourses.length);
+    console.log('   - Sessions:', this.sessions.length);
+
+    this.courseMetadataService.updateGroupCoursesMetadata(
+      this.selectedGroup,
+      this.groupCourses,
+      this.sessions
+    );
+  }
+
+// ✅ NUEVO MÉTODO: Limpiar datos cuando no hay grupo
+  private clearGroupData(): void {
+    this.sessions = [];
+    this.groupCourses = [];
+    this.scheduleHourRows = [];
+    this.courseMetadataService.clearMetadata();
+    this.collapsedTimeSlots.clear();
+  }
+
 
   private buildScheduleGrid(): void {
     if (!this.timeSlots || this.timeSlots.length === 0) {
@@ -169,6 +286,7 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
 
     const processedTimeSlots = TimeSlotHelper.sortTimeSlots(this.timeSlots);
     const hourRows: ScheduleHourRow[] = [];
+
 
     processedTimeSlots.forEach(timeSlot => {
       timeSlot.sortedHours.forEach((hour, hourIndex) => {
@@ -201,6 +319,9 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     });
 
     this.scheduleHourRows = hourRows;
+    if (this.selectedGroup) {
+      this.autoCollapseEmptyTimeSlots();
+    }
   }
 
   private findSessionForHour(day: DayOfWeek, hour: TeachingHourResponse): ClassSessionResponse | undefined {
@@ -214,7 +335,7 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     return !this.findSessionForHour(day, hour);
   }
 
-  // ===== MÉTODOS DE UI =====
+  // ===== MÉTODOS DE UI MEJORADOS =====
 
   getDayName(day: DayOfWeek): string {
     return DAY_NAMES[day];
@@ -241,17 +362,34 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     return row.cells[day];
   }
 
+  // ✅ NUEVO: Tooltip mejorado para celdas de tiempo con información del turno
+  getTimeSlotTooltip(row: ScheduleHourRow): string {
+    return `Turno: ${row.timeSlot.name}\n` +
+      `Horario: ${this.formatTime(row.timeSlot.startTime)} - ${this.formatTime(row.timeSlot.endTime)}\n` +
+      `Hora ${row.teachingHour.orderInTimeSlot} de ${row.totalHoursInTimeSlot}\n` +
+      `Duración: ${row.teachingHour.durationMinutes} minutos`;
+  }
+
+  // ✅ MEJORADO: Tooltip más informativo para celdas de sesión
   getCellTooltip(cell: ScheduleCell): string {
     if (cell.session) {
       const session = cell.session;
-      return `${session.course.name}\n${session.teacher.fullName}\n${session.learningSpace.name}\n${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}`;
+      return `📚 ${session.course.name}\n` +
+        `👨‍🏫 ${session.teacher.fullName}\n` +
+        `🏫 ${session.learningSpace.name}\n` +
+        `⏰ ${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}\n` +
+        `📝 Tipo: ${session.sessionType.name === 'THEORY' ? 'Teórica' : 'Práctica'}\n` +
+        `⏱️ ${session.totalHours} hora(s) pedagógica(s)`;
     }
 
     if (cell.isAvailable) {
-      return `Click para asignar clase\n${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}`;
+      return `➕ Click para asignar clase\n` +
+        `⏰ ${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}\n` +
+        `⏱️ Duración: ${cell.teachingHour.durationMinutes} minutos`;
     }
 
-    return `No disponible\n${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}`;
+    return `🚫 No disponible\n` +
+      `⏰ ${this.formatTime(cell.teachingHour.startTime)} - ${this.formatTime(cell.teachingHour.endTime)}`;
   }
 
   getSessionCardClasses(session: ClassSessionResponse): string {
@@ -266,18 +404,123 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     return this.sessions.reduce((total, session) => total + session.totalHours, 0);
   }
 
-  shouldShowTimeSlotName(row: ScheduleHourRow): boolean {
-    return row.isFirstHourOfTimeSlot;
-  }
+  // ✅ ELIMINADO: Ya no necesitamos mostrar nombres de turnos en filas
+  // shouldShowTimeSlotName(row: ScheduleHourRow): boolean {
+  //   return row.isFirstHourOfTimeSlot;
+  // }
 
-  // ✅ NUEVO: Método para acortar nombres largos
+  // ✅ MEJORADO: Método para acortar nombres largos con mejor lógica
   getShortName(fullName: string): string {
-    const names = fullName.split(' ');
+    if (!fullName) return '';
+
+    const names = fullName.trim().split(' ');
     if (names.length <= 2) return fullName;
+
+    // Tomar primer nombre y primer apellido
     return `${names[0]} ${names[names.length - 1]}`;
   }
 
-  // ===== MÉTODOS DE ACCIÓN =====
+
+
+
+
+  // ===== MÉTODOS PARA COLAPSAR TURNOS =====
+
+  /**
+   * Verifica si un turno tiene clases asignadas
+   */
+  private timeSlotHasSessions(timeSlotUuid: string): boolean {
+    return this.sessions.some(session =>
+      session.teachingHours.some(hour =>
+        this.timeSlots.find(ts => ts.uuid === timeSlotUuid)?.teachingHours?.some(th => th.uuid === hour.uuid)
+      )
+    );
+  }
+
+  /**
+   * Colapsa automáticamente turnos sin clases
+   */
+  private autoCollapseEmptyTimeSlots(): void {
+    this.collapsedTimeSlots.clear();
+
+    this.timeSlots.forEach(timeSlot => {
+      if (!this.timeSlotHasSessions(timeSlot.uuid)) {
+        this.collapsedTimeSlots.add(timeSlot.uuid);
+      }
+    });
+  }
+
+  /**
+   * Toggle del estado de colapso de un turno
+   */
+  toggleTimeSlotCollapse(timeSlotUuid: string): void {
+    if (this.collapsedTimeSlots.has(timeSlotUuid)) {
+      this.collapsedTimeSlots.delete(timeSlotUuid);
+    } else {
+      this.collapsedTimeSlots.add(timeSlotUuid);
+    }
+  }
+
+  /**
+   * Verifica si un turno está colapsado
+   */
+  isTimeSlotCollapsed(timeSlotUuid: string): boolean {
+    return this.collapsedTimeSlots.has(timeSlotUuid);
+  }
+
+  /**
+   * Verifica si una fila debe mostrarse (no está en un turno colapsado)
+   */
+  shouldShowRow(row: ScheduleHourRow): boolean {
+    return !this.isTimeSlotCollapsed(row.timeSlot.uuid);
+  }
+
+  /**
+   * Obtiene el resumen de un turno colapsado
+   */
+  getCollapsedTimeSlotSummary(timeSlotUuid: string): string {
+    const timeSlot = this.timeSlots.find(ts => ts.uuid === timeSlotUuid);
+    if (!timeSlot) return '';
+
+    const sessionsCount = this.sessions.filter(session =>
+      session.teachingHours.some(hour =>
+        timeSlot.teachingHours?.some(th => th.uuid === hour.uuid)
+      )
+    ).length;
+
+    return sessionsCount > 0 ? `${sessionsCount} clases` : 'Sin clases';
+  }
+
+  /**
+   * Expande todos los turnos
+   */
+  expandAllTimeSlots(): void {
+    this.collapsedTimeSlots.clear();
+  }
+
+  /**
+   * Colapsa todos los turnos vacíos
+   */
+  collapseEmptyTimeSlots(): void {
+    this.autoCollapseEmptyTimeSlots();
+  }
+
+  getSortedTimeSlots(): any[] {
+    return [...this.timeSlots].sort((a, b) => {
+      // Convertir tiempo de inicio a minutos para comparar
+      const timeToMinutes = (time: string): number => {
+        const [hours, minutes] = time.split(':').map(Number);
+        return hours * 60 + minutes;
+      };
+
+      const aStartMinutes = timeToMinutes(a.startTime);
+      const bStartMinutes = timeToMinutes(b.startTime);
+
+      return aStartMinutes - bStartMinutes;
+    });
+  }
+
+  // ===== MÉTODOS DE ACCIÓN MEJORADOS =====
 
   onCellClick(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell): void {
     if (!cell.session && cell.isAvailable && this.selectedGroup) {
@@ -299,7 +542,7 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
       dialogRef.afterClosed().subscribe(result => {
         if (result) {
           this.showSnackBar('Clase asignada exitosamente', 'success');
-          this.loadGroupSchedule(this.selectedGroup!.uuid);
+          this.loadGroupData(this.selectedGroup!.uuid);
         }
       });
     }
@@ -326,7 +569,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.showSnackBar('Clase actualizada exitosamente', 'success');
-        this.loadGroupSchedule(this.selectedGroup!.uuid);
+        // ✅ Recargar datos completos para actualizar metadatos
+        this.loadGroupData(this.selectedGroup!.uuid);
       }
     });
   }
@@ -336,7 +580,7 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
       width: '400px',
       data: {
         title: 'Confirmar eliminación',
-        message: `¿Está seguro de eliminar la clase de "${session.course.name}"?`,
+        message: `¿Está seguro de eliminar la clase de "${session.course.name}"?\n\nEsta acción no se puede deshacer.`,
         confirmText: 'Eliminar',
         cancelText: 'Cancelar',
         type: 'danger'
@@ -355,8 +599,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.showSnackBar('Clase eliminada exitosamente', 'success');
-          this.loadGroupSchedule(this.selectedGroup!.uuid);
+            this.showSnackBar('Clase eliminada exitosamente', 'success');
+            this.loadGroupData(this.selectedGroup!.uuid);
         },
         error: (error) => {
           console.error('Error deleting session:', error);
@@ -383,14 +627,14 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.showSnackBar('Clase asignada exitosamente', 'success');
-        this.loadGroupSchedule(this.selectedGroup!.uuid);
+        this.loadGroupData(this.selectedGroup!.uuid);
       }
     });
   }
 
   private showSnackBar(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info'): void {
     this.snackBar.open(message, 'Cerrar', {
-      duration: 3000,
+      duration: 4000, // Aumentado para mejor UX
       horizontalPosition: 'end',
       verticalPosition: 'top',
       panelClass: [`${type}-snackbar`]
@@ -402,7 +646,11 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   }
 }
 
-// ===== COMPONENTE DE CONFIRMACIÓN SIMPLE =====
+
+
+
+
+// ===== COMPONENTE DE CONFIRMACIÓN MEJORADO =====
 interface ConfirmDialogData {
   title: string;
   message: string;
@@ -415,22 +663,34 @@ interface ConfirmDialogData {
   selector: 'app-confirm-dialog',
   template: `
     <div class="p-6">
-      <h2 class="text-lg font-semibold mb-3" [class]="getTitleClass()">{{ data.title }}</h2>
-      <p class="text-slate-600 mb-6">{{ data.message }}</p>
+      <div class="flex items-center space-x-3 mb-4">
+        <div class="w-10 h-10 rounded-full flex items-center justify-center" [class]="getIconBackgroundClass()">
+          <mat-icon [class]="getIconClass()">{{ getIcon() }}</mat-icon>
+        </div>
+        <h2 class="text-lg font-semibold" [class]="getTitleClass()">{{ data.title }}</h2>
+      </div>
+
+      <p class="text-slate-600 mb-6 whitespace-pre-line leading-relaxed">{{ data.message }}</p>
+
       <div class="flex space-x-3 justify-end">
-        <button mat-button (click)="onCancel()" class="text-slate-600">
+        <button
+          mat-button
+          (click)="onCancel()"
+          class="text-slate-600 hover:bg-slate-100 px-4 py-2 rounded-lg transition-colors">
           {{ data.cancelText }}
         </button>
-        <button mat-raised-button
-                [color]="getButtonColor()"
-                (click)="onConfirm()">
+        <button
+          mat-raised-button
+          [color]="getButtonColor()"
+          (click)="onConfirm()"
+          class="px-6 py-2 rounded-lg">
           {{ data.confirmText }}
         </button>
       </div>
     </div>
   `,
   standalone: true,
-  imports: [CommonModule, MatButtonModule, MatDialogModule]
+  imports: [CommonModule, MatButtonModule, MatDialogModule, MatIconModule]
 })
 export class ConfirmDialogComponent {
   constructor(
@@ -462,5 +722,32 @@ export class ConfirmDialogComponent {
       info: 'primary'
     };
     return colors[this.data.type] || 'primary';
+  }
+
+  getIcon(): string {
+    const icons = {
+      danger: 'warning',
+      warning: 'info',
+      info: 'help'
+    };
+    return icons[this.data.type] || 'help';
+  }
+
+  getIconClass(): string {
+    const classes = {
+      danger: 'text-red-600',
+      warning: 'text-yellow-600',
+      info: 'text-blue-600'
+    };
+    return classes[this.data.type] || 'text-slate-600';
+  }
+
+  getIconBackgroundClass(): string {
+    const classes = {
+      danger: 'bg-red-100',
+      warning: 'bg-yellow-100',
+      info: 'bg-blue-100'
+    };
+    return classes[this.data.type] || 'bg-slate-100';
   }
 }

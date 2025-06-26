@@ -1,11 +1,37 @@
+// assignment-dialog.component.scss
+
 .dialog-content {
-  width: 600px;
   max-height: 80vh;
   overflow-y: auto;
+  padding: 0;
 }
 
 .context-info {
-  margin-bottom: 20px;
+  padding: 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #fafafa;
+
+  mat-chip-set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  mat-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+.step-content {
+  padding: 16px;
 }
 
 .step-number {
@@ -15,15 +41,11 @@
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #3f51b5;
+  background: #1976d2;
   color: white;
   font-size: 12px;
   font-weight: 600;
   margin-right: 8px;
-}
-
-.step-content {
-  padding: 16px 0;
 }
 
 .full-width {
@@ -34,192 +56,629 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
+
+  .option-main {
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .option-secondary {
+    font-size: 12px;
+    color: rgba(0, 0, 0, 0.6);
+  }
+
+  .teacher-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .recommended-times {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #f57c00;
+    margin-bottom: 4px;
+
+    mat-icon {
+      font-size: 14px;
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .option-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+
+    mat-chip {
+      font-size: 10px;
+      height: 20px;
+
+      &.highlight {
+        background-color: #e3f2fd;
+        color: #1976d2;
+      }
+    }
+  }
 }
 
-.option-main {
-  font-weight: 500;
+// ✅ NUEVOS ESTILOS: Selección de tipo de sesión
+.session-type-selection {
+  .selection-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  .selection-subtitle {
+    margin: 0 0 24px 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 14px;
+  }
+
+  .session-type-options {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .session-type-option-container {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+
+    &:hover:not(.disabled) {
+      border-color: #1976d2;
+      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
+    }
+
+    &.disabled {
+      opacity: 0.6;
+      background-color: #f5f5f5;
+    }
+
+    .session-type-radio {
+      width: 100%;
+
+      ::ng-deep .mdc-radio {
+        display: none; // Ocultar el radio button tradicional
+      }
+
+      ::ng-deep .mdc-form-field {
+        width: 100%;
+      }
+    }
+
+    &:has(.mdc-radio--checked) {
+      border-color: #1976d2;
+      background-color: #e3f2fd;
+    }
+  }
+
+  .option-card {
+    padding: 20px;
+    cursor: pointer;
+
+    .option-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+
+      .option-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background-color: #f5f5f5;
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+
+          &.theory-icon {
+            color: #1976d2;
+          }
+
+          &.practice-icon {
+            color: #7b1fa2;
+          }
+        }
+      }
+
+      .option-info {
+        flex: 1;
+
+        .option-title {
+          margin: 0 0 4px 0;
+          font-size: 16px;
+          font-weight: 500;
+          color: rgba(0, 0, 0, 0.87);
+        }
+
+        .option-description {
+          margin: 0;
+          font-size: 14px;
+          color: rgba(0, 0, 0, 0.6);
+        }
+      }
+    }
+
+    .option-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 12px;
+
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 12px;
+        background-color: rgba(0, 0, 0, 0.04);
+        border-radius: 6px;
+
+        .stat-label {
+          font-size: 12px;
+          color: rgba(0, 0, 0, 0.6);
+        }
+
+        .stat-value {
+          font-size: 14px;
+          font-weight: 500;
+          color: rgba(0, 0, 0, 0.87);
+
+          &.over-limit {
+            color: #d32f2f;
+            font-weight: 600;
+          }
+        }
+      }
+    }
+
+    .option-recommendation {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background-color: rgba(0, 0, 0, 0.04);
+      border-radius: 6px;
+
+      .recommendation-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+
+        &.available {
+          color: #388e3c;
+        }
+
+        &.warning {
+          color: #f57c00;
+        }
+      }
+
+      .recommendation-text {
+        font-size: 12px;
+        color: rgba(0, 0, 0, 0.6);
+      }
+    }
+  }
+
+  .type-selection-info {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background-color: #e3f2fd;
+    border-radius: 8px;
+    margin-bottom: 16px;
+
+    mat-icon {
+      color: #1976d2;
+      margin-top: 2px;
+    }
+
+    .info-content {
+      flex: 1;
+
+      p {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        color: rgba(0, 0, 0, 0.7);
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+
+        strong {
+          color: rgba(0, 0, 0, 0.87);
+        }
+      }
+    }
+  }
+
+  .no-options-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    background-color: #fff3e0;
+    border-radius: 8px;
+    border: 1px solid #ffcc02;
+
+    mat-icon {
+      color: #f57c00;
+      margin-top: 2px;
+    }
+
+    .warning-content {
+      flex: 1;
+
+      h5 {
+        margin: 0 0 8px 0;
+        font-size: 14px;
+        font-weight: 500;
+        color: rgba(0, 0, 0, 0.87);
+      }
+
+      p {
+        margin: 0;
+        font-size: 13px;
+        color: rgba(0, 0, 0, 0.6);
+      }
+    }
+  }
 }
 
-.option-secondary {
-  font-size: 0.85em;
-  color: #666;
-}
-
-.option-tags {
+// Estilos para mostrar información del tipo de espacio
+.space-type-info {
   display: flex;
-  gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-
-.option-tags mat-chip {
-  font-size: 0.75em;
-  min-height: 20px;
-  padding: 2px 8px;
-}
-
-.option-tags mat-chip.highlight {
-  background-color: #4caf50;
-  color: white;
-}
-
-.intellisense-panel {
-  background: #f5f5f5;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f5f5f5;
   border-radius: 8px;
-  padding: 12px;
-  margin-top: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.7);
+
+  mat-icon {
+    &.theory-icon {
+      color: #1976d2;
+    }
+
+    &.practice-icon {
+      color: #7b1fa2;
+    }
+  }
+}
+
+.specialty-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  background-color: #f3e5f5;
+  border-radius: 8px;
+  margin-top: 16px;
+
+  mat-icon {
+    color: #7b1fa2;
+    margin-top: 2px;
+  }
+
+  .info-content {
+    flex: 1;
+
+    strong {
+      color: rgba(0, 0, 0, 0.87);
+      font-size: 14px;
+    }
+
+    p {
+      margin: 4px 0 0 0;
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+  }
+}
+
+// Estilos para estados de disponibilidad de docentes
+.status-available {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status-conflict {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+.status-not-available {
+  background-color: #ffebee;
+  color: #d32f2f;
+}
+
+.status-no-schedule {
+  background-color: #f5f5f5;
+  color: #757575;
+}
+
+.status-error {
+  background-color: #fce4ec;
+  color: #c2185b;
+}
+
+// Estilos para IntelliSense
+.intellisense-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
 .course-details {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
 
-.detail-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9em;
-}
+  .detail-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.7);
 
-.detail-item mat-icon {
-  font-size: 18px;
-  color: #666;
-}
-
-.recommendations {
-  background: #e3f2fd;
-  border-radius: 8px;
-  padding: 12px;
-  margin-top: 12px;
-}
-
-.recommendations h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px 0;
-  color: #1976d2;
-}
-
-.assignment-summary {
-  background: #f5f5f5;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.assignment-summary h4 {
-  margin-top: 0;
-}
-
-.validation-panel {
-  margin-top: 16px;
-}
-
-.validation-section {
-  margin-bottom: 16px;
-}
-
-.validation-section h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 8px 0;
-}
-
-.error-title {
-  color: #f44336;
-}
-
-.warning-title {
-  color: #ff9800;
-}
-
-.suggestion-title {
-  color: #2196f3;
-}
-
-mat-spinner {
-  display: inline-block;
-  margin-right: 8px;
-}
-
-ngx-mat-select-search {
-  width: 100%;
-  padding: 8px;
-}
-
-.loading-spinner {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-}
-
-@media (max-width: 600px) {
-  .dialog-content {
-    width: 100%;
-    max-width: 90vw;
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: #1976d2;
+    }
   }
 }
-.status-available { background-color: #4caf50; color: white; }
-.status-conflict { background-color: #ff9800; color: white; }
-.status-not-available { background-color: #f44336; color: white; }
-.status-no-schedule { background-color: #9e9e9e; color: white; }
-.status-error { background-color: #e91e63; color: white; }
 
-.recommended-times {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8em;
-  color: #666;
-  margin-top: 4px;
-}
-/* Ya tienes estos estilos, pero asegúrate de que estén completos */
-.teacher-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  margin-bottom: 4px;
-}
+// Estilos para recomendaciones
+.recommendations {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
 
-.teacher-info .option-main {
-  flex: 1;
-}
+  h4 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    color: rgba(0, 0, 0, 0.87);
 
-.teacher-info mat-chip {
-  font-size: 0.7em;
-  min-height: 18px;
-  margin-left: 8px;
-}
+    mat-icon {
+      color: #ffc107;
+    }
+  }
 
-.recommended-times {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.8em;
-  color: #666;
-  margin-top: 4px;
-  padding: 4px 8px;
-  background-color: #fff3cd;
-  border-radius: 4px;
-  border-left: 3px solid #ff9800;
+  mat-list {
+    padding: 0;
+
+    mat-list-item {
+      height: auto;
+      min-height: 40px;
+      padding: 8px 0;
+
+      mat-icon {
+        color: #4caf50;
+        margin-right: 8px;
+      }
+
+      span {
+        font-size: 13px;
+        line-height: 1.4;
+      }
+    }
+  }
 }
 
-.recommended-times mat-icon {
-  font-size: 16px;
-  width: 16px;
-  height: 16px;
+// Estilos para el resumen de asignación
+.assignment-summary {
+  margin-bottom: 24px;
+
+  h4 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(0, 0, 0, 0.87);
+  }
+
+  mat-list {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+
+    mat-list-item {
+      border-bottom: 1px solid #f5f5f5;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      mat-icon {
+        color: #1976d2;
+        margin-right: 12px;
+
+        &.theory-icon {
+          color: #1976d2;
+        }
+
+        &.practice-icon {
+          color: #7b1fa2;
+        }
+      }
+
+      span {
+        font-size: 14px;
+        color: rgba(0, 0, 0, 0.87);
+      }
+    }
+  }
 }
 
-/* Estilos para opciones deshabilitadas */
-mat-option[disabled] {
-  opacity: 0.6;
+// Estilos para validación
+.validation-panel {
+  margin-top: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+
+  .validation-section {
+    &:not(:last-child) {
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    h4 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 500;
+
+      &.error-title {
+        background-color: #ffebee;
+        color: #d32f2f;
+      }
+
+      &.warning-title {
+        background-color: #fff3e0;
+        color: #f57c00;
+      }
+
+      &.suggestion-title {
+        background-color: #e8f5e8;
+        color: #2e7d32;
+      }
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    mat-list {
+      padding: 0;
+
+      mat-list-item {
+        padding: 8px 16px;
+        min-height: auto;
+
+        mat-icon {
+          margin-right: 8px;
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+
+        span {
+          font-size: 13px;
+          line-height: 1.4;
+        }
+      }
+    }
+  }
 }
 
-mat-option[disabled] .option-content {
-  color: #999;
+// Responsive design
+@media (max-width: 768px) {
+  .dialog-content {
+    max-height: 90vh;
+  }
+
+  .session-type-selection {
+    .option-stats {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .option-card {
+      padding: 16px;
+
+      .option-header {
+        gap: 12px;
+
+        .option-icon {
+          width: 40px;
+          height: 40px;
+
+          mat-icon {
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
+        }
+      }
+    }
+  }
+
+  .context-info {
+    mat-chip-set {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+  }
+}
+
+// Animaciones
+.session-type-option-container {
+  animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Mejoras en accesibilidad
+.session-type-option-container {
+  &:focus-within {
+    outline: 2px solid #1976d2;
+    outline-offset: 2px;
+  }
+}
+
+// Estados hover mejorados
+.option-card:hover {
+  .option-icon {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+  }
+}
+
+// Scroll suave para el contenido del diálogo
+.dialog-content {
+  scroll-behavior: smooth;
 }

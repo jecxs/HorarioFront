@@ -1,3 +1,4 @@
+<!-- assignment-dialog.component.html -->
 <h2 mat-dialog-title>
   {{ data.mode === 'create' ? 'Nueva Asignación de Clase' : 'Editar Asignación' }}
 </h2>
@@ -31,7 +32,7 @@
           Seleccionar Curso
         </mat-panel-title>
         <mat-panel-description *ngIf="selectionState.course">
-          {{ selectionState.course.name }}
+          {{ selectionState.course?.name }}
         </mat-panel-description>
       </mat-expansion-panel-header>
 
@@ -61,33 +62,131 @@
           <div class="course-details">
             <div class="detail-item">
               <mat-icon>access_time</mat-icon>
-              <span>{{ selectionState.course.weeklyTheoryHours }}h teoría,
-                {{ selectionState.course.weeklyPracticeHours }}h práctica</span>
+              <span>{{ selectionState.course?.weeklyTheoryHours }}h teoría,
+                {{ selectionState.course?.weeklyPracticeHours }}h práctica</span>
             </div>
             <div class="detail-item">
               <mat-icon>psychology</mat-icon>
-              <span>Área: {{ selectionState.course.teachingKnowledgeArea.name }}</span>
+              <span>Área: {{ selectionState.course?.teachingKnowledgeArea?.name }}</span>
             </div>
-            <div class="detail-item" *ngIf="selectionState.course.preferredSpecialty">
+            <div class="detail-item" *ngIf="selectionState.course?.preferredSpecialty">
               <mat-icon>science</mat-icon>
-              <span>Laboratorio preferido: {{ selectionState.course.preferredSpecialty.name }}</span>
+              <span>Laboratorio preferido: {{ selectionState.course?.preferredSpecialty?.name }}</span>
             </div>
           </div>
         </div>
       </div>
     </mat-expansion-panel>
 
-    <!-- Step 2: Selección de Docente -->
+    <!-- ✅ Step 2: Selección de Tipo de Sesión -->
     <mat-expansion-panel [expanded]="currentStep === 2"
                          [disabled]="!selectionState.course"
                          (opened)="currentStep = 2">
       <mat-expansion-panel-header>
         <mat-panel-title>
           <span class="step-number">2</span>
+          Tipo de Sesión
+        </mat-panel-title>
+        <mat-panel-description *ngIf="selectionState.selectedSessionType">
+          {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="step-content">
+        <div class="session-type-selection">
+          <h4 class="selection-title">
+            <mat-icon>school</mat-icon>
+            ¿Qué tipo de sesión desea asignar?
+          </h4>
+          <p class="selection-subtitle">
+            Seleccione el tipo de clase según el contenido a impartir
+          </p>
+
+          <mat-radio-group
+            formControlName="sessionType"
+            (change)="onSessionTypeSelected($event.value)"
+            class="session-type-options">
+
+            <div *ngFor="let option of sessionTypeOptions"
+                 class="session-type-option-container"
+                 [class.disabled]="!option.isAvailable">
+
+              <mat-radio-button
+                [value]="option.value"
+                [disabled]="!option.isAvailable"
+                class="session-type-radio">
+
+                <div class="option-card">
+                  <div class="option-header">
+                    <div class="option-icon">
+                      <mat-icon [class]="option.value === 'THEORY' ? 'theory-icon' : 'practice-icon'">
+                        {{ option.icon }}
+                      </mat-icon>
+                    </div>
+                    <div class="option-info">
+                      <h5 class="option-title">{{ option.label }}</h5>
+                      <p class="option-description">{{ option.description }}</p>
+                    </div>
+                  </div>
+
+                  <div class="option-stats">
+                    <div class="stat-item">
+                      <span class="stat-label">Horas semanales:</span>
+                      <span class="stat-value">{{ option.weeklyHours }}h</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-label">Asignadas:</span>
+                      <span class="stat-value"
+                            [class.over-limit]="option.assignedHours > option.weeklyHours">
+                        {{ option.assignedHours }}h
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="option-recommendation" *ngIf="option.recommendation">
+                    <mat-icon class="recommendation-icon"
+                              [class]="option.isAvailable ? 'available' : 'warning'">
+                      {{ option.isAvailable ? 'check_circle' : 'warning' }}
+                    </mat-icon>
+                    <span class="recommendation-text">{{ option.recommendation }}</span>
+                  </div>
+                </div>
+              </mat-radio-button>
+            </div>
+          </mat-radio-group>
+
+          <!-- Información adicional -->
+          <div class="type-selection-info" *ngIf="sessionTypeOptions.length > 0">
+            <mat-icon>info</mat-icon>
+            <div class="info-content">
+              <p><strong>Teoría:</strong> Clases magistrales, explicaciones conceptuales, evaluaciones escritas.</p>
+              <p><strong>Práctica:</strong> Laboratorios, talleres, trabajos prácticos, demostraciones.</p>
+            </div>
+          </div>
+
+          <!-- Advertencia si no hay opciones disponibles -->
+          <div class="no-options-warning" *ngIf="sessionTypeOptions.length === 0">
+            <mat-icon>warning</mat-icon>
+            <div class="warning-content">
+              <h5>No hay tipos de sesión disponibles</h5>
+              <p>Este curso no tiene horas teóricas ni prácticas definidas. Verifique la configuración del curso.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-expansion-panel>
+
+    <!-- Step 3: Selección de Docente -->
+    <mat-expansion-panel [expanded]="currentStep === 3"
+                         [disabled]="!selectionState.selectedSessionType"
+                         (opened)="currentStep = 3">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <span class="step-number">3</span>
           Seleccionar Docente
         </mat-panel-title>
         <mat-panel-description *ngIf="selectionState.teacher">
-          {{ selectionState.teacher.fullName }}
+          {{ selectionState.teacher?.fullName }}
         </mat-panel-description>
       </mat-expansion-panel-header>
 
@@ -95,27 +194,21 @@
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Docente</mat-label>
           <mat-select formControlName="teacherUuid" (selectionChange)="onTeacherSelected($event.value)">
-            <!-- ✅ Cambiar para usar eligibleTeachersDetailed -->
             <mat-option *ngFor="let teacher of eligibleTeachersDetailed"
                         [value]="teacher.uuid"
                         [disabled]="!teacher.isAvailableForTimeSlot">
               <div class="option-content">
                 <div class="teacher-info">
                   <span class="option-main">{{ teacher.fullName }}</span>
-
-                  <!-- ✅ Indicador de disponibilidad -->
                   <mat-chip [class]="getAvailabilityClass(teacher.availabilityStatus)">
                     {{ getAvailabilityText(teacher.availabilityStatus) }}
                   </mat-chip>
                 </div>
-
-                <!-- ✅ Mostrar horarios recomendados si no está disponible -->
                 <div *ngIf="!teacher.isAvailableForTimeSlot && teacher.recommendedTimeSlots"
                      class="recommended-times">
                   <mat-icon>schedule</mat-icon>
                   Disponible: {{ teacher.recommendedTimeSlots }}
                 </div>
-
                 <div class="option-tags">
                   <mat-chip *ngFor="let area of teacher.knowledgeAreas"
                             [class.highlight]="isMatchingKnowledgeArea(area)">
@@ -133,39 +226,35 @@
             No hay docentes disponibles con el área de conocimiento requerida
           </mat-hint>
         </mat-form-field>
-
-
-        <!-- Recomendaciones de docentes -->
-        <div class="recommendations" *ngIf="(intelliSense?.recommendations?.length ?? 0) > 0">
-          <h4>
-            <mat-icon>lightbulb</mat-icon>
-            Recomendaciones
-          </h4>
-          <mat-list>
-            <mat-list-item *ngFor="let rec of (intelliSense?.recommendations ?? [])">
-              <mat-icon matListItemIcon>check_circle</mat-icon>
-              <span matListItemTitle>{{ rec }}</span>
-            </mat-list-item>
-          </mat-list>
-        </div>
       </div>
     </mat-expansion-panel>
 
-    <!-- Step 3: Selección de Aula -->
-    <mat-expansion-panel [expanded]="currentStep === 3"
+    <!-- Step 4: Selección de Aula -->
+    <mat-expansion-panel [expanded]="currentStep === 4"
                          [disabled]="!selectionState.teacher"
-                         (opened)="currentStep = 3">
+                         (opened)="currentStep = 4">
       <mat-expansion-panel-header>
         <mat-panel-title>
-          <span class="step-number">3</span>
+          <span class="step-number">4</span>
           Seleccionar Aula
         </mat-panel-title>
         <mat-panel-description *ngIf="selectionState.learningSpace">
-          {{ selectionState.learningSpace.name }}
+          {{ selectionState.learningSpace?.name }}
         </mat-panel-description>
       </mat-expansion-panel-header>
 
       <div class="step-content">
+        <!-- ✅ Mostrar el tipo de aula que se está buscando -->
+        <div class="space-type-info" *ngIf="selectionState.selectedSessionType">
+          <mat-icon [class]="selectionState.selectedSessionType === 'THEORY' ? 'theory-icon' : 'practice-icon'">
+            {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
+          </mat-icon>
+          <span>
+            Buscando {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }}
+            disponibles para sesión {{ selectionState.selectedSessionType === 'THEORY' ? 'teórica' : 'práctica' }}
+          </span>
+        </div>
+
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Aula/Laboratorio</mat-label>
           <mat-select formControlName="learningSpaceUuid" (selectionChange)="onSpaceSelected($event.value)">
@@ -174,29 +263,41 @@
                 <div class="option-content">
                   <span class="option-main">{{ space.name }}</span>
                   <span class="option-secondary">
-                        Capacidad: {{ space.capacity }} -
+                    Capacidad: {{ space.capacity }} -
                     {{ space.teachingType.name === 'THEORY' ? 'Teórica' : 'Práctica' }}
                     <span *ngIf="space.specialty"> - {{ space.specialty.name }}</span>
-                      </span>
+                  </span>
                 </div>
               </mat-option>
             </mat-optgroup>
           </mat-select>
           <mat-hint *ngIf="loadingSpaces">
             <mat-spinner diameter="16"></mat-spinner>
-            Verificando disponibilidad de aulas...
+            Verificando disponibilidad de {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas' : 'laboratorios' }}...
+          </mat-hint>
+          <mat-hint *ngIf="!loadingSpaces && eligibleSpaces.length === 0 && selectionState.selectedSessionType">
+            No hay {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }} disponibles en este horario
           </mat-hint>
         </mat-form-field>
+
+        <!-- ✅ Información sobre especialidades preferidas -->
+        <div class="specialty-info" *ngIf="selectionState.course?.preferredSpecialty && selectionState.selectedSessionType === 'PRACTICE'">
+          <mat-icon>star</mat-icon>
+          <div class="info-content">
+            <strong>Laboratorio preferido:</strong> {{ selectionState.course?.preferredSpecialty?.name }}
+            <p>Los laboratorios de esta especialidad aparecen primero en la lista</p>
+          </div>
+        </div>
       </div>
     </mat-expansion-panel>
 
-    <!-- Step 4: Confirmación y Validación -->
-    <mat-expansion-panel [expanded]="currentStep === 4"
+    <!-- Step 5: Confirmación y Validación -->
+    <mat-expansion-panel [expanded]="currentStep === 5"
                          [disabled]="!selectionState.learningSpace"
-                         (opened)="currentStep = 4">
+                         (opened)="currentStep = 5">
       <mat-expansion-panel-header>
         <mat-panel-title>
-          <span class="step-number">4</span>
+          <span class="step-number">5</span>
           Confirmar Asignación
         </mat-panel-title>
       </mat-expansion-panel-header>
@@ -209,6 +310,14 @@
             <mat-list-item>
               <mat-icon matListItemIcon>book</mat-icon>
               <span matListItemTitle>{{ selectionState.course?.name }}</span>
+            </mat-list-item>
+            <mat-list-item>
+              <mat-icon matListItemIcon [class]="selectionState.selectedSessionType === 'THEORY' ? 'theory-icon' : 'practice-icon'">
+                {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
+              </mat-icon>
+              <span matListItemTitle>
+                Sesión {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
+              </span>
             </mat-list-item>
             <mat-list-item>
               <mat-icon matListItemIcon>person</mat-icon>
@@ -232,7 +341,7 @@
                     formControlName="notes"
                     rows="3"
                     placeholder="Agregar observaciones o notas sobre esta clase...">
-              </textarea>
+          </textarea>
         </mat-form-field>
 
         <!-- Validación en tiempo real -->
@@ -284,7 +393,6 @@
 
 <mat-dialog-actions align="end">
   <button mat-button (click)="onCancel()">Cancelar</button>
-
   <button mat-raised-button
           color="primary"
           (click)="onSave()"

@@ -1,7 +1,7 @@
 // src/app/features/schedule-assignment/components/assignment-dialog/assignment-dialog.component.ts
 import { Component, Inject, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Subject, BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, takeUntil, startWith, switchMap, of, map } from 'rxjs';
 
 // Angular Material
@@ -21,6 +21,9 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatRadioModule } from '@angular/material/radio';
+
+import { CourseMetadataService } from '../../services/course-metadata.service';
 
 // Services
 import { ClassSessionService } from '../../services/class-session.service';
@@ -42,7 +45,7 @@ import {
   TeachingTypeResponse,
   TeacherEligibilityResponse
 } from '../../models/class-session.model';
-import {MatSelectSearchComponent} from 'ngx-mat-select-search';
+import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 
 export interface AssignmentDialogData {
   mode: 'create' | 'edit';
@@ -59,6 +62,18 @@ interface SelectionState {
   learningSpace?: LearningSpaceResponse;
   teachingType?: TeachingTypeResponse;
   selectedHours: TeachingHourResponse[];
+  selectedSessionType?: 'THEORY' | 'PRACTICE';
+}
+
+interface SessionTypeOption {
+  value: 'THEORY' | 'PRACTICE';
+  label: string;
+  description: string;
+  icon: string;
+  weeklyHours: number;
+  assignedHours: number;
+  isAvailable: boolean;
+  recommendation?: string;
 }
 
 @Component({
@@ -83,11 +98,11 @@ interface SelectionState {
     MatBadgeModule,
     MatListModule,
     MatSnackBarModule,
-    MatSelectSearchComponent
+    MatSelectSearchComponent,
+    MatRadioModule
   ],
   templateUrl: './assignment-dialog.component.html',
   styleUrls: ['./assignment-dialog.component.scss']
-
 })
 export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -96,10 +111,11 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private classSessionService = inject(ClassSessionService);
   private courseService = inject(CourseService);
   private teachingTypeService = inject(TeachingTypeService);
+  private courseMetadataService = inject(CourseMetadataService);
 
   // Form
   assignmentForm: FormGroup;
-  courseFilterCtrl = this.fb.control('');
+  courseFilterCtrl = new FormControl('');
 
   // State
   currentStep = 1;
@@ -114,6 +130,9 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   eligibleTeachersDetailed: TeacherEligibilityResponse[] = [];
   eligibleSpaces: LearningSpaceResponse[] = [];
   groupedSpaces: { label: string; spaces: LearningSpaceResponse[] }[] = [];
+
+  // ✅ Opciones de tipo de sesión
+  sessionTypeOptions: SessionTypeOption[] = [];
 
   // IntelliSense
   intelliSense: IntelliSenseResponse | null = null;
@@ -131,6 +150,7 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   ) {
     this.assignmentForm = this.fb.group({
       courseUuid: ['', Validators.required],
+      sessionType: ['', Validators.required], // ✅ NUEVO CAMPO
       teacherUuid: ['', Validators.required],
       learningSpaceUuid: ['', Validators.required],
       sessionTypeUuid: ['', Validators.required],
@@ -149,13 +169,11 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     this.setupValidation();
 
     // Cargar tipos de enseñanza
-    // en ngOnInit o justo antes de necesitar el UUID
     this.teachingTypeService.ensureTypesLoaded()
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
-        // ahora sí podrás usar getTypeUuidByName(...)
+        // Los tipos están cargados
       });
-
 
     // Si es modo edición, cargar los datos
     if (this.data.mode === 'edit' && this.data.sessionToEdit) {
@@ -178,15 +196,10 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
           next: (response) => {
             const allCourses = Array.isArray(response.data) ? response.data : [response.data];
 
-            // ✅ SOLUCIÓN: Filtrar por ciclo Y carrera
+            // Filtrar por ciclo Y carrera
             this.courses = allCourses.filter((course: CourseResponse) => {
-              // Filtrar por número de ciclo
               const sameCycleNumber = course.cycle.number === this.data.studentGroup?.cycleNumber;
-
-              // ✅ AGREGAR: Filtrar por carrera (usando el UUID de la carrera)
-              // Necesitamos comparar la carrera del curso con la carrera del grupo
               const sameCareer = course.career.uuid === this.data.studentGroup?.careerUuid;
-
               return sameCycleNumber && sameCareer;
             });
 
@@ -207,15 +220,13 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private setupCourseFilter(): void {
     this.courseFilterCtrl.valueChanges
       .pipe(
-        startWith(''),           // arranca con '' en lugar de null
+        startWith(''),
         debounceTime(300),
         distinctUntilChanged(),
         takeUntil(this.destroy$)
       )
       .subscribe((searchTerm) => {
-        // fuerza a string no-nulo
         const term = (searchTerm ?? '').toLowerCase();
-
         const filtered = this.courses.filter(course =>
           course.name.toLowerCase().includes(term) ||
           course.code.toLowerCase().includes(term)
@@ -224,17 +235,19 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
       });
   }
 
-
-  // En setupValidation method, agregar conversión:
   private setupValidation(): void {
     combineLatest([
       this.assignmentForm.get('courseUuid')!.valueChanges,
       this.assignmentForm.get('teacherUuid')!.valueChanges,
-      this.assignmentForm.get('learningSpaceUuid')!.valueChanges
+      this.assignmentForm.get('learningSpaceUuid')!.valueChanges,
+      this.assignmentForm.get('sessionTypeUuid')!.valueChanges // ✅ AGREGAR ESTA LÍNEA
     ]).pipe(
       debounceTime(500),
-      switchMap(([courseUuid, teacherUuid, spaceUuid]) => {
-        if (courseUuid && teacherUuid && spaceUuid && this.data.dayOfWeek && this.selectionState.selectedHours.length > 0) {
+      switchMap(([courseUuid, teacherUuid, spaceUuid, sessionTypeUuid]) => {
+        // ✅ VERIFICAR QUE TODOS LOS CAMPOS ESTÉN PRESENTES
+        if (courseUuid && teacherUuid && spaceUuid && sessionTypeUuid &&
+          this.data.dayOfWeek && this.selectionState.selectedHours.length > 0) {
+
           const validation: ClassSessionValidation = {
             courseUuid,
             teacherUuid,
@@ -242,9 +255,13 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
             studentGroupUuid: this.data.studentGroup?.uuid || '',
             dayOfWeek: this.data.dayOfWeek.toString(),
             teachingHourUuids: this.selectionState.selectedHours.map(h => h.uuid),
-            // ✅ AGREGAR: sessionUuid para modo edición
+            sessionTypeUuid, // ✅ INCLUIR EL sessionTypeUuid
             sessionUuid: this.data.mode === 'edit' ? this.data.sessionToEdit?.uuid : undefined
           };
+
+          console.log('=== VALIDATION REQUEST ===');
+          console.log('Validation payload:', validation);
+
           return this.classSessionService.validateAssignment(validation);
         }
         return of(null);
@@ -252,16 +269,13 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
       takeUntil(this.destroy$)
     ).subscribe(result => {
       this.validationResult = result;
+      console.log('Validation result:', result);
     });
   }
 
-
-  // Agregar este getter al componente
   get canSave(): boolean {
     const formValid = this.assignmentForm.valid;
     const notSaving = !this.saving;
-
-    // Si no hay validationResult o no tiene errores, permitir guardar
     const noValidationErrors = !this.validationResult ||
       (this.validationResult.isValid === true) ||
       (!this.validationResult.errors || this.validationResult.errors.length === 0);
@@ -269,8 +283,6 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     return formValid && notSaving && noValidationErrors;
   }
 
-
-  // También agregar logs en onCourseSelected
   onCourseSelected(courseUuid: string): void {
     const course = this.courses.find(c => c.uuid === courseUuid);
     if (course) {
@@ -278,48 +290,154 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
       console.log('Course:', course);
       console.log('Weekly theory hours:', course.weeklyTheoryHours);
       console.log('Weekly practice hours:', course.weeklyPracticeHours);
-      console.log('Teaching types:', course.teachingTypes);
 
       this.selectionState.course = course;
-      this.currentStep = 2;
 
-      // Determinar tipo de sesión
-      const sessionTypeName = course.weeklyPracticeHours > 0 ? 'PRACTICE' : 'THEORY';
-      console.log('Determined session type:', sessionTypeName);
+      // ✅ CAMBIO PRINCIPAL: Generar opciones de tipo de sesión
+      this.generateSessionTypeOptions(course);
 
-      // El resto del código...
-      this.teachingTypeService.getAllTeachingTypes()
-        .pipe(takeUntil(this.destroy$))
-        .subscribe(response => {
-          console.log('Teaching types loaded:', response);
-          const typeUuid = this.teachingTypeService.getTypeUuidByName(sessionTypeName);
-          console.log('Session type UUID:', typeUuid);
-
-          if (typeUuid) {
-            this.assignmentForm.patchValue({ sessionTypeUuid: typeUuid });
-          }
-        });
-
-      this.loadEligibleTeachers(courseUuid);
+      this.currentStep = 2; // Ir al paso de selección de tipo de sesión
     }
   }
 
-  // assignment-dialog.component.ts
+  // ✅ MÉTODO CLAVE: Generar opciones basadas en el curso Y las horas ya asignadas
+  private generateSessionTypeOptions(course: CourseResponse): void {
+    this.sessionTypeOptions = [];
+
+    // ✅ Obtener horas ya asignadas desde el servicio de metadatos
+    const assignedHours = this.courseMetadataService.getAssignedHoursByType(course.uuid);
+    const assignedTheoryHours = assignedHours.theory;
+    const assignedPracticeHours = assignedHours.practice;
+
+    console.log('=== GENERATING SESSION TYPE OPTIONS (CORRECTED) ===');
+    console.log('Course:', course.name);
+    console.log('Course teaching types:', course.teachingTypes);
+    console.log('Required - Theory:', course.weeklyTheoryHours, 'Practice:', course.weeklyPracticeHours);
+    console.log('Assigned - Theory:', assignedTheoryHours, 'Practice:', assignedPracticeHours);
+
+    // ✅ CORREGIR: Verificar que el curso SOPORTE el tipo de sesión
+    const supportedTypes = course.teachingTypes.map(tt => tt.name);
+    console.log('Supported teaching types:', supportedTypes);
+
+    // Opción TEORÍA (solo si el curso tiene horas teóricas Y soporta THEORY)
+    if (course.weeklyTheoryHours > 0 && supportedTypes.includes('THEORY')) {
+      const remainingTheoryHours = course.weeklyTheoryHours - assignedTheoryHours;
+
+      this.sessionTypeOptions.push({
+        value: 'THEORY',
+        label: 'Sesión Teórica',
+        description: 'Clase teórica en aula tradicional',
+        icon: 'menu_book',
+        weeklyHours: course.weeklyTheoryHours,
+        assignedHours: assignedTheoryHours,
+        isAvailable: remainingTheoryHours > 0,
+        recommendation: remainingTheoryHours > 0
+          ? `Quedan ${remainingTheoryHours}h de teoría por asignar`
+          : 'Ya se asignaron todas las horas teóricas'
+      });
+    }
+
+    // Opción PRÁCTICA (solo si el curso tiene horas prácticas Y soporta PRACTICE)
+    if (course.weeklyPracticeHours > 0 && supportedTypes.includes('PRACTICE')) {
+      const remainingPracticeHours = course.weeklyPracticeHours - assignedPracticeHours;
+
+      this.sessionTypeOptions.push({
+        value: 'PRACTICE',
+        label: 'Sesión Práctica',
+        description: 'Clase práctica en laboratorio',
+        icon: 'science',
+        weeklyHours: course.weeklyPracticeHours,
+        assignedHours: assignedPracticeHours,
+        isAvailable: remainingPracticeHours > 0,
+        recommendation: remainingPracticeHours > 0
+          ? `Quedan ${remainingPracticeHours}h de práctica por asignar`
+          : 'Ya se asignaron todas las horas prácticas'
+      });
+    }
+
+    console.log('Generated session type options:', this.sessionTypeOptions);
+
+    // ✅ LÓGICA MEJORADA: No auto-seleccionar, dejar que el usuario elija
+    if (this.sessionTypeOptions.length === 1) {
+      console.log('Only one option available, auto-selecting:', this.sessionTypeOptions[0].value);
+      const selectedType = this.sessionTypeOptions[0].value;
+      this.assignmentForm.patchValue({ sessionType: selectedType });
+      this.onSessionTypeSelected(selectedType);
+    } else if (this.sessionTypeOptions.length > 1) {
+      console.log('Multiple options available, user must choose');
+      // No auto-seleccionar, esperar input del usuario
+    } else {
+      console.log('❌ No session type options available for this course');
+      this.snackBar.open(
+        'Este curso no tiene tipos de sesión disponibles o ya están completas',
+        'Cerrar',
+        { duration: 5000 }
+      );
+    }
+  }
+
+  // ✅ MÉTODO: Cuando se selecciona un tipo de sesión
+  onSessionTypeSelected(sessionType: 'THEORY' | 'PRACTICE'): void {
+    console.log('=== SESSION TYPE SELECTED ===');
+    console.log('Selected type:', sessionType);
+
+    this.selectionState.selectedSessionType = sessionType;
+
+    // ✅ CORREGIR: Determinar el UUID del tipo de enseñanza
+    this.teachingTypeService.ensureTypesLoaded()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        const typeUuid = this.teachingTypeService.getTypeUuidByName(sessionType);
+        console.log('Session type UUID:', typeUuid);
+
+        if (typeUuid) {
+          // ✅ ACTUALIZAR FORMULARIO
+          this.assignmentForm.patchValue({
+            sessionType: sessionType,  // ✅ Campo de formulario
+            sessionTypeUuid: typeUuid  // ✅ UUID para el backend
+          });
+
+          // ✅ ACTUALIZAR ESTADO
+          this.selectionState.teachingType = {
+            uuid: typeUuid,
+            name: sessionType
+          };
+
+          console.log('✅ Form updated with sessionType:', sessionType, 'and UUID:', typeUuid);
+
+          // Ir al paso de selección de docente
+          this.currentStep = 3;
+          this.loadEligibleTeachers(this.selectionState.course!.uuid);
+        } else {
+          console.error('❌ No se pudo obtener el UUID del tipo de sesión:', sessionType);
+          this.snackBar.open('Error al configurar el tipo de sesión', 'Cerrar', { duration: 3000 });
+        }
+      });
+  }
+
   private loadEligibleTeachers(courseUuid: string): void {
     this.loadingTeachers = true;
     this.eligibleTeachers = [];
 
     const dayOfWeekStr = this.data.dayOfWeek ? this.data.dayOfWeek.toString() : undefined;
+    const teachingHourUuids = this.selectionState.selectedHours.map(h => h.uuid);
 
-    // ✅ Usar el nuevo endpoint con timeSlotUuid
+    console.log('Loading teachers with specific hours:', teachingHourUuids);
+
     this.classSessionService.getEligibleTeachersDetailed(
       courseUuid,
       dayOfWeekStr,
-      this.data.timeSlotUuid  // ✅ Descomitar esta línea
+      this.data.timeSlotUuid,
+      teachingHourUuids
     ).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
           this.eligibleTeachersDetailed = Array.isArray(response.data) ? response.data : [response.data];
+
+          this.eligibleTeachersDetailed.forEach(teacher => {
+            console.log(`${teacher.fullName}: ${teacher.availabilityStatus} (${teacher.isAvailableForTimeSlot ? 'Available' : 'Not Available'})`);
+          });
+
           this.loadingTeachers = false;
           this.loadIntelliSense();
         },
@@ -350,11 +468,10 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
       default: return 'Error';
     }
   }
+
   onTeacherSelected(teacherUuid: string): void {
-    // ✅ Buscar en eligibleTeachersDetailed
     const teacherDetailed = this.eligibleTeachersDetailed.find(t => t.uuid === teacherUuid);
     if (teacherDetailed) {
-      // ✅ Convertir a TeacherResponse para compatibilidad
       this.selectionState.teacher = {
         uuid: teacherDetailed.uuid,
         fullName: teacherDetailed.fullName,
@@ -365,74 +482,109 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
         totalAvailabilities: 0
       };
 
-      this.currentStep = 3;
+      this.currentStep = 4; // Ir al paso de selección de aula
       this.loadEligibleSpaces();
     }
   }
 
+  // ✅ MÉTODO COMPLETAMENTE CORREGIDO: Cargar aulas elegibles
   private loadEligibleSpaces(): void {
-    if (!this.selectionState.course) return;
+    if (!this.selectionState.course || !this.selectionState.selectedSessionType) {
+      console.log('❌ Cannot load spaces: missing course or session type');
+      return;
+    }
 
-    console.log('=== LOADING ELIGIBLE SPACES (WITH SPECIFIC HOURS) ===');
-    console.log('Course:', this.selectionState.course);
+    console.log('=== LOADING ELIGIBLE SPACES (FINAL VERSION) ===');
+    console.log('Course:', this.selectionState.course.name);
+    console.log('Selected session type:', this.selectionState.selectedSessionType);
     console.log('Selected hours:', this.selectionState.selectedHours);
 
     this.loadingSpaces = true;
     this.eligibleSpaces = [];
 
     const dayOfWeekStr = this.data.dayOfWeek ? this.data.dayOfWeek.toString().toUpperCase() : undefined;
-
-    // ✅ OBTENER las horas pedagógicas específicas que se quieren asignar
     const teachingHourUuids = this.selectionState.selectedHours.map(h => h.uuid);
 
-    console.log('Day of week:', dayOfWeekStr);
-    console.log('TimeSlot UUID:', this.data.timeSlotUuid);
-    console.log('Teaching hour UUIDs being sent:', teachingHourUuids);
+    console.log('Request parameters:');
+    console.log('- Course UUID:', this.selectionState.course.uuid);
+    console.log('- Day of week:', dayOfWeekStr);
+    console.log('- TimeSlot UUID:', this.data.timeSlotUuid);
+    console.log('- Teaching hour UUIDs:', teachingHourUuids);
+    console.log('- Session type:', this.selectionState.selectedSessionType);
 
+    // ✅ LLAMADA MEJORADA: Pasar sessionType al backend
     this.classSessionService.getEligibleSpaces(
       this.selectionState.course.uuid,
       dayOfWeekStr,
       this.data.timeSlotUuid,
-      teachingHourUuids  // ✅ ENVIAR LAS HORAS ESPECÍFICAS
+      teachingHourUuids,
+      this.selectionState.selectedSessionType // ✅ NUEVO PARÁMETRO
     ).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          console.log('Eligible spaces response (with specific hours):', response);
+          console.log('✅ Backend response:', response);
 
-          this.eligibleSpaces = Array.isArray(response.data) ? response.data : [response.data];
+          let allSpaces = Array.isArray(response.data) ? response.data : [response.data];
+          console.log('Spaces returned by backend:', allSpaces.length);
 
-          console.log('Available spaces for specific hours:', this.eligibleSpaces.length);
-          this.eligibleSpaces.forEach((space, index) => {
-            console.log(`Space ${index + 1}:`, {
-              name: space.name,
-              type: space.teachingType.name,
-              capacity: space.capacity
-            });
+          // ✅ AHORA EL BACKEND YA DEBERÍA FILTRAR, PERO MANTENEMOS VERIFICACIÓN
+          this.eligibleSpaces = allSpaces.filter(space => {
+            const spaceType = space.teachingType?.name;
+
+            if (!spaceType) {
+              console.log(`❌ Space ${space.name} has no teaching type`);
+              return false;
+            }
+
+            const matchesSessionType =
+              (this.selectionState.selectedSessionType === 'THEORY' && spaceType === 'THEORY') ||
+              (this.selectionState.selectedSessionType === 'PRACTICE' && spaceType === 'PRACTICE');
+
+            console.log(`Space ${space.name}: type=${spaceType}, matches ${this.selectionState.selectedSessionType}=${matchesSessionType}`);
+
+            // ✅ Si el backend ya filtró correctamente, esto debería ser siempre true
+            if (!matchesSessionType) {
+              console.warn(`⚠️ Backend returned space ${space.name} of type ${spaceType} but frontend requested ${this.selectionState.selectedSessionType}`);
+            }
+
+            return matchesSessionType;
           });
 
+          console.log(`✅ Final filtered spaces: ${this.eligibleSpaces.length} ${this.selectionState.selectedSessionType} spaces`);
+
+          // ✅ MENSAJE DE ERROR MEJORADO
           if (this.eligibleSpaces.length === 0) {
-            console.log('❌ No spaces available for these specific hours');
+            const spaceTypeName = this.selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios';
+            console.log(`❌ No ${spaceTypeName} available for the specified hours`);
+
+            this.snackBar.open(
+              `No hay ${spaceTypeName} disponibles en este horario específico`,
+              'Cerrar',
+              { duration: 5000 }
+            );
           } else {
-            console.log('✅ Found available spaces for specific hours');
+            console.log(`✅ Found ${this.eligibleSpaces.length} available spaces:`);
+            this.eligibleSpaces.forEach(space => {
+              console.log(`  - ${space.name} (${space.teachingType.name}) - Capacity: ${space.capacity}`);
+            });
           }
 
           this.groupSpaces();
           this.loadingSpaces = false;
         },
         error: (error) => {
-          console.error('Error loading spaces with specific hours:', error);
+          console.error('❌ Error loading spaces:', error);
           this.snackBar.open('Error al cargar aulas', 'Cerrar', { duration: 3000 });
           this.loadingSpaces = false;
         }
       });
   }
 
-
   private groupSpaces(): void {
     const groups = new Map<string, LearningSpaceResponse[]>();
 
     this.eligibleSpaces.forEach(space => {
-      const type = space.teachingType.name === 'THEORY' ? 'Aulas Teóricas' : 'Laboratorios';
+      const type = space.teachingType?.name === 'THEORY' ? 'Aulas Teóricas' : 'Laboratorios';
       if (!groups.has(type)) {
         groups.set(type, []);
       }
@@ -449,21 +601,19 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     const space = this.eligibleSpaces.find(s => s.uuid === spaceUuid);
     if (space) {
       this.selectionState.learningSpace = space;
-      this.currentStep = 4;
+      this.currentStep = 5; // Ir al paso final de confirmación
     }
   }
 
-  // En loadIntelliSense method:
   private loadIntelliSense(): void {
     if (!this.selectionState.course) return;
 
-    // CORRECCIÓN: Convertir enum a string explícitamente
     const dayOfWeekStr = this.data.dayOfWeek ? this.data.dayOfWeek.toString() : undefined;
 
     const params = {
       courseUuid: this.selectionState.course.uuid,
       groupUuid: this.data.studentGroup?.uuid,
-      dayOfWeek: dayOfWeekStr, // Usar la conversión a string
+      dayOfWeek: dayOfWeekStr,
       timeSlotUuid: this.data.timeSlotUuid
     };
 
@@ -480,7 +630,7 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   }
 
   isMatchingKnowledgeArea(area: any): boolean {
-    return this.selectionState.course?.teachingKnowledgeArea.uuid === area.uuid;
+    return this.selectionState.course?.teachingKnowledgeArea?.uuid === area?.uuid;
   }
 
   getDayName(day: DayOfWeek): string {
@@ -509,9 +659,10 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private loadEditData(): void {
     const session = this.data.sessionToEdit;
 
-    // Cargar datos del formulario
+    // ✅ IMPORTANTE: Cargar datos del formulario incluyendo sessionType
     this.assignmentForm.patchValue({
       courseUuid: session.course.uuid,
+      sessionType: session.sessionType.name, // ✅ NUEVO
       teacherUuid: session.teacher.uuid,
       learningSpaceUuid: session.learningSpace.uuid,
       sessionTypeUuid: session.sessionType.uuid,
@@ -521,17 +672,39 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     // Actualizar estado de selección
     this.selectionState = {
       course: session.course,
+      selectedSessionType: session.sessionType.name, // ✅ NUEVO
       teacher: session.teacher,
       learningSpace: session.learningSpace,
       teachingType: session.sessionType,
       selectedHours: session.teachingHours
     };
 
-    this.currentStep = 4;
+    // ✅ Si es edición, generar opciones de tipo de sesión
+    this.generateSessionTypeOptions(session.course);
+
+    this.currentStep = 5; // Ir directo al paso final en modo edición
   }
 
+  // ✅ MÉTODO onSave CORREGIDO
   onSave(): void {
     if (!this.assignmentForm.valid || !this.data.studentGroup || !this.data.dayOfWeek) {
+      console.log('❌ Form validation failed');
+      console.log('Form valid:', this.assignmentForm.valid);
+      console.log('Form value:', this.assignmentForm.value);
+      console.log('Form errors:', this.getFormErrors());
+      return;
+    }
+
+    // ✅ VALIDACIÓN ADICIONAL
+    if (!this.selectionState.selectedSessionType) {
+      console.log('❌ No session type selected');
+      this.snackBar.open('Debe seleccionar un tipo de sesión', 'Cerrar', { duration: 3000 });
+      return;
+    }
+
+    if (!this.assignmentForm.value.sessionTypeUuid) {
+      console.log('❌ No session type UUID in form');
+      this.snackBar.open('Error en la configuración del tipo de sesión', 'Cerrar', { duration: 3000 });
       return;
     }
 
@@ -543,10 +716,15 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
       teacherUuid: this.assignmentForm.value.teacherUuid,
       learningSpaceUuid: this.assignmentForm.value.learningSpaceUuid,
       dayOfWeek: this.data.dayOfWeek,
-      sessionTypeUuid: this.assignmentForm.value.sessionTypeUuid,
+      sessionTypeUuid: this.assignmentForm.value.sessionTypeUuid, // ✅ Usar el UUID correcto
       teachingHourUuids: this.selectionState.selectedHours.map(h => h.uuid),
       notes: this.assignmentForm.value.notes
     };
+
+    console.log('=== SAVING SESSION ===');
+    console.log('Request payload:', request);
+    console.log('Selected session type:', this.selectionState.selectedSessionType);
+    console.log('Session type UUID:', request.sessionTypeUuid);
 
     const operation$ = this.data.mode === 'create'
       ? this.classSessionService.createSession(request)
@@ -555,6 +733,7 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     operation$.pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
+          console.log('✅ Session saved successfully:', response.data);
           this.snackBar.open(
             this.data.mode === 'create' ? 'Clase asignada exitosamente' : 'Clase actualizada exitosamente',
             'Cerrar',
@@ -563,7 +742,7 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
           this.dialogRef.close(response.data);
         },
         error: (error) => {
-          console.error('Error saving session:', error);
+          console.error('❌ Error saving session:', error);
           this.snackBar.open(
             error.error?.message || 'Error al guardar la asignación',
             'Cerrar',
@@ -572,6 +751,18 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
           this.saving = false;
         }
       });
+  }
+
+// ✅ MÉTODO AUXILIAR para debugging
+  private getFormErrors(): any {
+    const errors: any = {};
+    Object.keys(this.assignmentForm.controls).forEach(key => {
+      const control = this.assignmentForm.get(key);
+      if (control && control.errors) {
+        errors[key] = control.errors;
+      }
+    });
+    return errors;
   }
 
   onCancel(): void {

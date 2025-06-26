@@ -135,6 +135,7 @@ export interface ClassSessionValidation {
   studentGroupUuid: string;
   dayOfWeek: string;
   teachingHourUuids: string[];
+  sessionTypeUuid: string;
   sessionUuid?: string; // Para modo edición
 }
 

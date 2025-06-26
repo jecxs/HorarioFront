@@ -1,4 +1,4 @@
-// schedule-by-group.component.scss - Versión Minimalista
+// schedule-by-group.component.scss - Versión Mejorada
 
 // ===== VARIABLES MINIMALISTAS =====
 :root {
@@ -6,6 +6,7 @@
   --schedule-secondary: #8b5cf6;
   --schedule-border: #e2e8f0;
   --schedule-bg: #f8fafc;
+  --row-height: 70px; // Altura fija para todas las filas
 }
 
 // ===== ANIMACIONES SUTILES =====
@@ -24,29 +25,124 @@
   animation: subtle-fade 0.3s ease-out;
 }
 
-// ===== TARJETAS DE SESIÓN SIMPLES =====
+// ===== ESTRUCTURA DE FILAS UNIFORME =====
+.schedule-row {
+  height: var(--row-height);
+  min-height: var(--row-height);
+  max-height: var(--row-height);
+}
+
+// ===== TARJETAS DE SESIÓN MEJORADAS =====
 .session-card-theory {
   background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   }
+
+  // Asegurar que el contenido no se desborde
+  .session-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
 }
 
 .session-card-practice {
   background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  position: relative;
+  overflow: hidden;
 
   &:hover {
     background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
   }
+
+  // Asegurar que el contenido no se desborde
+  .session-content {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+}
+
+// ===== BOTONES DE ACCIÓN INTERNOS =====
+.session-actions {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 10;
+
+  .action-btn {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.5);
+      transform: scale(1.1);
+    }
+
+    &.delete-btn:hover {
+      background: rgba(239, 68, 68, 0.8);
+    }
+
+    mat-icon {
+      font-size: 12px;
+      width: 12px;
+      height: 12px;
+    }
+  }
+}
+
+// Mostrar botones al hacer hover en la celda
+.session-card-theory:hover .session-actions,
+.session-card-practice:hover .session-actions {
+  opacity: 1;
 }
 
 // ===== MEJORAS PARA ANGULAR MATERIAL =====
 ::ng-deep {
+
+  // Tooltips personalizados para sesiones
+  .session-tooltip {
+    background: rgba(30, 41, 59, 0.95) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 12px 16px !important;
+    font-size: 12px !important;
+    max-width: 280px !important;
+    line-height: 1.4 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+
+    // Evitar superposición con botones
+    .mat-tooltip {
+      white-space: pre-line !important;
+    }
+  }
 
   // Form fields compactos
   .compact-select {
@@ -173,8 +269,8 @@
 
 // ===== RESPONSIVE COMPACTO =====
 @media (max-width: 1024px) {
-  .grid-cols-\[220px_repeat\(6\,1fr\)\] {
-    grid-template-columns: 200px repeat(6, 1fr);
+  .grid-cols-\[200px_repeat\(6\,1fr\)\] {
+    grid-template-columns: 180px repeat(6, 1fr);
   }
 }
 
@@ -183,8 +279,8 @@
     min-width: 1000px;
   }
 
-  .grid-cols-\[220px_repeat\(6\,1fr\)\] {
-    grid-template-columns: 180px repeat(6, 1fr);
+  .grid-cols-\[200px_repeat\(6\,1fr\)\] {
+    grid-template-columns: 160px repeat(6, 1fr);
   }
 
   .session-card-theory,
@@ -192,6 +288,17 @@
     h6 {
       font-size: 0.65rem;
       line-height: 1.2;
+    }
+
+    .session-actions .action-btn {
+      width: 18px;
+      height: 18px;
+
+      mat-icon {
+        font-size: 11px;
+        width: 11px;
+        height: 11px;
+      }
     }
   }
 }
@@ -246,17 +353,6 @@ button:focus-visible,
   }
 }
 
-// ===== BORDES Y SEPARADORES =====
-.time-slot-separator {
-  border-top: 2px solid #e2e8f0;
-  margin-top: 1px;
-}
-
-// ===== ESTADOS DE HOVER SUTILES =====
-.hover\:bg-slate-50\/50:hover {
-  background-color: rgba(248, 250, 252, 0.5);
-}
-
 // ===== EFECTOS DE TRANSICIÓN SIMPLES =====
 .transition-all {
   transition: all 0.2s ease;
@@ -272,4 +368,31 @@ button:focus-visible,
 
 .transition-opacity {
   transition: opacity 0.2s ease;
+}
+
+// ===== ALTURA FIJA PARA FILAS =====
+.h-16 {
+  height: 70px !important;
+  min-height: 70px !important;
+  max-height: 70px !important;
+}
+
+// ===== ASEGURAR QUE LOS ICONOS NO SE DESBORDEN =====
+.session-card-theory,
+.session-card-practice {
+  .text-xs mat-icon {
+    font-size: 12px !important;
+    width: 12px !important;
+    height: 12px !important;
+    line-height: 12px !important;
+  }
+}
+
+// ===== CELDA DE HORA CON TOOLTIP =====
+.time-cell {
+  cursor: help;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.05);
+  }
 }
