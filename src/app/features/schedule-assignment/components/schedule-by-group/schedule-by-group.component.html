@@ -1,0 +1,335 @@
+<!-- schedule-by-group.component.html - Con Header de Metadatos -->
+<div class="min-h-screen bg-slate-50 p-4">
+  <div class="max-w-[1600px] mx-auto space-y-4">
+
+    <!-- Compact Header -->
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <button
+            mat-icon-button
+            (click)="goBack()"
+            class="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors">
+            <mat-icon class="text-slate-600">arrow_back</mat-icon>
+          </button>
+          <div>
+            <h1 class="text-xl font-semibold text-slate-900">Horario por Grupo</h1>
+            <p class="text-sm text-slate-500">Gestión visual de horarios académicos</p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+          <!-- Compact Group Info -->
+          <div *ngIf="selectedGroup" class="flex items-center space-x-4 text-sm">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                <mat-icon class="text-blue-600 text-sm">groups</mat-icon>
+              </div>
+              <div>
+                <span class="font-medium text-slate-900">{{ selectedGroup.name }}</span>
+                <span class="text-slate-500 ml-1">• Ciclo {{ selectedGroup.cycleNumber }}</span>
+              </div>
+            </div>
+            <div class="text-slate-400">|</div>
+            <div class="flex items-center space-x-2">
+              <mat-icon class="text-slate-400 text-sm">schedule</mat-icon>
+              <span class="text-slate-600">{{ getTotalHours() }} horas</span>
+            </div>
+          </div>
+
+          <!-- Compact Group Selector -->
+          <div class="w-64">
+            <mat-form-field appearance="outline" class="compact-select w-full">
+              <mat-label>Grupo</mat-label>
+              <mat-select [formControl]="groupControl">
+                <mat-option *ngFor="let group of studentGroups" [value]="group.uuid">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="font-medium">{{ group.name }}</span>
+                    <span class="text-xs text-slate-500">Ciclo {{ group.cycleNumber }}</span>
+                  </div>
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Compact Action Button -->
+          <button
+            mat-raised-button
+            color="primary"
+            [disabled]="!selectedGroup"
+            (click)="openAssignmentDialog()"
+            class="h-10 px-4 rounded-lg">
+            <mat-icon class="mr-2 text-sm">add</mat-icon>
+            <span class="text-sm">Nueva Clase</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ NUEVO: Header Sticky con Metadatos de Cursos -->
+    <app-course-metadata-header
+      *ngIf="selectedGroup && !loading && !loadingCourses"
+      [selectedGroup]="selectedGroup"
+      [isSticky]="true">
+    </app-course-metadata-header>
+
+    <!-- Loading State para Metadatos -->
+    <div *ngIf="selectedGroup && (loading || loadingCourses)"
+         class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div class="flex items-center justify-center space-x-3">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span class="text-slate-600">
+          {{ loadingCourses ? 'Cargando información de cursos...' : 'Cargando horario...' }}
+        </span>
+      </div>
+    </div>
+
+    <!-- Compact Schedule Board -->
+    <div *ngIf="selectedGroup && !loading && !loadingCourses"
+         class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+
+      <!-- Board Header con Controles de Colapso -->
+      <div class="bg-slate-900 text-white p-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <h3 class="font-semibold">Tablero de Horarios</h3>
+            <span class="text-slate-300 text-sm">{{ selectedGroup?.name }}</span>
+          </div>
+
+          <div class="flex items-center space-x-4">
+            <!-- Controles de Colapso -->
+            <div *ngIf="showCollapseControls" class="flex items-center space-x-2 text-xs">
+              <button
+                mat-icon-button
+                (click)="expandAllTimeSlots()"
+                class="w-7 h-7 rounded bg-white/20 hover:bg-white/30 transition-colors"
+                matTooltip="Expandir todos los turnos"
+                matTooltipPosition="below">
+                <mat-icon class="text-white text-sm">expand_more</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="collapseEmptyTimeSlots()"
+                class="w-7 h-7 rounded bg-white/20 hover:bg-white/30 transition-colors"
+                matTooltip="Colapsar turnos vacíos"
+                matTooltipPosition="below">
+                <mat-icon class="text-white text-sm">expand_less</mat-icon>
+              </button>
+            </div>
+
+            <!-- Compact Legend -->
+            <div class="flex items-center space-x-4 text-xs">
+              <div class="flex items-center space-x-1">
+                <div class="w-3 h-3 rounded bg-blue-500"></div>
+                <span>Teórica</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <div class="w-3 h-3 rounded bg-purple-500"></div>
+                <span>Práctica</span>
+              </div>
+              <div class="flex items-center space-x-1">
+                <div class="w-3 h-3 rounded border border-emerald-400 border-dashed"></div>
+                <span>Disponible</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Compact Schedule Grid -->
+      <div class="overflow-x-auto">
+        <div class="min-w-[1200px]">
+
+          <!-- Compact Header Row -->
+          <div class="grid grid-cols-[200px_repeat(6,1fr)] bg-slate-50 border-b border-slate-200">
+            <!-- Time Header -->
+            <div class="p-3 bg-white border-r border-slate-200 sticky left-0 z-20">
+              <div class="flex items-center space-x-2">
+                <mat-icon class="text-slate-500 text-lg">schedule</mat-icon>
+                <div>
+                  <h4 class="font-medium text-slate-800">Hora</h4>
+                  <p class="text-xs text-slate-500">Horario • Duración</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Compact Day Headers -->
+            <div *ngFor="let day of workingDays" class="p-3 text-center">
+              <div class="flex flex-col items-center space-y-1">
+                <mat-icon class="text-slate-600">{{ getDayIcon(day) }}</mat-icon>
+                <span class="font-medium text-slate-800 text-sm">{{ getDayName(day) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schedule Content agrupado por TimeSlot (ordenado cronológicamente) -->
+          <div>
+            <ng-container *ngFor="let timeSlot of getSortedTimeSlots(); let timeSlotIndex = index">
+
+              <!-- Encabezado del TimeSlot (Turno) -->
+              <div class="grid grid-cols-[200px_repeat(6,1fr)] bg-slate-100 border-b border-slate-200 hover:bg-slate-150 transition-colors">
+                <!-- TimeSlot Header Cell -->
+                <div class="p-2 bg-slate-200 border-r border-slate-300 sticky left-0 z-15">
+                  <button
+                    class="w-full flex items-center justify-between text-left hover:bg-slate-300 rounded p-1 transition-colors"
+                    (click)="toggleTimeSlotCollapse(timeSlot.uuid)">
+
+                    <div class="flex items-center space-x-2">
+                      <!-- Ícono de colapso -->
+                      <mat-icon class="text-slate-600 text-lg transition-transform duration-200"
+                                [class.rotate-90]="!isTimeSlotCollapsed(timeSlot.uuid)">
+                        chevron_right
+                      </mat-icon>
+
+                      <!-- Info del turno -->
+                      <div>
+                        <div class="font-medium text-slate-800 text-sm">
+                          {{ timeSlot.name }}
+                        </div>
+                        <div class="text-xs text-slate-600">
+                          {{ timeSlot.startTime }} - {{ timeSlot.endTime }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Resumen cuando está colapsado -->
+                    <div *ngIf="isTimeSlotCollapsed(timeSlot.uuid)"
+                         class="text-xs text-slate-600 bg-slate-300 px-2 py-1 rounded">
+                      {{ getCollapsedTimeSlotSummary(timeSlot.uuid) }}
+                    </div>
+                  </button>
+                </div>
+
+                <!-- TimeSlot Summary Cells (cuando está colapsado) -->
+                <div *ngFor="let day of workingDays"
+                     class="p-2 border-r border-slate-300 last:border-r-0 flex items-center justify-center">
+                  <div *ngIf="isTimeSlotCollapsed(timeSlot.uuid)"
+                       class="text-xs text-slate-500">
+                    <!-- Aquí podrías mostrar un resumen por día si lo deseas -->
+                    <mat-icon class="text-slate-400">more_horiz</mat-icon>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Filas de Horas del TimeSlot (solo si no está colapsado) -->
+              <ng-container *ngIf="!isTimeSlotCollapsed(timeSlot.uuid)">
+                <div *ngFor="let row of scheduleHourRows; let rowIndex = index">
+                  <div *ngIf="row.timeSlot.uuid === timeSlot.uuid"
+                       class="grid grid-cols-[200px_repeat(6,1fr)] hover:bg-slate-50/50 transition-colors border-b border-slate-100 last:border-b-0 h-16">
+
+                    <!-- Compact Time Cell with Tooltip -->
+                    <div class="p-2 bg-white border-r border-slate-100 sticky left-0 z-10 flex items-center">
+                      <div
+                        class="flex items-center space-x-3 w-full cursor-help"
+                        [matTooltip]="getTimeSlotTooltip(row)"
+                        matTooltipPosition="right">
+
+                        <!-- Hour Number Badge -->
+                        <div class="w-7 h-7 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                          <span class="text-white font-semibold text-xs">{{ row.teachingHour.orderInTimeSlot }}</span>
+                        </div>
+
+                        <!-- Time Info -->
+                        <div class="flex-1 min-w-0">
+                          <div class="font-medium text-slate-800 text-sm truncate">
+                            {{ formatTime(row.teachingHour.startTime) }} - {{ formatTime(row.teachingHour.endTime) }}
+                          </div>
+                          <div class="text-xs text-slate-500">
+                            {{ row.teachingHour.durationMinutes }} min
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Compact Day Cells -->
+                    <div *ngFor="let day of workingDays" class="relative border-r border-slate-100 last:border-r-0">
+                      <ng-container *ngIf="getCellForDay(row, day) as cell">
+
+                        <!-- Session Card (compact with internal actions) -->
+                        <div *ngIf="cell.session"
+                             class="absolute inset-1 rounded-lg shadow-sm cursor-pointer group transition-all duration-200 hover:shadow-md overflow-hidden"
+                             [class]="getSessionCardClasses(cell.session)"
+                             (click)="editSession(cell.session)"
+                             [matTooltip]="getCellTooltip(cell)"
+                             matTooltipClass="session-tooltip"
+                             matTooltipPosition="above">
+
+                          <div class="p-2 h-full flex flex-col justify-between relative">
+                            <!-- Main Content -->
+                            <div class="flex-1 min-h-0">
+                              <h6 class="font-medium text-white text-xs leading-tight mb-1 truncate">
+                                {{ cell.session.course.name }}
+                              </h6>
+                              <div class="text-xs text-white/80 space-y-0.5">
+                                <div class="flex items-center space-x-1">
+                                  <mat-icon class="text-xs flex-shrink-0">person</mat-icon>
+                                  <span class="truncate">{{ getShortName(cell.session.teacher.fullName) }}</span>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                  <mat-icon class="text-xs flex-shrink-0">room</mat-icon>
+                                  <span class="truncate">{{ cell.session.learningSpace.name }}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <!-- Action Buttons - Always visible on hover -->
+                            <div class="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <button
+                                mat-icon-button
+                                class="w-5 h-5 bg-black/30 hover:bg-black/50 rounded flex items-center justify-center"
+                                (click)="editSession(cell.session); $event.stopPropagation()"
+                                matTooltip="Editar clase"
+                                matTooltipPosition="above">
+                                <mat-icon class="text-white text-xs">edit</mat-icon>
+                              </button>
+                              <button
+                                mat-icon-button
+                                class="w-5 h-5 bg-black/30 hover:bg-red-600/80 rounded flex items-center justify-center"
+                                (click)="deleteSession(cell.session); $event.stopPropagation()"
+                                matTooltip="Eliminar clase"
+                                matTooltipPosition="above">
+                                <mat-icon class="text-white text-xs">delete</mat-icon>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <!-- Available Cell (minimal) -->
+                        <div *ngIf="!cell.session && cell.isAvailable"
+                             class="absolute inset-1 rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 flex items-center justify-center cursor-pointer hover:bg-emerald-100/50 transition-colors group"
+                             (click)="onCellClick(row, day, cell)"
+                             [matTooltip]="getCellTooltip(cell)"
+                             matTooltipPosition="above">
+                          <mat-icon class="text-emerald-600 group-hover:scale-110 transition-transform">add_circle_outline</mat-icon>
+                        </div>
+
+                        <!-- Unavailable Cell (minimal) -->
+                        <div *ngIf="!cell.session && !cell.isAvailable"
+                             class="absolute inset-1 rounded-lg bg-slate-100 flex items-center justify-center">
+                          <mat-icon class="text-slate-400 text-lg">block</mat-icon>
+                        </div>
+
+                      </ng-container>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Compact Empty State -->
+    <div *ngIf="!selectedGroup && !loading" class="flex flex-col items-center justify-center py-20">
+      <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+        <mat-icon class="text-slate-400 text-2xl">event_available</mat-icon>
+      </div>
+      <h3 class="text-lg font-medium text-slate-900 mb-2">Seleccione un grupo</h3>
+      <p class="text-slate-500 text-center max-w-md">
+        Elija un grupo académico para visualizar y gestionar su horario
+      </p>
+    </div>
+
+  </div>
+</div>

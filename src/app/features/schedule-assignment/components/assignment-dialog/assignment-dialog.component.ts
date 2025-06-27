@@ -3,7 +3,7 @@ import { Component, Inject, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Subject, BehaviorSubject, combineLatest, debounceTime, distinctUntilChanged, takeUntil, startWith, switchMap, of, map } from 'rxjs';
-
+import { Router } from '@angular/router';
 // Angular Material
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -43,7 +43,10 @@ import {
   IntelliSenseResponse,
   ClassSessionValidation,
   TeachingTypeResponse,
-  TeacherEligibilityResponse
+  TeacherEligibilityResponse,
+  TeacherClassConflict,
+  GroupedTeachers,
+  TeacherAvailabilityStatus
 } from '../../models/class-session.model';
 import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 
@@ -112,7 +115,16 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private courseService = inject(CourseService);
   private teachingTypeService = inject(TeachingTypeService);
   private courseMetadataService = inject(CourseMetadataService);
+  private router = inject(Router);
 
+  groupedTeachers: GroupedTeachers = {
+    available: [],
+    withConflicts: [],
+    unavailable: [],
+    noSchedule: []
+  };
+  showConflictDetails = false; // Para expandir/colapsar detalles de conflictos
+  selectedConflictingTeacher: TeacherEligibilityResponse | null = null;
   // Form
   assignmentForm: FormGroup;
   courseFilterCtrl = new FormControl('');
@@ -418,11 +430,20 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   private loadEligibleTeachers(courseUuid: string): void {
     this.loadingTeachers = true;
     this.eligibleTeachers = [];
+    this.groupedTeachers = {
+      available: [],
+      withConflicts: [],
+      unavailable: [],
+      noSchedule: []
+    };
 
     const dayOfWeekStr = this.data.dayOfWeek ? this.data.dayOfWeek.toString() : undefined;
     const teachingHourUuids = this.selectionState.selectedHours.map(h => h.uuid);
 
-    console.log('Loading teachers with specific hours:', teachingHourUuids);
+    console.log('=== LOADING TEACHERS WITH CONFLICT DETECTION ===');
+    console.log('Course UUID:', courseUuid);
+    console.log('Day:', dayOfWeekStr);
+    console.log('Selected Hours:', teachingHourUuids);
 
     this.classSessionService.getEligibleTeachersDetailed(
       courseUuid,
@@ -434,20 +455,210 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
         next: (response) => {
           this.eligibleTeachersDetailed = Array.isArray(response.data) ? response.data : [response.data];
 
-          this.eligibleTeachersDetailed.forEach(teacher => {
-            console.log(`${teacher.fullName}: ${teacher.availabilityStatus} (${teacher.isAvailableForTimeSlot ? 'Available' : 'Not Available'})`);
-          });
+          // ✅ NUEVA LÓGICA: Agrupar docentes por categorías
+          this.groupTeachersByAvailability();
+
+          console.log('✅ Teachers grouped successfully:');
+          console.log('  - Available:', this.groupedTeachers.available.length);
+          console.log('  - With Conflicts:', this.groupedTeachers.withConflicts.length);
+          console.log('  - Unavailable:', this.groupedTeachers.unavailable.length);
+          console.log('  - No Schedule:', this.groupedTeachers.noSchedule.length);
 
           this.loadingTeachers = false;
           this.loadIntelliSense();
         },
         error: (error) => {
-          console.error('Error loading teachers:', error);
+          console.error('❌ Error loading teachers:', error);
           this.snackBar.open('Error al cargar docentes', 'Cerrar', { duration: 3000 });
           this.loadingTeachers = false;
         }
       });
   }
+  // ✅ NUEVO MÉTODO: Agrupar docentes por disponibilidad y conflictos
+  private groupTeachersByAvailability(): void {
+    this.groupedTeachers = {
+      available: [],
+      withConflicts: [],
+      unavailable: [],
+      noSchedule: []
+    };
+
+    this.eligibleTeachersDetailed.forEach(teacher => {
+      switch (teacher.availabilityStatus) {
+        case 'AVAILABLE':
+          this.groupedTeachers.available.push(teacher);
+          break;
+
+        case 'SCHEDULE_CONFLICT':
+        case 'PARTIAL_CONFLICT':
+          this.groupedTeachers.withConflicts.push(teacher);
+          break;
+
+        case 'NO_SCHEDULE_CONFIGURED':
+          this.groupedTeachers.noSchedule.push(teacher);
+          break;
+
+        case 'TIME_CONFLICT':
+        case 'NOT_AVAILABLE':
+        case 'ERROR':
+        default:
+          this.groupedTeachers.unavailable.push(teacher);
+          break;
+      }
+    });
+
+    // Ordenar cada grupo alfabéticamente
+    Object.keys(this.groupedTeachers).forEach(key => {
+      (this.groupedTeachers as any)[key].sort((a: TeacherEligibilityResponse, b: TeacherEligibilityResponse) =>
+        a.fullName.localeCompare(b.fullName)
+      );
+    });
+  }
+  getAvailabilityIcon(status: TeacherAvailabilityStatus): string {
+    const icons = {
+      'AVAILABLE': 'check_circle',
+      'SCHEDULE_CONFLICT': 'event_busy',
+      'PARTIAL_CONFLICT': 'warning',
+      'TIME_CONFLICT': 'schedule',
+      'NOT_AVAILABLE': 'cancel',
+      'NO_SCHEDULE_CONFIGURED': 'help_outline',
+      'ERROR': 'error'
+    };
+    return icons[status] || 'help_outline';
+  }
+
+  getAvailabilityColor(status: TeacherAvailabilityStatus): string {
+    const colors = {
+      'AVAILABLE': 'text-green-600',
+      'SCHEDULE_CONFLICT': 'text-red-600',
+      'PARTIAL_CONFLICT': 'text-orange-600',
+      'TIME_CONFLICT': 'text-yellow-600',
+      'NOT_AVAILABLE': 'text-red-500',
+      'NO_SCHEDULE_CONFIGURED': 'text-gray-500',
+      'ERROR': 'text-red-700'
+    };
+    return colors[status] || 'text-gray-500';
+  }
+
+  getStatusDescription(status: TeacherAvailabilityStatus): string {
+    const descriptions = {
+      'AVAILABLE': 'Disponible para asignar',
+      'SCHEDULE_CONFLICT': 'Tiene clases en este horario',
+      'PARTIAL_CONFLICT': 'Conflicto parcial de horario',
+      'TIME_CONFLICT': 'Fuera de horario de disponibilidad',
+      'NOT_AVAILABLE': 'No disponible',
+      'NO_SCHEDULE_CONFIGURED': 'Sin horario configurado',
+      'ERROR': 'Error al verificar disponibilidad'
+    };
+    return descriptions[status] || 'Estado desconocido';
+  }
+  // ✅ REEMPLAZAR TODO EL MÉTODO
+  onTeacherSelectedWithConflictCheck(teacherUuid: string): void {
+    const teacher = this.eligibleTeachersDetailed.find(t => t.uuid === teacherUuid);
+    if (!teacher) return;
+    // ✅ NUEVO: Si el docente tiene conflictos de clases, mostrar mensaje y navegar
+    if (teacher.hasScheduleConflict && teacher.conflictingClasses && teacher.conflictingClasses.length > 0) {
+      this.handleTeacherConflict(teacher);
+      return;
+    }
+    // Si no tiene conflictos, proceder normalmente
+    this.selectTeacher(teacher);
+  }
+  // ✅ NUEVO MÉTODO: Manejar conflicto de docente
+  public handleTeacherConflict(teacher: TeacherEligibilityResponse): void {
+    if (!teacher.conflictingClasses || teacher.conflictingClasses.length === 0) return;
+
+    const conflict = teacher.conflictingClasses[0]; // Tomar el primer conflicto
+    const conflictGroupUuid = conflict.studentGroupUuid;
+
+    // Mostrar snackbar con información y opción de navegar
+    const snackBarRef = this.snackBar.open(
+      `${teacher.fullName} tiene una clase de ${conflict.courseName} con ${conflict.studentGroupName}. ¿Ver horario del grupo para resolver el conflicto?`,
+      'Ver Horario',
+      {
+        duration: 8000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+        panelClass: ['conflict-snackbar']
+      }
+    );
+
+    // Manejar click en el botón
+    snackBarRef.onAction().subscribe(() => {
+      this.navigateToGroupSchedule(conflictGroupUuid);
+    });
+  }
+// ✅ NUEVO MÉTODO: Navegar al horario del grupo en conflicto
+  private navigateToGroupSchedule(groupUuid: string): void {
+    // Cerrar el diálogo actual
+    this.dialogRef.close();
+
+    // Navegar al horario por grupo con el grupo específico seleccionado
+    this.router.navigate(['/dashboard/horarios/by-group'], {
+      queryParams: { groupUuid: groupUuid }
+    });
+  }
+  // ✅ NUEVO MÉTODO: Seleccionar docente sin conflictos
+  private selectTeacher(teacherDetailed: TeacherEligibilityResponse): void {
+    this.selectionState.teacher = {
+      uuid: teacherDetailed.uuid,
+      fullName: teacherDetailed.fullName,
+      email: teacherDetailed.email,
+      department: teacherDetailed.department,
+      knowledgeAreas: teacherDetailed.knowledgeAreas,
+      hasUserAccount: teacherDetailed.hasUserAccount,
+      totalAvailabilities: 0
+    };
+
+    // Actualizar formulario
+    this.assignmentForm.patchValue({
+      teacherUuid: teacherDetailed.uuid
+    });
+
+    this.currentStep = 4; // Ir al paso de selección de aula
+    this.loadEligibleSpaces();
+  }
+
+
+
+
+  // ✅ NUEVO: Toggle para mostrar/ocultar detalles de conflictos
+  toggleConflictDetails(): void {
+    this.showConflictDetails = !this.showConflictDetails;
+  }
+
+  // ✅ NUEVO: Obtener resumen de conflictos para un docente
+  getConflictSummary(teacher: TeacherEligibilityResponse): string {
+    if (!teacher.conflictingClasses || teacher.conflictingClasses.length === 0) {
+      return '';
+    }
+
+    if (teacher.conflictingClasses.length === 1) {
+      const conflict = teacher.conflictingClasses[0];
+      return `${conflict.courseName} - ${conflict.studentGroupName}`;
+    }
+
+    return `${teacher.conflictingClasses.length} clases en conflicto`;
+  }
+
+  // ✅ NUEVO: Verificar si un docente puede ser seleccionado
+  canSelectTeacher(teacher: TeacherEligibilityResponse): boolean {
+    return teacher.availabilityStatus === 'AVAILABLE' ||
+      teacher.availabilityStatus === 'SCHEDULE_CONFLICT' ||
+      teacher.availabilityStatus === 'PARTIAL_CONFLICT';
+  }
+
+  // ✅ NUEVO: Obtener mensaje de ayuda para cada categoría
+  getCategoryHelpText(category: keyof GroupedTeachers): string {
+    const helpTexts = {
+      available: 'Docentes que pueden ser asignados sin conflictos',
+      withConflicts: 'Docentes que tienen clases en el mismo horario - requieren confirmación',
+      unavailable: 'Docentes fuera de su horario de disponibilidad',
+      noSchedule: 'Docentes sin horario de disponibilidad configurado'
+    };
+    return helpTexts[category];
+  }
+
 
   getAvailabilityClass(status: string): string {
     switch(status) {

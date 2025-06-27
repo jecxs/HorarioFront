@@ -205,9 +205,48 @@ export interface TeacherEligibilityResponse {
   knowledgeAreas: any[];
   hasUserAccount: boolean;
   isAvailableForTimeSlot: boolean;
-  availabilityStatus: 'AVAILABLE' | 'NOT_AVAILABLE' | 'TIME_CONFLICT' | 'NO_SCHEDULE_CONFIGURED' | 'ERROR';
+  availabilityStatus: TeacherAvailabilityStatus; // ✅ CORREGIDO: Usar el tipo completo
   availabilitiesForDay: any[];
   recommendedTimeSlots: string;
+
+  // ✅ VERIFICAR estos campos para conflictos:
+  hasScheduleConflict?: boolean;
+  conflictingClasses?: TeacherClassConflict[]; // ✅ USAR LA INTERFACE CORRECTA
+  conflictSummary?: string;
+  conflictType?: 'SAME_HOURS' | 'OVERLAPPING_HOURS' | 'ADJACENT_HOURS';
+}
+
+// ✅ NUEVO: Información detallada sobre conflictos de clases
+export interface TeacherClassConflict {
+  sessionUuid: string;
+  courseName: string;
+  courseCode: string;
+  studentGroupName: string;
+  studentGroupUuid: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  teachingHours: TeachingHourResponse[];
+  learningSpaceName: string;
+  sessionType: 'THEORY' | 'PRACTICE';
+  conflictingHourUuids: string[]; // Qué horas específicamente entran en conflicto
+}
+
+export type TeacherAvailabilityStatus =
+  | 'AVAILABLE'              // Disponible y sin conflictos
+  | 'NOT_AVAILABLE'          // No tiene horario de disponibilidad configurado
+  | 'TIME_CONFLICT'          // Fuera de su horario de disponibilidad
+  | 'SCHEDULE_CONFLICT'      // Tiene clase asignada en esas horas
+  | 'PARTIAL_CONFLICT'       // Algunas horas en conflicto, otras disponibles
+  | 'NO_SCHEDULE_CONFIGURED' // Sin horario configurado
+  | 'ERROR';                 // Error al verificar
+
+// ✅ NUEVO: Para agrupar docentes en el UI
+export interface GroupedTeachers {
+  available: TeacherEligibilityResponse[];
+  withConflicts: TeacherEligibilityResponse[];
+  unavailable: TeacherEligibilityResponse[];
+  noSchedule: TeacherEligibilityResponse[];
 }
 
 // ✅ NUEVAS INTERFACES DE UTILIDAD PARA EL TABLERO MEJORADO

@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged, combineLatest } from 'rxjs';
-
+import { ActivatedRoute } from '@angular/router';
 // Angular Material
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -75,6 +75,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   private periodService = inject(PeriodService);
   private courseService = inject(CourseService); // ✅ AGREGAR
   private courseMetadataService = inject(CourseMetadataService); // ✅ AGREGAR
+  private route = inject(ActivatedRoute);
+
 
   // ✅ NUEVAS PROPIEDADES para colapsar turnos
   collapsedTimeSlots: Set<string> = new Set(); // UUIDs de turnos colapsados
@@ -96,9 +98,14 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   loading = false;
   workingDays = WORKING_DAYS.filter(d => d !== DayOfWeek.SUNDAY);
 
+  constructor(
+  ) {
+  }
+
   ngOnInit(): void {
     this.loadInitialData();
     this.setupGroupSelection();
+    this.handleQueryParams();
   }
 
   ngOnDestroy(): void {
@@ -126,6 +133,29 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
         error: (error) => {
           console.error('Error loading groups:', error);
           this.showSnackBar('Error al cargar los grupos', 'error');
+        }
+      });
+  }
+  // ✅ AGREGAR nuevo método
+  private handleQueryParams(): void {
+    this.route.queryParams
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(params => {
+        if (params['groupUuid']) {
+          // Seleccionar el grupo desde queryParams
+          this.groupControl.setValue(params['groupUuid']);
+
+          // Mostrar mensaje de contexto
+          this.snackBar.open(
+            'Navegado desde un conflicto de horario. Revise las asignaciones del docente.',
+            'Entendido',
+            {
+              duration: 5000,
+              horizontalPosition: 'center',
+              verticalPosition: 'top',
+              panelClass: ['info-snackbar']
+            }
+          );
         }
       });
   }
@@ -599,8 +629,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-            this.showSnackBar('Clase eliminada exitosamente', 'success');
-            this.loadGroupData(this.selectedGroup!.uuid);
+          this.showSnackBar('Clase eliminada exitosamente', 'success');
+          this.loadGroupData(this.selectedGroup!.uuid);
         },
         error: (error) => {
           console.error('Error deleting session:', error);
@@ -695,7 +725,8 @@ interface ConfirmDialogData {
 export class ConfirmDialogComponent {
   constructor(
     private dialogRef: MatDialogRef<ConfirmDialogComponent>,
-    @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData
+    @Inject(MAT_DIALOG_DATA) public data: ConfirmDialogData,
+
   ) {}
 
   onConfirm(): void {
