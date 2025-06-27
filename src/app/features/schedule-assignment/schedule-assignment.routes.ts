@@ -8,14 +8,12 @@ export const SCHEDULE_ASSIGNMENT_ROUTES: Routes = [
       import('./components/schedule-assignment-main/schedule-assignment-main.component')
         .then(m => m.ScheduleAssignmentMainComponent)
   },
-  /*
   {
     path: 'by-teacher',
     loadComponent: () =>
       import('./components/schedule-by-teacher/schedule-by-teacher.component')
         .then(m => m.ScheduleByTeacherComponent)
   },
-  */
   {
     path: 'by-group',
     loadComponent: () =>

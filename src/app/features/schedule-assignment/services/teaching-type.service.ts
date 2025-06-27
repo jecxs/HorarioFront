@@ -13,7 +13,6 @@ export interface TeachingType {
   providedIn: 'root'
 })
 export class TeachingTypeService extends BaseApiService {
-  // ✅ CORREGIDO: underscore en lugar de asterisco
   private _types$ = new BehaviorSubject<TeachingType[]>([]);
   private loaded = false;
 
@@ -23,7 +22,7 @@ export class TeachingTypeService extends BaseApiService {
       .pipe(
         map(resp => resp.data),
         tap(types => {
-          this._types$.next(types); // ✅ CORREGIDO: con underscore
+          this._types$.next(types);
           this.loaded = true;
           console.log('Teaching types loaded:', types);
         }),

@@ -1,8 +1,8 @@
 // src/app/features/student-groups/services/student-group.service.ts
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { BaseApiService } from '../../../shared/services/base-api.service';
-
+import { BaseApiService, ApiResponse } from '../../../shared/services/base-api.service';
+import { StudentGroupResponse } from '../../schedule-assignment/models/class-session.model';
 
 export interface StudentGroup {
   uuid: string;
@@ -87,4 +87,5 @@ export class StudentGroupService extends BaseApiService {
   getAllModalities(): Observable<any> {
     return this.get<any[]>('/protected/educational-modalities');
   }
+
 }
