@@ -10,3 +10,6 @@ export * from './models/class-session.model';
 export * from './models/teacher-metadata.model'; // ✅ NUEVO
 export * from './schedule-assignment.routes';
 export * from './components/teacher-assignment-dialog/teacher-assignment-dialog.component'; // ✅ NUEVO
+export * from './services/export.service';
+export * from './services/course-metadata.service';
+export * from './models/course-metadata.model';

@@ -70,8 +70,10 @@
     <app-course-metadata-header
       *ngIf="selectedGroup && !loading && !loadingCourses"
       [selectedGroup]="selectedGroup"
+      [sessions]="sessions"
       [isSticky]="true">
     </app-course-metadata-header>
+
 
     <!-- Loading State para Metadatos -->
     <div *ngIf="selectedGroup && (loading || loadingCourses)"

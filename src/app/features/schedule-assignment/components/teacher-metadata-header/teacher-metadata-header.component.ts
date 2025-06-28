@@ -12,11 +12,14 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 // Services y Models
 import { TeacherMetadataService } from '../../services/teacher-metadata.service';
+import { ExportService, ExportData } from '../../services/export.service';
 import { TeacherScheduleMetadata, TeacherAssignmentStats } from '../../models/teacher-metadata.model';
-import { TeacherResponse, DayOfWeek, DAY_NAMES } from '../../models/class-session.model';
+import { TeacherResponse, DayOfWeek, DAY_NAMES, ClassSessionResponse } from '../../models/class-session.model';
 
 @Component({
   selector: 'app-teacher-metadata-header',
@@ -30,7 +33,8 @@ import { TeacherResponse, DayOfWeek, DAY_NAMES } from '../../models/class-sessio
     MatChipsModule,
     MatBadgeModule,
     MatDividerModule,
-    MatButtonModule
+    MatButtonModule,
+    MatMenuModule
   ],
   template: `
     <!-- src/app/features/schedule-assignment/components/teacher-metadata-header/teacher-metadata-header.component.html -->
@@ -75,14 +79,44 @@ import { TeacherResponse, DayOfWeek, DAY_NAMES } from '../../models/class-sessio
           </div>
         </div>
 
-        <!-- Toggle Button -->
-        <button mat-icon-button
-                (click)="toggleExpanded()"
-                class="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
-          <mat-icon class="text-white transition-transform duration-300" [ngClass]="{'rotated': isExpanded}">
-            {{ isExpanded ? 'expand_less' : 'expand_more' }}
-          </mat-icon>
-        </button>
+        <!-- Actions and Toggle -->
+        <div class="flex items-center space-x-3">
+          <!-- ✅ NUEVO: Export Menu -->
+          <div *ngIf="selectedTeacher && metadata && metadata.totalSessions > 0" class="export-section">
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="exportMenu"
+              class="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-colors"
+              [disabled]="isExporting"
+              matTooltip="Exportar horario"
+              matTooltipPosition="below">
+              <mat-icon class="text-white" *ngIf="!isExporting">download</mat-icon>
+              <mat-icon class="text-white animate-spin" *ngIf="isExporting">hourglass_empty</mat-icon>
+            </button>
+
+            <mat-menu #exportMenu="matMenu" class="export-menu">
+              <button mat-menu-item (click)="exportToPDF()" [disabled]="isExporting">
+                <mat-icon color="primary">picture_as_pdf</mat-icon>
+                <span>Exportar a PDF</span>
+                <span class="export-hint">Formato imprimible</span>
+              </button>
+              <button mat-menu-item (click)="exportToExcel()" [disabled]="isExporting">
+                <mat-icon color="accent">table_chart</mat-icon>
+                <span>Exportar a Excel</span>
+                <span class="export-hint">Para análisis y edición</span>
+              </button>
+            </mat-menu>
+          </div>
+
+          <!-- Toggle Button -->
+          <button mat-icon-button
+                  (click)="toggleExpanded()"
+                  class="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 transition-colors">
+            <mat-icon class="text-white transition-transform duration-300" [ngClass]="{'rotated': isExpanded}">
+              {{ isExpanded ? 'expand_less' : 'expand_more' }}
+            </mat-icon>
+          </button>
+        </div>
       </div>
 
       <!-- Detailed View -->
@@ -239,15 +273,19 @@ import { TeacherResponse, DayOfWeek, DAY_NAMES } from '../../models/class-sessio
 export class TeacherMetadataHeaderComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private metadataService = inject(TeacherMetadataService);
+  private exportService = inject(ExportService);
+  private snackBar = inject(MatSnackBar);
 
   @Input() isSticky = false;
   @Input() selectedTeacher: TeacherResponse | null = null;
+  @Input() sessions: ClassSessionResponse[] = []; // ✅ NUEVO: Para exportación
 
   // State
   metadata: TeacherScheduleMetadata | null = null;
   assignmentStats: TeacherAssignmentStats | null = null;
   suggestions: string[] = [];
   isExpanded = false;
+  isExporting = false; // ✅ NUEVO: Estado de exportación
 
   workingDays = Object.values(DayOfWeek).filter(d => d !== DayOfWeek.SUNDAY);
 
@@ -283,6 +321,89 @@ export class TeacherMetadataHeaderComponent implements OnInit, OnDestroy {
   toggleExpanded(): void {
     this.isExpanded = !this.isExpanded;
   }
+
+  // ===== MÉTODOS DE EXPORTACIÓN =====
+
+  async exportToPDF(): Promise<void> {
+    if (!this.selectedTeacher || !this.metadata) {
+      this.showSnackBar('No hay datos del docente para exportar', 'warning');
+      return;
+    }
+
+    try {
+      this.isExporting = true;
+      console.log('🖨️ Starting PDF export for teacher:', this.selectedTeacher.fullName);
+
+      const exportData: ExportData = {
+        title: 'Horario de Clases',
+        subtitle: `Docente: ${this.selectedTeacher.fullName}`,
+        entity: this.selectedTeacher,
+        sessions: this.sessions,
+        exportType: 'teacher',
+        metadata: {
+          totalHours: this.metadata.totalAssignedHours,
+          totalSessions: this.metadata.totalSessions,
+          generatedAt: new Date(),
+          generatedBy: 'Sistema de Gestión de Horarios'
+        }
+      };
+
+      await this.exportService.exportToPDF(exportData);
+      this.showSnackBar('Horario exportado a PDF exitosamente', 'success');
+
+    } catch (error) {
+      console.error('❌ Error exporting to PDF:', error);
+      this.showSnackBar('Error al exportar a PDF', 'error');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  async exportToExcel(): Promise<void> {
+    if (!this.selectedTeacher || !this.metadata) {
+      this.showSnackBar('No hay datos del docente para exportar', 'warning');
+      return;
+    }
+
+    try {
+      this.isExporting = true;
+      console.log('📊 Starting Excel export for teacher:', this.selectedTeacher.fullName);
+
+      const exportData: ExportData = {
+        title: 'Horario de Clases',
+        subtitle: `Docente: ${this.selectedTeacher.fullName}`,
+        entity: this.selectedTeacher,
+        sessions: this.sessions,
+        exportType: 'teacher',
+        metadata: {
+          totalHours: this.metadata.totalAssignedHours,
+          totalSessions: this.metadata.totalSessions,
+          generatedAt: new Date(),
+          generatedBy: 'Sistema de Gestión de Horarios'
+        }
+      };
+
+      await this.exportService.exportToExcel(exportData);
+      this.showSnackBar('Horario exportado a Excel exitosamente', 'success');
+
+    } catch (error) {
+      console.error('❌ Error exporting to Excel:', error);
+      this.showSnackBar('Error al exportar a Excel', 'error');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  private showSnackBar(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    this.snackBar.open(message, 'Cerrar', {
+      duration: 4000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: [`${type}-snackbar`]
+    });
+  }
+
+  // ===== MÉTODOS EXISTENTES =====
 
   getDayName(day: DayOfWeek): string {
     return DAY_NAMES[day];

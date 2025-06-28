@@ -13,11 +13,14 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 // Services y Models
 import { CourseMetadataService } from '../../services/course-metadata.service';
+import { ExportService, ExportData } from '../../services/export.service';
 import { GroupCoursesSummary, CourseMetadata, CourseAssignmentStats } from '../../models/course-metadata.model';
-import { StudentGroupResponse } from '../../models/class-session.model';
+import { StudentGroupResponse, ClassSessionResponse } from '../../models/class-session.model';
 
 @Component({
   selector: 'app-course-metadata-header',
@@ -32,7 +35,8 @@ import { StudentGroupResponse } from '../../models/class-session.model';
     MatBadgeModule,
     MatExpansionModule,
     MatDividerModule,
-    MatButtonModule
+    MatButtonModule,
+    MatMenuModule
   ],
   template: `
     <div class="metadata-header-container" [class.sticky]="isSticky">
@@ -71,10 +75,40 @@ import { StudentGroupResponse } from '../../models/class-session.model';
           </div>
         </div>
 
-        <!-- Toggle Button -->
-        <button mat-icon-button (click)="toggleExpanded()" class="toggle-btn">
-          <mat-icon [class.rotated]="isExpanded">{{ isExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
-        </button>
+        <!-- Actions and Toggle -->
+        <div class="actions-section">
+          <!-- ✅ NUEVO: Export Menu -->
+          <div *ngIf="selectedGroup && summary && summary.totalAssignedHours > 0" class="export-section">
+            <button
+              mat-icon-button
+              [matMenuTriggerFor]="exportMenu"
+              class="export-btn"
+              [disabled]="isExporting"
+              matTooltip="Exportar horario del grupo"
+              matTooltipPosition="below">
+              <mat-icon *ngIf="!isExporting">download</mat-icon>
+              <mat-icon class="animate-spin" *ngIf="isExporting">hourglass_empty</mat-icon>
+            </button>
+
+            <mat-menu #exportMenu="matMenu" class="export-menu">
+              <button mat-menu-item (click)="exportToPDF()" [disabled]="isExporting">
+                <mat-icon color="primary">picture_as_pdf</mat-icon>
+                <span>Exportar a PDF</span>
+                <span class="export-hint">Formato imprimible</span>
+              </button>
+              <button mat-menu-item (click)="exportToExcel()" [disabled]="isExporting">
+                <mat-icon color="accent">table_chart</mat-icon>
+                <span>Exportar a Excel</span>
+                <span class="export-hint">Para análisis y edición</span>
+              </button>
+            </mat-menu>
+          </div>
+
+          <!-- Toggle Button -->
+          <button mat-icon-button (click)="toggleExpanded()" class="toggle-btn">
+            <mat-icon [class.rotated]="isExpanded">{{ isExpanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </button>
+        </div>
       </div>
 
       <!-- Detailed View (Expandible) -->
@@ -238,15 +272,19 @@ import { StudentGroupResponse } from '../../models/class-session.model';
 export class CourseMetadataHeaderComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private metadataService = inject(CourseMetadataService);
+  private exportService = inject(ExportService);
+  private snackBar = inject(MatSnackBar);
 
   @Input() isSticky = false;
   @Input() selectedGroup: StudentGroupResponse | null = null;
+  @Input() sessions: ClassSessionResponse[] = []; // ✅ NUEVO: Para exportación
 
   // State
   summary: GroupCoursesSummary | null = null;
   assignmentStats: CourseAssignmentStats | null = null;
   suggestions: string[] = [];
   isExpanded = false;
+  isExporting = false; // ✅ NUEVO: Estado de exportación
 
   ngOnInit(): void {
     // Suscribirse a cambios en los metadatos
@@ -281,6 +319,91 @@ export class CourseMetadataHeaderComponent implements OnInit, OnDestroy {
     this.isExpanded = !this.isExpanded;
   }
 
+  // ===== MÉTODOS DE EXPORTACIÓN =====
+
+  async exportToPDF(): Promise<void> {
+    if (!this.selectedGroup || !this.summary) {
+      this.showSnackBar('No hay datos del grupo para exportar', 'warning');
+      return;
+    }
+
+    try {
+      this.isExporting = true;
+      console.log('🖨️ Starting PDF export for group:', this.selectedGroup.name);
+
+      const exportData: ExportData = {
+        title: 'Horario de Clases',
+        subtitle: `Grupo: ${this.selectedGroup.name} - Ciclo ${this.selectedGroup.cycleNumber}`,
+        entity: this.selectedGroup,
+        sessions: this.sessions,
+        exportType: 'group',
+        metadata: {
+          totalHours: this.summary.totalAssignedHours,
+          totalSessions: this.sessions.length,
+          periodName: this.selectedGroup.periodName,
+          generatedAt: new Date(),
+          generatedBy: 'Sistema de Gestión de Horarios'
+        }
+      };
+
+      await this.exportService.exportToPDF(exportData);
+      this.showSnackBar('Horario exportado a PDF exitosamente', 'success');
+
+    } catch (error) {
+      console.error('❌ Error exporting to PDF:', error);
+      this.showSnackBar('Error al exportar a PDF', 'error');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  async exportToExcel(): Promise<void> {
+    if (!this.selectedGroup || !this.summary) {
+      this.showSnackBar('No hay datos del grupo para exportar', 'warning');
+      return;
+    }
+
+    try {
+      this.isExporting = true;
+      console.log('📊 Starting Excel export for group:', this.selectedGroup.name);
+
+      const exportData: ExportData = {
+        title: 'Horario de Clases',
+        subtitle: `Grupo: ${this.selectedGroup.name} - Ciclo ${this.selectedGroup.cycleNumber}`,
+        entity: this.selectedGroup,
+        sessions: this.sessions,
+        exportType: 'group',
+        metadata: {
+          totalHours: this.summary.totalAssignedHours,
+          totalSessions: this.sessions.length,
+          periodName: this.selectedGroup.periodName,
+          generatedAt: new Date(),
+          generatedBy: 'Sistema de Gestión de Horarios'
+        }
+      };
+
+      await this.exportService.exportToExcel(exportData);
+      this.showSnackBar('Horario exportado a Excel exitosamente', 'success');
+
+    } catch (error) {
+      console.error('❌ Error exporting to Excel:', error);
+      this.showSnackBar('Error al exportar a Excel', 'error');
+    } finally {
+      this.isExporting = false;
+    }
+  }
+
+  private showSnackBar(message: string, type: 'success' | 'error' | 'warning' = 'success'): void {
+    this.snackBar.open(message, 'Cerrar', {
+      duration: 4000,
+      horizontalPosition: 'end',
+      verticalPosition: 'top',
+      panelClass: [`${type}-snackbar`]
+    });
+  }
+
+  // ===== MÉTODOS EXISTENTES =====
+
   trackByCourse(index: number, courseMetadata: CourseMetadata): string {
     return courseMetadata.course.uuid;
   }
@@ -302,6 +425,4 @@ export class CourseMetadataHeaderComponent implements OnInit, OnDestroy {
     if (!this.assignmentStats || this.assignmentStats.totalPracticeHours === 0) return 0;
     return (this.assignmentStats.assignedPracticeHours / this.assignmentStats.totalPracticeHours) * 100;
   }
-
-
 }

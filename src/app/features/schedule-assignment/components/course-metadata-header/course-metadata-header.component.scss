@@ -474,3 +474,480 @@
     padding: 16px;
   }
 }
+.metadata-header-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+
+  &.sticky {
+    position: sticky;
+    top: 1rem;
+    z-index: 30;
+  }
+}
+
+.summary-bar {
+  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  color: white;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.summary-section {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  .summary-icon {
+    font-size: 1.125rem;
+    opacity: 0.9;
+
+    &.completed {
+      color: #10b981;
+    }
+
+    &.pending {
+      color: #f59e0b;
+    }
+  }
+
+  .summary-content {
+    display: flex;
+    flex-direction: column;
+
+    .summary-value {
+      font-weight: 700;
+      font-size: 1.125rem;
+      line-height: 1.2;
+
+      &.urgent {
+        color: #fbbf24;
+      }
+    }
+
+    .summary-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.8;
+    }
+  }
+
+  .progress-circle {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+
+    &.completed {
+      border-color: #10b981;
+      background: rgba(16, 185, 129, 0.2);
+    }
+
+    .progress-value {
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+  }
+}
+
+.actions-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.export-btn, .toggle-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .mat-icon {
+    color: white;
+
+    &.rotated {
+      transform: rotate(180deg);
+    }
+  }
+}
+
+.detailed-view {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+
+  &.expanded {
+    max-height: 2000px;
+  }
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1.5rem;
+  padding-bottom: 0;
+}
+
+.stat-card {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+
+  &.theory {
+    border-left: 4px solid #3b82f6;
+  }
+
+  &.practice {
+    border-left: 4px solid #8b5cf6;
+  }
+
+  .stat-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+
+    .mat-icon {
+      color: #64748b;
+    }
+
+    span {
+      font-weight: 500;
+      color: #1e293b;
+    }
+  }
+
+  .stat-progress {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+
+    .stat-value {
+      font-weight: 600;
+      color: #1e293b;
+    }
+  }
+
+  .theory-progress {
+    ::ng-deep .mat-mdc-progress-bar-fill::after {
+      background-color: #3b82f6;
+    }
+  }
+
+  .practice-progress {
+    ::ng-deep .mat-mdc-progress-bar-fill::after {
+      background-color: #8b5cf6;
+    }
+  }
+
+  .remaining-hours {
+    font-size: 0.875rem;
+    color: #f59e0b;
+    font-weight: 500;
+  }
+}
+
+.courses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.course-card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+
+  &.completed {
+    border-color: #10b981;
+    background: #f0fdf4;
+  }
+
+  &.priority {
+    border-color: #f59e0b;
+  }
+
+  &.urgent {
+    border-color: #ef4444;
+    background: #fef2f2;
+  }
+
+  .course-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+
+    .course-info {
+      flex: 1;
+
+      .course-name {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin: 0 0 0.25rem 0;
+        line-height: 1.4;
+      }
+
+      .course-code {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-weight: 500;
+      }
+    }
+
+    .course-status {
+      .status-chip {
+        font-size: 0.75rem;
+        min-height: 24px;
+
+        &.completed {
+          background: #dcfce7;
+          color: #166534;
+        }
+      }
+
+      .sessions-chip {
+        background: #dbeafe;
+        color: #1d4ed8;
+        font-size: 0.75rem;
+        min-height: 24px;
+      }
+    }
+  }
+
+  .course-progress {
+    margin-bottom: 1rem;
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+
+      .progress-text {
+        font-size: 0.875rem;
+        color: #475569;
+        font-weight: 500;
+      }
+
+      .progress-percentage {
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: #1e293b;
+      }
+    }
+
+    ::ng-deep .mat-mdc-progress-bar {
+      height: 6px;
+      border-radius: 3px;
+
+      &.completed .mat-mdc-progress-bar-fill::after {
+        background-color: #10b981;
+      }
+
+      .mat-mdc-progress-bar-fill::after {
+        background-color: #3b82f6;
+      }
+    }
+  }
+
+  .course-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .hour-type {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      .hour-icon {
+        .mat-icon {
+          font-size: 1rem;
+          color: #64748b;
+        }
+      }
+
+      .hour-info {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+
+        .hour-label {
+          font-weight: 500;
+          color: #374151;
+        }
+
+        .hour-value {
+          color: #1f2937;
+        }
+
+        .hour-remaining {
+          color: #f59e0b;
+          font-weight: 500;
+        }
+      }
+    }
+  }
+
+  .course-specialty {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+
+    .specialty-icon {
+      font-size: 1rem;
+      color: #8b5cf6;
+    }
+
+    .specialty-text {
+      font-size: 0.75rem;
+      color: #8b5cf6;
+      background: #f3f4f6;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+  }
+}
+
+.suggestions-section {
+  background: #fffbeb;
+  border: 1px solid #fde047;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.5rem;
+  margin-top: 0;
+
+  .suggestions-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    color: #92400e;
+    margin: 0 0 0.75rem 0;
+
+    .mat-icon {
+      color: #f59e0b;
+    }
+  }
+
+  .suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    .suggestion-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: #92400e;
+
+      .suggestion-icon {
+        color: #f59e0b;
+        margin-top: 0.125rem;
+        flex-shrink: 0;
+        font-size: 1rem;
+      }
+    }
+  }
+}
+
+// Animaciones
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+// Responsive
+@media (max-width: 768px) {
+  .summary-section {
+    gap: 1rem;
+  }
+
+  .summary-item {
+    gap: 0.5rem;
+
+    .summary-content {
+      .summary-value {
+        font-size: 1rem;
+      }
+
+      .summary-label {
+        font-size: 0.625rem;
+      }
+    }
+
+    .progress-circle {
+      width: 2.5rem;
+      height: 2.5rem;
+
+      .progress-value {
+        font-size: 0.75rem;
+      }
+    }
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .courses-grid {
+    grid-template-columns: 1fr;
+  }
+}
