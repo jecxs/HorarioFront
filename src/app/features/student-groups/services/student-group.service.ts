@@ -53,39 +53,38 @@ export interface Career {
 })
 export class StudentGroupService extends BaseApiService {
 
-  // Obtener todos los grupos
+  // ✅ CORREGIDO: Usar getWithPeriod para filtrar por periodo actual
   getAllGroups(): Observable<any> {
-    return this.get<StudentGroup[]>('/protected/student-groups');
+    return this.getWithPeriod<StudentGroup[]>('/protected/student-groups');
   }
 
-  // Obtener un grupo por ID
+  // ✅ CORREGIDO: Usar getWithPeriod
   getGroupById(uuid: string): Observable<any> {
-    return this.get<StudentGroup>(`/protected/student-groups/${uuid}`);
+    return this.getWithPeriod<StudentGroup>(`/protected/student-groups/${uuid}`);
   }
 
-  // Crear un nuevo grupo
+  // ✅ CORREGIDO: Usar postWithPeriod para crear en el periodo actual
   createGroup(group: StudentGroupRequest): Observable<any> {
-    return this.post<StudentGroup>('/protected/student-groups', group);
+    return this.postWithPeriod<StudentGroup>('/protected/student-groups', group);
   }
 
-  // Actualizar un grupo existente
+  // ✅ CORREGIDO: Mantener put normal ya que es actualización específica
   updateGroup(uuid: string, group: StudentGroupRequest): Observable<any> {
     return this.patch<StudentGroup>(`/protected/student-groups/${uuid}`, group);
   }
 
-  // Eliminar un grupo
+  // ✅ Sin cambios - delete es específico por UUID
   deleteGroup(uuid: string): Observable<any> {
     return this.delete<void>(`/protected/student-groups/${uuid}`);
   }
 
-  // Obtener todas las carreras con sus ciclos
+  // ✅ Sin filtro de periodo - las carreras son globales
   getAllCareers(): Observable<any> {
     return this.get<Career[]>('/protected/career');
   }
 
-  // Obtener modalidades educativas
+  // ✅ Sin filtro de periodo - las modalidades son globales
   getAllModalities(): Observable<any> {
     return this.get<any[]>('/protected/educational-modalities');
   }
-
 }

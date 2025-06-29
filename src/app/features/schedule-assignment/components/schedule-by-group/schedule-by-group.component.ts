@@ -103,10 +103,70 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    this.listenToPeriodChanges();
     this.loadInitialData();
     this.setupGroupSelection();
     this.handleQueryParams();
   }
+
+  // ✅ NUEVO MÉTODO
+  private listenToPeriodChanges(): void {
+    // Escuchar el evento global de cambio de periodo
+    window.addEventListener('period-changed', () => {
+      this.onPeriodChanged();
+    });
+
+    // También escuchar cambios del servicio
+    this.periodService.currentPeriod$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.onPeriodChanged();
+      });
+  }
+
+  // ✅ NUEVO MÉTODO
+  private onPeriodChanged(): void {
+    console.log('🔄 Period changed, clearing all data...');
+
+    // ✅ Limpiar datos actuales
+    this.clearGroupData();
+
+    // ✅ Limpiar cache del servicio
+    this.classSessionService.clearSessionsForNewPeriod();
+
+    // ✅ Recargar grupos del nuevo periodo
+    this.loadStudentGroups();
+
+    // ✅ Si había un grupo seleccionado, limpiar selección
+    if (this.selectedGroup) {
+      this.groupControl.setValue('');
+      this.selectedGroup = null;
+      this.snackBar.open(
+        'Periodo cambiado. Seleccione un grupo del nuevo periodo.',
+        'Entendido',
+        { duration: 4000 }
+      );
+    }
+  }
+
+  // ✅ NUEVO MÉTODO
+  private verifySelectedGroup(): void {
+    if (!this.selectedGroup) return;
+
+    // Buscar el grupo en la nueva lista
+    const groupExists = this.studentGroups.find(g => g.uuid === this.selectedGroup!.uuid);
+
+    if (!groupExists) {
+      // El grupo no existe en el nuevo periodo, limpiar selección
+      this.groupControl.setValue('');
+      this.snackBar.open(
+        'El grupo seleccionado no pertenece al periodo actual',
+        'Entendido',
+        { duration: 3000 }
+      );
+    }
+  }
+
 
   ngOnDestroy(): void {
     this.destroy$.next();
@@ -117,9 +177,17 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
 
   private loadInitialData(): void {
     const currentPeriod = this.periodService.getCurrentPeriod();
-    if (currentPeriod) {
-      this.loadStudentGroups();
+    if (!currentPeriod) {
+      // Mostrar mensaje y redirigir a selección de periodo
+      this.snackBar.open(
+        'Debe seleccionar un periodo académico',
+        'Seleccionar',
+        { duration: 5000 }
+      );
+      return;
     }
+
+    this.loadStudentGroups();
     this.loadTimeSlots();
   }
 
@@ -136,6 +204,8 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
         }
       });
   }
+
+
   // ✅ AGREGAR nuevo método
   private handleQueryParams(): void {
     this.route.queryParams

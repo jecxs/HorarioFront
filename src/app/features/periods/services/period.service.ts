@@ -1,4 +1,4 @@
-// src/app/shared/services/period.service.ts
+// src/app/features/periods/services/period.service.ts
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
@@ -28,9 +28,21 @@ export class PeriodService {
 
   constructor(private http: HttpClient) {
     // Intentar recuperar el periodo del localStorage al iniciar
-    const savedPeriod = localStorage.getItem('currentPeriod');
-    if (savedPeriod) {
-      this.currentPeriodSubject.next(JSON.parse(savedPeriod));
+    this.loadSavedPeriod();
+  }
+
+  // ✅ NUEVO: Cargar periodo guardado con validación
+  private loadSavedPeriod(): void {
+    try {
+      const savedPeriod = localStorage.getItem('currentPeriod');
+      if (savedPeriod) {
+        const period = JSON.parse(savedPeriod);
+        this.currentPeriodSubject.next(period);
+        console.log('📅 Periodo cargado desde localStorage:', period.name);
+      }
+    } catch (error) {
+      console.error('Error loading saved period:', error);
+      localStorage.removeItem('currentPeriod');
     }
   }
 
@@ -59,20 +71,54 @@ export class PeriodService {
     return this.http.delete<PeriodResponse>(`${this.apiUrl}/${uuid}`);
   }
 
-  // Establecer el periodo actual con el que se está trabajando
+  // ✅ MEJORADO: Establecer el periodo actual con notificaciones
   setCurrentPeriod(period: Period): void {
+    const previousPeriod = this.currentPeriodSubject.value;
+
+    console.log('📅 Cambiando periodo:', {
+      from: previousPeriod?.name || 'ninguno',
+      to: period.name
+    });
+
     this.currentPeriodSubject.next(period);
     localStorage.setItem('currentPeriod', JSON.stringify(period));
+
+    // ✅ Emitir evento global para que componentes se refresquen
+    window.dispatchEvent(new CustomEvent('period-changed', {
+      detail: {
+        newPeriod: period,
+        previousPeriod
+      }
+    }));
   }
 
-  // Limpiar el periodo actual
+  // ✅ MEJORADO: Limpiar con notificación
   clearCurrentPeriod(): void {
+    const previousPeriod = this.currentPeriodSubject.value;
+    console.log('📅 Limpiando periodo actual:', previousPeriod?.name || 'ninguno');
+
     this.currentPeriodSubject.next(null);
     localStorage.removeItem('currentPeriod');
+
+    // ✅ Emitir evento de limpieza
+    window.dispatchEvent(new CustomEvent('period-cleared', {
+      detail: { previousPeriod }
+    }));
   }
 
   // Obtener el periodo actual
   getCurrentPeriod(): Period | null {
     return this.currentPeriodSubject.value;
+  }
+
+  // ✅ NUEVO: Verificar si hay periodo seleccionado
+  hasPeriodSelected(): boolean {
+    return this.currentPeriodSubject.value !== null;
+  }
+
+  // ✅ NUEVO: Obtener nombre del periodo actual
+  getCurrentPeriodName(): string {
+    const period = this.currentPeriodSubject.value;
+    return period ? period.name : 'Sin periodo seleccionado';
   }
 }

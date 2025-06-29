@@ -40,7 +40,21 @@ export class ClassSessionService extends BaseApiService {
 
   // Obtener todas las sesiones
   getAllSessions(): Observable<ApiResponse<ClassSessionResponse[]>> {
-    return this.get<ClassSessionResponse[]>('/protected/class-sessions');
+    return this.getWithPeriod<ClassSessionResponse[]>('/protected/class-sessions');
+  }
+
+  clearSessionsForNewPeriod(): void {
+    this.sessionsCache.clear();
+    this.currentSessionsSubject.next([]);
+    console.log('🧹 Sessions cache cleared for new period');
+  }
+
+// ✅ NUEVO: Método para suscribirse a cambios de periodo
+  subscribeToPeriodChanges(): void {
+    // Este método puede ser llamado en componentes que necesiten reaccionar a cambios de periodo
+    window.addEventListener('period-changed', () => {
+      this.clearSessionsForNewPeriod();
+    });
   }
 
   // Obtener sesión por ID
@@ -50,7 +64,7 @@ export class ClassSessionService extends BaseApiService {
 
   // Obtener sesiones por grupo
   getSessionsByGroup(groupUuid: string): Observable<ApiResponse<ClassSessionResponse[]>> {
-    return this.get<ClassSessionResponse[]>(`/protected/class-sessions/student-group/${groupUuid}`)
+    return this.getWithPeriod<ClassSessionResponse[]>(`/protected/class-sessions/student-group/${groupUuid}`)
       .pipe(
         tap(response => {
           if (response.data) {
@@ -63,7 +77,7 @@ export class ClassSessionService extends BaseApiService {
 
   // Obtener sesiones por docente
   getSessionsByTeacher(teacherUuid: string): Observable<ApiResponse<ClassSessionResponse[]>> {
-    return this.get<ClassSessionResponse[]>(`/protected/class-sessions/teacher/${teacherUuid}`)
+    return this.getWithPeriod<ClassSessionResponse[]>(`/protected/class-sessions/teacher/${teacherUuid}`)
       .pipe(
         tap(response => {
           if (response.data) {
@@ -72,6 +86,15 @@ export class ClassSessionService extends BaseApiService {
           }
         })
       );
+  }
+  // ✅ NUEVO: Método para obtener sesiones por periodo específico
+  getSessionsByPeriod(periodUuid: string): Observable<ApiResponse<ClassSessionResponse[]>> {
+    const params = this.createParams({ periodUuid });
+    return this.get<ClassSessionResponse[]>('/protected/class-sessions', params);
+  }
+  // ✅ NUEVO: Método para limpiar sesiones de un periodo
+  deleteAllSessionsByPeriod(periodUuid: string): Observable<ApiResponse<void>> {
+    return this.delete<void>(`/protected/period-management/${periodUuid}/sessions`);
   }
 
   // Obtener IntelliSense

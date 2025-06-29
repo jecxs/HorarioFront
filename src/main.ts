@@ -12,6 +12,7 @@ import { AppComponent } from './app/app.component';
 import { routes } from './app/app.routes';
 import { environment } from './environments/environment';
 import { ApiInterceptor } from './app/shared/services/api.interceptor';
+import { PeriodInterceptor } from './app/shared/interceptors/period.interceptor'; // ✅ AGREGAR
 
 // Registrar localización en español
 registerLocaleData(localeEs);
@@ -22,9 +23,19 @@ bootstrapApplication(AppComponent, {
     provideHttpClient(
       withInterceptorsFromDi()
     ),
-    { provide: HTTP_INTERCEPTORS, useClass: ApiInterceptor, multi: true },
+    // ✅ AGREGAR: Los interceptors en el orden correcto
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: ApiInterceptor,
+      multi: true
+    },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: PeriodInterceptor, // ✅ AGREGAR el PeriodInterceptor
+      multi: true
+    },
     { provide: 'API_BASE_URL', useValue: environment.apiBaseUrl },
-    { provide: LOCALE_ID, useValue: 'es' }, // Configurar español como idioma por defecto
+    { provide: LOCALE_ID, useValue: 'es' },
     provideAnimations()
   ]
 });

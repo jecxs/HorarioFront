@@ -53,4 +53,15 @@ export class BaseApiService {
     });
     return httpParams;
   }
+
+  // ✅ NUEVO: Método específico para endpoints con periodo
+  protected getWithPeriod<T>(endpoint: string, additionalParams?: HttpParams): Observable<ApiResponse<T>> {
+    // El interceptor se encargará de agregar el periodUuid automáticamente
+    return this.get<T>(endpoint, additionalParams);
+  }
+
+  protected postWithPeriod<T>(endpoint: string, data: any): Observable<ApiResponse<T>> {
+    // El interceptor se encargará de agregar el periodUuid automáticamente
+    return this.post<T>(endpoint, data);
+  }
 }

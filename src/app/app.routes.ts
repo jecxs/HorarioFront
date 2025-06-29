@@ -1,6 +1,7 @@
 // src/app/app.routes.ts
 import { Routes } from '@angular/router';
 import { AuthGuard } from './shared/guards/auth.guard';
+import { PeriodGuard } from './shared/guards/period.guard'; // ✅ IMPORTAR
 
 export const routes: Routes = [
   // Ruta pública de login
@@ -39,15 +40,18 @@ export const routes: Routes = [
         path: 'docentes',
         loadChildren: () => import('./features/teachers/docentes.routes').then(routes => routes.DOCENTES_ROUTES)
       },
+      // ✅ Periodos - SIN guard para poder gestionar periodos
       {
         path: 'periodos',
         loadComponent: () =>
           import('./features/periods/components/period-list.component').then(m => m.PeriodListComponent)
       },
+      // ✅ RUTAS QUE REQUIEREN PERIODO SELECCIONADO
       {
         path: 'grupos',
         loadComponent: () =>
-          import('./features/student-groups/components/student-groups.component').then(m => m.StudentGroupsComponent)
+          import('./features/student-groups/components/student-groups.component').then(m => m.StudentGroupsComponent),
+        canActivate: [PeriodGuard] // ✅ Aplicar guard
       },
       {
         path: 'ambientes',
@@ -55,21 +59,21 @@ export const routes: Routes = [
           import('./features/learning-spaces/components/learning-spaces.component').then(m => m.LearningSpacesComponent)
       },
       {
-        path: 'cursos', // 👈 NUEVA RUTA
+        path: 'cursos',
         loadChildren: () => import('./features/courses/courses.routes').then(routes => routes.COURSES_ROUTES)
       },
       {
         path: 'turnos',
         loadComponent: () => import('./features/time-slots/components/time-slots.component').then(m => m.TimeSlotsComponent)
       },
+      // ✅ Horarios requiere periodo
       {
         path: 'horarios',
         loadChildren: () =>
           import('./features/schedule-assignment/schedule-assignment.routes')
-            .then(routes => routes.SCHEDULE_ASSIGNMENT_ROUTES)
+            .then(routes => routes.SCHEDULE_ASSIGNMENT_ROUTES),
+        canActivate: [PeriodGuard] // ✅ Aplicar guard
       }
-
-
     ]
   },
   // Wildcard route - debe ir al final

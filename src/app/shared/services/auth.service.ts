@@ -176,9 +176,6 @@ export class AuthService {
       if (payload.role && typeof payload.role === 'string') {
         roles.push(payload.role);
       }
-
-      console.log('🔍 DEBUG - Roles procesados:', roles);
-
       return {
         sub: payload.sub || '',
         roles: roles, // ✅ Siempre será un array, nunca undefined
