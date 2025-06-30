@@ -49,7 +49,7 @@ import {MatDivider} from '@angular/material/divider';
     MatChipsModule,
     MatExpansionModule,
     MatBadgeModule,
-    MatDivider
+
   ],
   templateUrl: './docente-list.component.html',
   styleUrls: ['./docente-list.component.scss']
@@ -278,5 +278,39 @@ export class DocenteListComponent implements OnInit {
     this.router.navigate(['/dashboard/docentes/view', docente.uuid], {
       queryParams: { tab: 'disponibilidad' }
     });
+  }
+  /**
+   * Obtiene las iniciales del nombre completo de un docente
+   * @param fullName - Nombre completo del docente
+   * @returns Las primeras dos iniciales en mayúsculas
+   */
+  getInitials(fullName: string): string {
+    if (!fullName) return '';
+
+    const names = fullName.trim().split(' ');
+    const initials = names
+      .map(name => name.charAt(0).toUpperCase())
+      .join('')
+      .substring(0, 2);
+
+    return initials;
+  }
+
+// Método opcional para obtener colores dinámicos de avatar basados en el nombre
+  getAvatarColor(fullName: string): string {
+    if (!fullName) return 'from-blue-100 to-purple-100';
+
+    const colors = [
+      'from-blue-100 to-purple-100',
+      'from-green-100 to-blue-100',
+      'from-purple-100 to-pink-100',
+      'from-yellow-100 to-orange-100',
+      'from-red-100 to-pink-100',
+      'from-indigo-100 to-purple-100'
+    ];
+
+    // Usar el primer carácter del nombre para determinar el color
+    const index = fullName.charCodeAt(0) % colors.length;
+    return colors[index];
   }
 }

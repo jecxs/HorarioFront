@@ -1,0 +1,234 @@
+<div class="time-slots-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="title-section">
+        <h1>
+          <mat-icon>schedule</mat-icon>
+          Gestión de Turnos y Horas Pedagógicas
+        </h1>
+        <p class="subtitle">
+          Configure los turnos de clases y sus horas pedagógicas correspondientes
+        </p>
+      </div>
+
+      <div class="header-actions">
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="openCreateDialog()">
+          <mat-icon>add_alarm</mat-icon>
+          <span *ngIf="!(isHandset$ | async)">Crear Turno</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Información explicativa -->
+    <div class="info-banner">
+      <mat-icon>lightbulb</mat-icon>
+      <div class="info-content">
+        <strong>¿Qué son los turnos y horas pedagógicas?</strong>
+        <p>Los turnos definen los períodos de clase en el día (ej: Mañana, Tarde).
+          Las horas pedagógicas son los bloques mínimos de tiempo que encajan exactamente dentro de cada turno.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading">
+    <mat-spinner></mat-spinner>
+    <p>Cargando turnos...</p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section" *ngIf="!loading && timeSlots.length > 0">
+    <div class="stats-grid">
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.totalSlots }}</div>
+            <div class="stat-label">Turnos Creados</div>
+            <mat-icon class="stat-icon">schedule</mat-icon>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.totalTeachingHours }}</div>
+            <div class="stat-label">Horas Pedagógicas</div>
+            <mat-icon class="stat-icon">view_module</mat-icon>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-value">{{ formatMinutes(stats.totalDailyMinutes) }}</div>
+            <div class="stat-label">Tiempo Total Diario</div>
+            <mat-icon class="stat-icon">timelapse</mat-icon>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="stat-card">
+        <mat-card-content>
+          <div class="stat-content">
+            <div class="stat-value">{{ stats.averageHoursPerSlot }}</div>
+            <div class="stat-label">Promedio Horas/Turno</div>
+            <mat-icon class="stat-icon">trending_up</mat-icon>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Time Slots Grid -->
+  <div class="content-section" *ngIf="!loading">
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="timeSlots.length === 0">
+      <mat-icon>schedule</mat-icon>
+      <h2>No hay turnos configurados</h2>
+      <p>Cree el primer turno para comenzar a organizar los horarios de clases</p>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="openCreateDialog()">
+        <mat-icon>add_alarm</mat-icon>
+        Crear Primer Turno
+      </button>
+    </div>
+
+    <!-- Time Slots List -->
+    <div class="time-slots-grid" *ngIf="timeSlots.length > 0">
+      <mat-card
+        class="time-slot-card"
+        *ngFor="let slot of sortedTimeSlots; trackBy: trackBySlot"
+        [class.highlight]="slot.teachingHours.length === 0">
+
+        <!-- Card Header -->
+        <mat-card-header>
+          <div mat-card-avatar class="slot-avatar">
+            <mat-icon>schedule</mat-icon>
+          </div>
+          <mat-card-title>{{ slot.name }}</mat-card-title>
+          <mat-card-subtitle>
+            {{ slot.startTime }} - {{ slot.endTime }}
+            <mat-chip
+              [color]="getSlotChipColor(slot)"
+              class="duration-chip">
+              {{ formatSlotDuration(slot) }}
+            </mat-chip>
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <!-- Teaching Hours Info -->
+        <mat-card-content>
+          <div class="teaching-hours-section">
+            <div class="hours-header">
+              <h4>
+                <mat-icon>view_module</mat-icon>
+                Horas Pedagógicas
+                <mat-badge [matBadge]="slot.teachingHours.length" matBadgeColor="primary">
+                </mat-badge>
+              </h4>
+            </div>
+
+            <!-- Teaching Hours List -->
+            <div class="hours-list" *ngIf="slot.teachingHours.length > 0">
+              <div
+                class="hour-item"
+                *ngFor="let hour of slot.teachingHours; let i = index"
+                [style.border-left-color]="getHourColor(i)">
+                <div class="hour-number">{{ hour.orderInTimeSlot }}</div>
+                <div class="hour-time">
+                  <span class="time">{{ hour.startTime }} - {{ hour.endTime }}</span>
+                  <span class="duration">{{ hour.durationMinutes }} min</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- No Teaching Hours -->
+            <div class="no-hours" *ngIf="slot.teachingHours.length === 0">
+              <mat-icon>warning</mat-icon>
+              <span>Sin horas pedagógicas configuradas</span>
+            </div>
+
+            <!-- Visual Timeline -->
+            <div class="visual-timeline" *ngIf="slot.teachingHours.length > 0">
+              <div class="timeline-bar">
+                <div
+                  class="time-segment"
+                  *ngFor="let hour of slot.teachingHours; let i = index"
+                  [style.background-color]="getHourColor(i)"
+                  [style.flex]="1"
+                  [matTooltip]="getHourTooltip(hour)">
+                </div>
+              </div>
+              <div class="timeline-labels">
+                <span>{{ slot.startTime }}</span>
+                <span>{{ slot.endTime }}</span>
+              </div>
+            </div>
+          </div>
+        </mat-card-content>
+
+        <!-- Card Actions -->
+        <mat-card-actions align="end">
+          <button
+            mat-button
+            color="primary"
+            (click)="openEditDialog(slot)"
+            matTooltip="Editar turno">
+            <mat-icon>edit</mat-icon>
+            <span *ngIf="!(isHandset$ | async)">Editar</span>
+          </button>
+
+          <button
+            mat-button
+            color="warn"
+            (click)="confirmDelete(slot)"
+            matTooltip="Eliminar turno">
+            <mat-icon>delete</mat-icon>
+            <span *ngIf="!(isHandset$ | async)">Eliminar</span>
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+
+  <!-- Help Section -->
+  <div class="help-section" *ngIf="!loading">
+    <mat-card class="help-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>help_outline</mat-icon>
+          Guía de Uso
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <div class="help-content">
+          <div class="help-item">
+            <mat-icon>fiber_manual_record</mat-icon>
+            <span><strong>Turnos:</strong> Definen períodos de clase en el día (ej: M1: 6:45-9:45, T1: 14:00-17:00)</span>
+          </div>
+          <div class="help-item">
+            <mat-icon>fiber_manual_record</mat-icon>
+            <span><strong>Horas Pedagógicas:</strong> Bloques mínimos de 30-60 min que encajan exactamente en cada turno</span>
+          </div>
+          <div class="help-item">
+            <mat-icon>fiber_manual_record</mat-icon>
+            <span><strong>Sin tiempo perdido:</strong> Las horas deben llenar completamente el turno sin dejar minutos libres</span>
+          </div>
+          <div class="help-item">
+            <mat-icon>fiber_manual_record</mat-icon>
+            <span><strong>Ejemplo:</strong> Turno de 3h = 4 bloques de 45min o 6 bloques de 30min</span>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+</div>

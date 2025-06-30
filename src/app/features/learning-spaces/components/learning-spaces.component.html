@@ -1,269 +1,316 @@
 <!-- src/app/features/learning-spaces/components/learning-spaces.component.html -->
-<div class="spaces-container">
-  <!-- Header Section -->
-  <div class="page-header">
-    <div class="header-content">
-      <div class="title-section">
-        <h1 class="page-title">
-          <mat-icon>room</mat-icon>
-          Ambientes de Aprendizaje
-        </h1>
-        <p class="page-subtitle">
+<div class="min-h-screen bg-gray-50/30 p-4 lg:p-6">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center">
+            <mat-icon class="text-white">room</mat-icon>
+          </div>
+          <h1 class="text-2xl lg:text-3xl font-semibold text-gray-900">
+            Ambientes de Aprendizaje
+          </h1>
+        </div>
+        <p class="text-gray-600 text-sm lg:text-base">
           Gestiona las aulas, laboratorios y espacios educativos de la institución
         </p>
       </div>
 
-      <div class="header-actions">
+      <div class="flex gap-3">
         <button
           mat-stroked-button
           color="accent"
           (click)="openCreateSpecialtyDialog()"
-          class="specialty-button">
-          <mat-icon>add_business</mat-icon>
-          <span [class.hide-text]="isHandset$ | async">Nueva Especialidad</span>
+          class="!border-purple-200 !text-purple-600 hover:!bg-purple-50 !rounded-xl !px-4 !py-2">
+          <mat-icon class="!text-lg">add_business</mat-icon>
+          <span class="hidden sm:inline ml-2">Nueva Especialidad</span>
         </button>
 
         <button
           mat-raised-button
           color="primary"
           (click)="openCreateSpaceDialog()"
-          class="create-button">
-          <mat-icon>add</mat-icon>
-          <span [class.hide-text]="isHandset$ | async">Crear Ambiente</span>
+          class="!bg-blue-500 hover:!bg-blue-600 !rounded-xl !px-4 !py-2 !shadow-sm">
+          <mat-icon class="!text-lg">add</mat-icon>
+          <span class="hidden sm:inline ml-2">Crear Ambiente</span>
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Stats Cards -->
-  <div class="stats-section" [class.mobile]="isHandset$ | async">
-    <mat-card class="stat-card total">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ totalSpaces }}</div>
-          <div class="stat-label">Total Ambientes</div>
-          <mat-icon class="stat-icon">room</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card theoretical">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ theoreticalSpaces }}</div>
-          <div class="stat-label">Aulas Teóricas</div>
-          <mat-icon class="stat-icon">menu_book</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card practical">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ practicalSpaces }}</div>
-          <div class="stat-label">Laboratorios</div>
-          <mat-icon class="stat-icon">science</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card capacity">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ totalCapacity }}</div>
-          <div class="stat-label">Capacidad Total</div>
-          <mat-icon class="stat-icon">people</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Filters Section -->
-  <mat-card class="filters-card">
-    <mat-card-content>
-      <div class="filters-content" [class.mobile]="isHandset$ | async">
-        <div class="filters-row">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Tipo de Ambiente</mat-label>
-            <mat-select [formControl]="selectedTypeFilter">
-              <mat-option value="">Todos los tipos</mat-option>
-              <mat-option *ngFor="let type of teachingTypes" [value]="type.name">
-                <div class="type-option">
-                  <mat-icon>{{ getTypeIcon(type.name) }}</mat-icon>
-                  {{ getTypeDisplayName(type.name) }}
-                </div>
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Especialidad</mat-label>
-            <mat-select [formControl]="selectedSpecialtyFilter">
-              <mat-option value="">Todas las especialidades</mat-option>
-              <mat-option *ngFor="let specialty of specialties" [value]="specialty.uuid">
-                {{ specialty.name }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Capacidad mínima</mat-label>
-            <input matInput type="number" [formControl]="capacityFilter" placeholder="Ej: 20">
-            <mat-icon matSuffix>people</mat-icon>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter-field search-field">
-            <mat-label>Buscar ambiente</mat-label>
-            <input matInput [formControl]="searchFilter" placeholder="Nombre del ambiente...">
-            <mat-icon matSuffix>search</mat-icon>
-          </mat-form-field>
-
-          <button
-            mat-stroked-button
-            color="accent"
-            (click)="clearFilters()"
-            class="clear-filters-btn">
-            <mat-icon>clear</mat-icon>
-            <span [class.hide-text]="isHandset$ | async">Limpiar</span>
-          </button>
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white rounded-xl p-4 lg:p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-2xl lg:text-3xl font-bold text-blue-600 mb-1">{{ totalSpaces }}</div>
+            <div class="text-sm text-gray-600">Total Ambientes</div>
+          </div>
+          <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+            <mat-icon class="text-blue-500 !text-xl">room</mat-icon>
+          </div>
         </div>
       </div>
-    </mat-card-content>
-  </mat-card>
 
-  <!-- Spaces by Type -->
-  <div class="spaces-content">
-    <div *ngIf="filteredSpacesByType.length === 0" class="no-data">
-      <mat-icon>info</mat-icon>
-      <h3>No se encontraron ambientes</h3>
-      <p>No hay ambientes que coincidan con los filtros aplicados.</p>
-      <button mat-button color="primary" (click)="clearFilters()">
+      <div class="bg-white rounded-xl p-4 lg:p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-2xl lg:text-3xl font-bold text-green-600 mb-1">{{ theoreticalSpaces }}</div>
+            <div class="text-sm text-gray-600">Aulas Teóricas</div>
+          </div>
+          <div class="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+            <mat-icon class="text-green-500 !text-xl">menu_book</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 lg:p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-2xl lg:text-3xl font-bold text-purple-600 mb-1">{{ practicalSpaces }}</div>
+            <div class="text-sm text-gray-600">Laboratorios</div>
+          </div>
+          <div class="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+            <mat-icon class="text-purple-500 !text-xl">science</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-xl p-4 lg:p-5 border border-gray-100 hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-2xl lg:text-3xl font-bold text-orange-600 mb-1">{{ totalCapacity }}</div>
+            <div class="text-sm text-gray-600">Capacidad Total</div>
+          </div>
+          <div class="w-10 h-10 bg-orange-50 rounded-lg flex items-center justify-center">
+            <mat-icon class="text-orange-500 !text-xl">people</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="bg-white rounded-xl border border-gray-100 p-4 lg:p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Tipo de Ambiente</mat-label>
+          <mat-select [formControl]="selectedTypeFilter">
+            <mat-option value="">Todos los tipos</mat-option>
+            <mat-option *ngFor="let type of teachingTypes" [value]="type.name">
+              <div class="flex items-center gap-2">
+                <mat-icon class="!text-lg">{{ getTypeIcon(type.name) }}</mat-icon>
+                {{ getTypeDisplayName(type.name) }}
+              </div>
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Especialidad</mat-label>
+          <mat-select [formControl]="selectedSpecialtyFilter">
+            <mat-option value="">Todas las especialidades</mat-option>
+            <mat-option *ngFor="let specialty of specialties" [value]="specialty.uuid">
+              {{ specialty.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Capacidad mínima</mat-label>
+          <input matInput type="number" [formControl]="capacityFilter" placeholder="Ej: 20">
+          <mat-icon matSuffix class="!text-gray-400">people</mat-icon>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="w-full lg:col-span-1">
+          <mat-label>Buscar ambiente</mat-label>
+          <input matInput [formControl]="searchFilter" placeholder="Nombre del ambiente...">
+          <mat-icon matSuffix class="!text-gray-400">search</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-stroked-button
+          (click)="clearFilters()"
+          class="!border-gray-200 !text-gray-600 hover:!bg-gray-50 !rounded-lg h-14">
+          <mat-icon class="!text-lg">clear</mat-icon>
+          <span class="hidden lg:inline ml-2">Limpiar</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="filteredSpacesByType.length === 0" class="bg-white rounded-xl border border-gray-100 p-12 text-center">
+      <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <mat-icon class="text-gray-400 !text-2xl">info</mat-icon>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No se encontraron ambientes</h3>
+      <p class="text-gray-600 mb-6">No hay ambientes que coincidan con los filtros aplicados.</p>
+      <button mat-button color="primary" (click)="clearFilters()" class="!rounded-lg">
         Limpiar filtros
       </button>
     </div>
 
-    <div *ngFor="let typeData of filteredSpacesByType" class="type-section">
-      <mat-card class="type-card">
-        <mat-card-header class="type-header">
-          <div class="type-info">
-            <div class="type-title">
-              <h2>
-                <mat-icon [style.color]="getTypeColor(typeData.type.name) === 'primary' ? '#1976d2' : '#7b1fa2'">
-                  {{ getTypeIcon(typeData.type.name) }}
-                </mat-icon>
-                Ambientes {{ getTypeDisplayName(typeData.type.name) }}
-              </h2>
+    <!-- Spaces by Type -->
+    <div *ngFor="let typeData of filteredSpacesByType" class="space-y-4">
+      <!-- Type Header -->
+      <div class="bg-white rounded-xl border border-gray-100 p-4 lg:p-6">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-xl flex items-center justify-center"
+              [ngClass]="{
+                'bg-blue-50': getTypeColor(typeData.type.name) === 'primary',
+                'bg-purple-50': getTypeColor(typeData.type.name) === 'accent'
+              }">
+              <mat-icon
+                [ngClass]="{
+                  'text-blue-500': getTypeColor(typeData.type.name) === 'primary',
+                  'text-purple-500': getTypeColor(typeData.type.name) === 'accent'
+                }"
+                class="!text-xl">
+                {{ getTypeIcon(typeData.type.name) }}
+              </mat-icon>
             </div>
-            <div class="type-stats">
-              <span class="stat-item">
-                <mat-icon>room</mat-icon>
-                {{ typeData.totalSpaces }} ambientes
-              </span>
-              <span class="stat-item">
-                <mat-icon>people</mat-icon>
-                {{ typeData.totalCapacity }} personas
-              </span>
-              <span class="stat-item">
-                <mat-icon>trending_up</mat-icon>
-                Promedio: {{ typeData.averageCapacity }}
-              </span>
+            <h2 class="text-xl font-semibold text-gray-900">
+              Ambientes {{ getTypeDisplayName(typeData.type.name) }}
+            </h2>
+          </div>
+
+          <div class="flex gap-6 text-sm text-gray-600">
+            <div class="flex items-center gap-1">
+              <mat-icon class="!text-base text-gray-400">room</mat-icon>
+              <span>{{ typeData.totalSpaces }} ambientes</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <mat-icon class="!text-base text-gray-400">people</mat-icon>
+              <span>{{ typeData.totalCapacity }} personas</span>
+            </div>
+            <div class="flex items-center gap-1">
+              <mat-icon class="!text-base text-gray-400">trending_up</mat-icon>
+              <span>Promedio: {{ typeData.averageCapacity }}</span>
             </div>
           </div>
-        </mat-card-header>
+        </div>
+      </div>
 
-        <mat-card-content class="spaces-grid">
+      <!-- Spaces Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Space Cards -->
+        <div
+          *ngFor="let space of typeData.spaces"
+          class="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md hover:border-gray-200 transition-all duration-200 group">
+
+          <div class="flex items-start justify-between mb-4">
+            <div class="flex-1">
+              <h3 class="text-lg font-medium text-gray-900 mb-3">{{ space.name }}</h3>
+              <div class="flex flex-wrap gap-2">
+                <span
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium"
+                  [ngClass]="{
+                    'bg-blue-50 text-blue-700': getCapacityRangeColor(space.capacity) === 'primary',
+                    'bg-green-50 text-green-700': getCapacityRangeColor(space.capacity) === 'accent',
+                    'bg-orange-50 text-orange-700': getCapacityRangeColor(space.capacity) === 'warn'
+                  }">
+                  <mat-icon class="!text-xs">people</mat-icon>
+                  {{ space.capacity }}
+                </span>
+                <span
+                  *ngIf="space.specialty"
+                  class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium bg-gray-100 text-gray-700">
+                  {{ space.specialty.name }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <button
+                mat-icon-button
+                (click)="openEditSpaceDialog(space)"
+                class="!w-8 !h-8 !text-gray-400 hover:!text-blue-500 hover:!bg-blue-50">
+                <mat-icon class="!text-lg">edit</mat-icon>
+              </button>
+              <button
+                mat-icon-button
+                (click)="confirmDeleteSpace(space)"
+                class="!w-8 !h-8 !text-gray-400 hover:!text-red-500 hover:!bg-red-50">
+                <mat-icon class="!text-lg">delete</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3 text-sm text-gray-600">
+            <div class="flex items-center gap-2">
+              <mat-icon class="!text-base text-gray-400">{{ getTypeIcon(space.teachingType.name) }}</mat-icon>
+              <span>{{ getTypeDisplayName(space.teachingType.name) }}</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <mat-icon class="!text-base text-gray-400">people</mat-icon>
+              <span>{{ getCapacityRangeText(space.capacity) }} ({{ space.capacity }})</span>
+            </div>
+
+            <div *ngIf="space.specialty" class="flex items-start gap-2">
+              <mat-icon class="!text-base text-gray-400 mt-0.5">precision_manufacturing</mat-icon>
+              <div class="flex-1">
+                <div class="font-medium text-gray-900">{{ space.specialty.name }}</div>
+                <div *ngIf="space.specialty.description" class="text-xs text-gray-500 mt-1">
+                  {{ space.specialty.description }}
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="space.specialty && space.specialty.department" class="flex items-center gap-2">
+              <mat-icon class="!text-base text-gray-400">business</mat-icon>
+              <span>{{ space.specialty.department.name }}</span>
+            </div>
+          </div>
+
+          <!-- Type Indicator -->
           <div
-            *ngFor="let space of typeData.spaces"
-            class="space-card"
-            [class]="getTypeColor(typeData.type.name)">
-
-            <div class="space-header">
-              <div class="space-name">
-                <h3>{{ space.name }}</h3>
-                <div class="space-badges">
-                  <mat-chip
-                    class="capacity-chip"
-                    [color]="getCapacityRangeColor(space.capacity)">
-                    <mat-icon>people</mat-icon>
-                    {{ space.capacity }}
-                  </mat-chip>
-                  <mat-chip
-                    *ngIf="space.specialty"
-                    class="specialty-chip">
-                    {{ space.specialty.name }}
-                  </mat-chip>
-                </div>
-              </div>
-
-              <div class="space-actions">
-                <button
-                  mat-icon-button
-                  (click)="openEditSpaceDialog(space)"
-                  matTooltip="Editar ambiente">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  color="warn"
-                  (click)="confirmDeleteSpace(space)"
-                  matTooltip="Eliminar ambiente">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
-            </div>
-
-            <div class="space-details">
-              <div class="detail-row">
-                <div class="detail-item">
-                  <mat-icon>{{ getTypeIcon(space.teachingType.name) }}</mat-icon>
-                  <span>{{ getTypeDisplayName(space.teachingType.name) }}</span>
-                </div>
-                <div class="detail-item">
-                  <mat-icon>people</mat-icon>
-                  <span>{{ getCapacityRangeText(space.capacity) }} ({{ space.capacity }})</span>
-                </div>
-              </div>
-
-              <div class="detail-row" *ngIf="space.specialty">
-                <div class="detail-item specialty-detail">
-                  <mat-icon>precision_manufacturing</mat-icon>
-                  <div class="specialty-info">
-                    <span class="specialty-name">{{ space.specialty.name }}</span>
-                    <span class="specialty-desc" *ngIf="space.specialty.description">
-                      {{ space.specialty.description }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div class="detail-row" *ngIf="space.specialty && space.specialty.department">
-                <div class="detail-item">
-                  <mat-icon>business</mat-icon>
-                  <span>{{ space.specialty.department.name }}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Indicador visual del tipo -->
-            <div class="type-indicator" [class]="typeData.type.name.toLowerCase()">
-              <mat-icon>{{ getTypeIcon(typeData.type.name) }}</mat-icon>
-            </div>
+            class="absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center"
+            [ngClass]="{
+              'bg-blue-50': typeData.type.name.toLowerCase() === 'theory',
+              'bg-purple-50': typeData.type.name.toLowerCase() === 'practice'
+            }">
+            <mat-icon
+              [ngClass]="{
+                'text-blue-500': typeData.type.name.toLowerCase() === 'theory',
+                'text-purple-500': typeData.type.name.toLowerCase() === 'practice'
+              }"
+              class="!text-sm">
+              {{ getTypeIcon(typeData.type.name) }}
+            </mat-icon>
           </div>
+        </div>
 
-          <!-- Placeholder para crear nuevo ambiente de este tipo -->
-          <div class="add-space-card" (click)="openCreateSpaceDialog()">
-            <mat-icon>add</mat-icon>
-            <span>Agregar {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}</span>
+        <!-- Add Space Card -->
+        <div
+          (click)="openCreateSpaceDialog()"
+          class="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all duration-200 min-h-[200px] group">
+          <div class="w-12 h-12 bg-gray-100 group-hover:bg-blue-100 rounded-xl flex items-center justify-center mb-3 transition-colors duration-200">
+            <mat-icon class="text-gray-400 group-hover:text-blue-500 !text-xl transition-colors duration-200">add</mat-icon>
           </div>
+          <span class="text-gray-600 group-hover:text-blue-600 font-medium transition-colors duration-200">
+            Agregar {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}
+          </span>
+        </div>
 
-          <!-- Placeholder para crear por lotes -->
-          <div class="add-batch-card" (click)="openBatchCreateDialog()">
-            <mat-icon>playlist_add</mat-icon>
-            <span>Crear múltiples {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}</span>
-            <small>Crear varios ambientes con patrón de nombres</small>
+        <!-- Batch Create Card -->
+        <div
+          (click)="openBatchCreateDialog()"
+          class="bg-white border-2 border-dashed border-gray-200 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-purple-300 hover:bg-purple-50/30 transition-all duration-200 min-h-[200px] group">
+          <div class="w-12 h-12 bg-gray-100 group-hover:bg-purple-100 rounded-xl flex items-center justify-center mb-3 transition-colors duration-200">
+            <mat-icon class="text-gray-400 group-hover:text-purple-500 !text-xl transition-colors duration-200">playlist_add</mat-icon>
           </div>
-        </mat-card-content>
-      </mat-card>
+          <span class="text-gray-600 group-hover:text-purple-600 font-medium mb-1 transition-colors duration-200">
+            Crear múltiples {{ getTypeDisplayName(typeData.type.name).toLowerCase() }}
+          </span>
+          <small class="text-gray-500 text-center leading-tight">
+            Crear varios ambientes con patrón de nombres
+          </small>
+        </div>
+      </div>
     </div>
+
   </div>
 </div>

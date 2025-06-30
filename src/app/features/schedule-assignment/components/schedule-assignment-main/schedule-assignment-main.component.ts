@@ -308,20 +308,6 @@ export class ScheduleAssignmentMainComponent implements OnInit {
         'Evita huecos en el horario del grupo',
         'Recomendado para inicio de periodo'
       ]
-    },
-    {
-      id: 'by-course',
-      title: 'Por Curso',
-      description: 'Distribuya las horas de un curso específico entre diferentes grupos y horarios.',
-      icon: 'book',
-      route: '/dashboard/horarios/by-course',
-      color: 'warn',
-      advantages: [
-        'Asignación rápida de una materia',
-        'Vista de todos los grupos que llevan el curso',
-        'Control de horas totales del curso',
-        'Útil para cursos compartidos'
-      ]
     }
   ];
 
@@ -332,10 +318,9 @@ export class ScheduleAssignmentMainComponent implements OnInit {
 
   selectMode(mode: AssignmentMode): void {
     // Actualizar el estado del servicio
-    const modeMap: { [key: string]: 'BY_TEACHER' | 'BY_GROUP' | 'BY_COURSE' } = {
+    const modeMap: { [key: string]: 'BY_TEACHER' | 'BY_GROUP' } = {
       'by-teacher': 'BY_TEACHER',
-      'by-group': 'BY_GROUP',
-      'by-course': 'BY_COURSE'
+      'by-group': 'BY_GROUP'
     };
 
     this.classSessionService.updateAssignmentState({

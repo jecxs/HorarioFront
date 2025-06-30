@@ -1,660 +1,116 @@
-// assignment-dialog.component.scss
+// assignment-dialog.component.scss - Versión mejorada con Tailwind
 
-.dialog-content {
-  max-height: 80vh;
-  overflow-y: auto;
-  padding: 0;
+// Variables personalizadas que coinciden con tu dashboard
+:root {
+  --primary-blue: #3b82f6;
+  --primary-blue-light: #dbeafe;
+  --success-green: #10b981;
+  --warning-orange: #f59e0b;
+  --error-red: #ef4444;
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-600: #4b5563;
+  --gray-900: #111827;
 }
 
-.context-info {
-  padding: 16px;
-  border-bottom: 1px solid #e0e0e0;
-  background: #fafafa;
+// Contenedor principal del diálogo
+::ng-deep .mat-mdc-dialog-container {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
 
-  mat-chip-set {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+  .mat-mdc-dialog-surface {
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
   }
+}
 
-  mat-chip {
-    display: flex;
-    align-items: center;
-    gap: 4px;
+// Ajustes para Material Design inputs dentro del contexto de Tailwind
+::ng-deep .mat-mdc-form-field {
+  .mat-mdc-text-field-wrapper {
+    border-radius: 8px !important;
 
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
+    .mat-mdc-form-field-flex {
+      padding: 12px 16px !important;
+      min-height: 48px !important;
     }
   }
+
+  .mat-mdc-form-field-outline {
+    .mat-mdc-notched-outline-start,
+    .mat-mdc-notched-outline-middle,
+    .mat-mdc-notched-outline-end {
+      border-color: var(--gray-200) !important;
+      border-radius: 8px !important;
+    }
+  }
+
+  &.mat-focused {
+    .mat-mdc-form-field-outline {
+      .mat-mdc-notched-outline-start,
+      .mat-mdc-notched-outline-middle,
+      .mat-mdc-notched-outline-end {
+        border-color: var(--primary-blue) !important;
+        border-width: 2px !important;
+      }
+    }
+  }
+}
+
+// Material Select personalizado
+::ng-deep .mat-mdc-select {
+  .mat-mdc-select-trigger {
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .mat-mdc-select-value {
+    font-size: 14px !important;
+    color: var(--gray-900) !important;
+  }
+
+  .mat-mdc-select-placeholder {
+    color: var(--gray-600) !important;
+  }
+}
+
+// Material Radio personalizado para que funcione con nuestro diseño
+::ng-deep .mat-mdc-radio-button {
+  .mdc-radio {
+    display: none !important; // Ocultamos el radio button nativo
+  }
+
+  .mdc-form-field {
+    width: 100% !important;
+  }
+}
+
+// Hover effects para las cards de selección
+.session-type-card {
+  transition: all 0.2s ease !important;
+
+  &:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  }
+}
+
+// Animaciones suaves para los steps
+.step-container {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .step-content {
-  padding: 16px;
+  animation: slideDown 0.3s ease-out !important;
 }
 
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: #1976d2;
-  color: white;
-  font-size: 12px;
-  font-weight: 600;
-  margin-right: 8px;
-}
-
-.full-width {
-  width: 100%;
-}
-
-.option-content {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  width: 100%;
-
-  .option-main {
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .option-secondary {
-    font-size: 12px;
-    color: rgba(0, 0, 0, 0.6);
-  }
-
-  .teacher-info {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    margin-bottom: 4px;
-  }
-
-  .recommended-times {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 11px;
-    color: #f57c00;
-    margin-bottom: 4px;
-
-    mat-icon {
-      font-size: 14px;
-      width: 14px;
-      height: 14px;
-    }
-  }
-
-  .option-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-
-    mat-chip {
-      font-size: 10px;
-      height: 20px;
-
-      &.highlight {
-        background-color: #e3f2fd;
-        color: #1976d2;
-      }
-    }
-  }
-}
-
-// ✅ NUEVOS ESTILOS: Selección de tipo de sesión
-.session-type-selection {
-  .selection-title {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 8px 0;
-    font-size: 18px;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  .selection-subtitle {
-    margin: 0 0 24px 0;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 14px;
-  }
-
-  .session-type-options {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  .session-type-option-container {
-    border: 2px solid #e0e0e0;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-
-    &:hover:not(.disabled) {
-      border-color: #1976d2;
-      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.1);
-    }
-
-    &.disabled {
-      opacity: 0.6;
-      background-color: #f5f5f5;
-    }
-
-    .session-type-radio {
-      width: 100%;
-
-      ::ng-deep .mdc-radio {
-        display: none; // Ocultar el radio button tradicional
-      }
-
-      ::ng-deep .mdc-form-field {
-        width: 100%;
-      }
-    }
-
-    &:has(.mdc-radio--checked) {
-      border-color: #1976d2;
-      background-color: #e3f2fd;
-    }
-  }
-
-  .option-card {
-    padding: 20px;
-    cursor: pointer;
-
-    .option-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 16px;
-
-      .option-icon {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background-color: #f5f5f5;
-
-        mat-icon {
-          font-size: 24px;
-          width: 24px;
-          height: 24px;
-
-          &.theory-icon {
-            color: #1976d2;
-          }
-
-          &.practice-icon {
-            color: #7b1fa2;
-          }
-        }
-      }
-
-      .option-info {
-        flex: 1;
-
-        .option-title {
-          margin: 0 0 4px 0;
-          font-size: 16px;
-          font-weight: 500;
-          color: rgba(0, 0, 0, 0.87);
-        }
-
-        .option-description {
-          margin: 0;
-          font-size: 14px;
-          color: rgba(0, 0, 0, 0.6);
-        }
-      }
-    }
-
-    .option-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-bottom: 12px;
-
-      .stat-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background-color: rgba(0, 0, 0, 0.04);
-        border-radius: 6px;
-
-        .stat-label {
-          font-size: 12px;
-          color: rgba(0, 0, 0, 0.6);
-        }
-
-        .stat-value {
-          font-size: 14px;
-          font-weight: 500;
-          color: rgba(0, 0, 0, 0.87);
-
-          &.over-limit {
-            color: #d32f2f;
-            font-weight: 600;
-          }
-        }
-      }
-    }
-
-    .option-recommendation {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background-color: rgba(0, 0, 0, 0.04);
-      border-radius: 6px;
-
-      .recommendation-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-
-        &.available {
-          color: #388e3c;
-        }
-
-        &.warning {
-          color: #f57c00;
-        }
-      }
-
-      .recommendation-text {
-        font-size: 12px;
-        color: rgba(0, 0, 0, 0.6);
-      }
-    }
-  }
-
-  .type-selection-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    background-color: #e3f2fd;
-    border-radius: 8px;
-    margin-bottom: 16px;
-
-    mat-icon {
-      color: #1976d2;
-      margin-top: 2px;
-    }
-
-    .info-content {
-      flex: 1;
-
-      p {
-        margin: 0 0 8px 0;
-        font-size: 13px;
-        color: rgba(0, 0, 0, 0.7);
-
-        &:last-child {
-          margin-bottom: 0;
-        }
-
-        strong {
-          color: rgba(0, 0, 0, 0.87);
-        }
-      }
-    }
-  }
-
-  .no-options-warning {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-    background-color: #fff3e0;
-    border-radius: 8px;
-    border: 1px solid #ffcc02;
-
-    mat-icon {
-      color: #f57c00;
-      margin-top: 2px;
-    }
-
-    .warning-content {
-      flex: 1;
-
-      h5 {
-        margin: 0 0 8px 0;
-        font-size: 14px;
-        font-weight: 500;
-        color: rgba(0, 0, 0, 0.87);
-      }
-
-      p {
-        margin: 0;
-        font-size: 13px;
-        color: rgba(0, 0, 0, 0.6);
-      }
-    }
-  }
-}
-
-// Estilos para mostrar información del tipo de espacio
-.space-type-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  background-color: #f5f5f5;
-  border-radius: 8px;
-  margin-bottom: 16px;
-  font-size: 14px;
-  color: rgba(0, 0, 0, 0.7);
-
-  mat-icon {
-    &.theory-icon {
-      color: #1976d2;
-    }
-
-    &.practice-icon {
-      color: #7b1fa2;
-    }
-  }
-}
-
-.specialty-info {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background-color: #f3e5f5;
-  border-radius: 8px;
-  margin-top: 16px;
-
-  mat-icon {
-    color: #7b1fa2;
-    margin-top: 2px;
-  }
-
-  .info-content {
-    flex: 1;
-
-    strong {
-      color: rgba(0, 0, 0, 0.87);
-      font-size: 14px;
-    }
-
-    p {
-      margin: 4px 0 0 0;
-      font-size: 12px;
-      color: rgba(0, 0, 0, 0.6);
-    }
-  }
-}
-
-// Estilos para estados de disponibilidad de docentes
-.status-available {
-  background-color: #e8f5e8;
-  color: #2e7d32;
-}
-
-.status-conflict {
-  background-color: #fff3e0;
-  color: #f57c00;
-}
-
-.status-not-available {
-  background-color: #ffebee;
-  color: #d32f2f;
-}
-
-.status-no-schedule {
-  background-color: #f5f5f5;
-  color: #757575;
-}
-
-.status-error {
-  background-color: #fce4ec;
-  color: #c2185b;
-}
-
-// Estilos para IntelliSense
-.intellisense-panel {
-  margin-top: 16px;
-  padding: 16px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
-  border: 1px solid #e9ecef;
-}
-
-.course-details {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-
-  .detail-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: rgba(0, 0, 0, 0.7);
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: #1976d2;
-    }
-  }
-}
-
-// Estilos para recomendaciones
-.recommendations {
-  margin-top: 16px;
-  padding: 16px;
-  background-color: #f3f4f6;
-  border-radius: 8px;
-
-  h4 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: 0 0 12px 0;
-    font-size: 16px;
-    color: rgba(0, 0, 0, 0.87);
-
-    mat-icon {
-      color: #ffc107;
-    }
-  }
-
-  mat-list {
-    padding: 0;
-
-    mat-list-item {
-      height: auto;
-      min-height: 40px;
-      padding: 8px 0;
-
-      mat-icon {
-        color: #4caf50;
-        margin-right: 8px;
-      }
-
-      span {
-        font-size: 13px;
-        line-height: 1.4;
-      }
-    }
-  }
-}
-
-// Estilos para el resumen de asignación
-.assignment-summary {
-  margin-bottom: 24px;
-
-  h4 {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-    font-weight: 500;
-    color: rgba(0, 0, 0, 0.87);
-  }
-
-  mat-list {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-
-    mat-list-item {
-      border-bottom: 1px solid #f5f5f5;
-
-      &:last-child {
-        border-bottom: none;
-      }
-
-      mat-icon {
-        color: #1976d2;
-        margin-right: 12px;
-
-        &.theory-icon {
-          color: #1976d2;
-        }
-
-        &.practice-icon {
-          color: #7b1fa2;
-        }
-      }
-
-      span {
-        font-size: 14px;
-        color: rgba(0, 0, 0, 0.87);
-      }
-    }
-  }
-}
-
-// Estilos para validación
-.validation-panel {
-  margin-top: 24px;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e0e0e0;
-
-  .validation-section {
-    &:not(:last-child) {
-      border-bottom: 1px solid #f5f5f5;
-    }
-
-    h4 {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0;
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 500;
-
-      &.error-title {
-        background-color: #ffebee;
-        color: #d32f2f;
-      }
-
-      &.warning-title {
-        background-color: #fff3e0;
-        color: #f57c00;
-      }
-
-      &.suggestion-title {
-        background-color: #e8f5e8;
-        color: #2e7d32;
-      }
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
-
-    mat-list {
-      padding: 0;
-
-      mat-list-item {
-        padding: 8px 16px;
-        min-height: auto;
-
-        mat-icon {
-          margin-right: 8px;
-          font-size: 16px;
-          width: 16px;
-          height: 16px;
-        }
-
-        span {
-          font-size: 13px;
-          line-height: 1.4;
-        }
-      }
-    }
-  }
-}
-
-// Responsive design
-@media (max-width: 768px) {
-  .dialog-content {
-    max-height: 90vh;
-  }
-
-  .session-type-selection {
-    .option-stats {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .option-card {
-      padding: 16px;
-
-      .option-header {
-        gap: 12px;
-
-        .option-icon {
-          width: 40px;
-          height: 40px;
-
-          mat-icon {
-            font-size: 20px;
-            width: 20px;
-            height: 20px;
-          }
-        }
-      }
-    }
-  }
-
-  .context-info {
-    mat-chip-set {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-  }
-}
-
-// Animaciones
-.session-type-option-container {
-  animation: fadeInUp 0.3s ease;
-}
-
-@keyframes fadeInUp {
+@keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
@@ -662,606 +118,284 @@
   }
 }
 
-// Mejoras en accesibilidad
-.session-type-option-container {
-  &:focus-within {
-    outline: 2px solid #1976d2;
-    outline-offset: 2px;
-  }
-}
-
-// Estados hover mejorados
-.option-card:hover {
-  .option-icon {
-    transform: scale(1.05);
-    transition: transform 0.2s ease;
-  }
-}
-
-// Scroll suave para el contenido del diálogo
-.dialog-content {
-  scroll-behavior: smooth;
-}
-/* ✅ AGREGAR al assignment-dialog.component.scss */
-
-/* =========================
-   TEACHER CATEGORIES STYLES
-   ========================= */
-
-.teacher-categories-container {
-  max-height: 70vh;
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.categories-header {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #e2e8f0;
-}
-
-.loading-container {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  background: #f8fafc;
-  border-radius: 8px;
-}
-
-/* =========================
-   TEACHER CATEGORY STYLES
-   ========================= */
-
-.teacher-category {
-  margin-bottom: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border: 1px solid #e2e8f0;
-}
-
-.category-header {
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.teacher-cards-grid {
-  display: grid;
-  gap: 12px;
-  padding: 16px;
-  background: #ffffff;
-}
-
-/* =========================
-   AVAILABLE CATEGORY
-   ========================= */
-
-.available-category {
-  border-left: 4px solid #10b981;
-
-  .category-header {
-    background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%);
-    border-bottom-color: #d1fae5;
-  }
-
-  .teacher-cards-grid {
-    background: linear-gradient(135deg, #f0fdf4 0%, #ffffff 100%);
-  }
-}
-
-/* =========================
-   CONFLICT CATEGORY
-   ========================= */
-
-.conflict-category {
-  border-left: 4px solid #f59e0b;
-
-  .category-header {
-    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    border-bottom-color: #fed7aa;
-  }
-
-  .teacher-cards-grid {
-    background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
-  }
-}
-
-.toggle-details-btn {
-  width: 32px;
-  height: 32px;
-  transition: transform 0.2s ease;
-
-  &:hover {
-    background: rgba(245, 158, 11, 0.1);
-  }
-
-  .mat-icon.rotate-180 {
-    transform: rotate(180deg);
-  }
-}
-
-/* =========================
-   TEACHER CARD STYLES
-   ========================= */
-
+// Teacher cards hover effects
 .teacher-card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 16px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 2px solid transparent;
-  position: relative;
+  transition: all 0.2s ease !important;
 
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px) !important;
+  }
+
+  &.available-card:hover {
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.15) !important;
+  }
+
+  &.conflict-card:hover {
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.15) !important;
   }
 }
 
-.available-card {
-  border-color: #d1fae5;
+// Material Icons ajustados al diseño
+::ng-deep .mat-icon {
+  font-size: inherit !important;
+  width: auto !important;
+  height: auto !important;
+  line-height: inherit !important;
+}
 
-  &:hover {
-    border-color: #10b981;
-    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.15);
+// Spinner personalizado
+::ng-deep .mat-mdc-progress-spinner {
+  circle {
+    stroke: var(--primary-blue) !important;
   }
 }
 
-.conflict-card {
-  border-color: #fed7aa;
-
-  &:hover {
-    border-color: #f59e0b;
-    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.15);
-  }
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 12px;
-}
-
-.teacher-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.teacher-name {
-  font-weight: 600;
-  color: #1f2937;
-  margin: 0 0 4px 0;
-  font-size: 14px;
-  line-height: 1.3;
-}
-
-.teacher-email {
-  color: #6b7280;
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.2;
-}
-
-/* =========================
-   STATUS BADGES
-   ========================= */
-
-.status-badge {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  white-space: nowrap;
-
-  .mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-  }
-}
-
-.available-badge {
-  background: #dcfce7;
-  color: #166534;
-
-  .mat-icon {
-    color: #16a34a;
-  }
-}
-
-.conflict-badge {
-  background: #fef3c7;
-  color: #92400e;
-
-  .mat-icon {
-    color: #d97706;
-  }
-}
-
-/* =========================
-   CARD CONTENT
-   ========================= */
-
-.card-content {
-  space-y: 8px;
-}
-
-.knowledge-areas {
-  margin-bottom: 8px;
-}
-
-.area-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.area-tag {
-  display: inline-block;
-  padding: 2px 6px;
-  background: #f1f5f9;
-  color: #475569;
-  border-radius: 4px;
-  font-size: 11px;
-  font-weight: 500;
-
-  &.highlight {
-    background: #dbeafe;
-    color: #1d4ed8;
-    font-weight: 600;
-  }
-}
-
-.availability-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #059669;
-  margin-top: 8px;
-
-  .mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-  }
-}
-
-/* =========================
-   CONFLICT INFORMATION
-   ========================= */
-
-.conflict-summary {
-  background: #fffbeb;
-  border-radius: 6px;
-  padding: 8px;
-  margin-top: 8px;
-  border: 1px solid #fed7aa;
-}
-
-.conflict-overview {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-
-  .mat-icon {
-    font-size: 14px;
-    width: 14px;
-    height: 14px;
-  }
-
-  .conflict-text {
-    font-size: 12px;
-    color: #92400e;
-    font-weight: 500;
-  }
-}
-
-.conflict-details {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #fed7aa;
-}
-
-.conflict-item {
-  background: #ffffff;
-  border-radius: 4px;
-  padding: 8px;
-  margin-bottom: 6px;
-  border: 1px solid #fed7aa;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-}
-
-.conflict-item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-
-  .course-name {
-    font-weight: 600;
-    color: #92400e;
-    font-size: 11px;
-  }
-
-  .group-name {
-    font-size: 10px;
-    color: #78716c;
-    background: #fef3c7;
-    padding: 1px 4px;
-    border-radius: 3px;
-  }
-}
-
-.conflict-item-details {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 10px;
-  color: #78716c;
-
-  > div {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-
-    .mat-icon {
-      font-size: 12px;
-      width: 12px;
-      height: 12px;
-    }
-  }
-}
-
-.conflict-warning {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 8px;
-  padding: 4px 6px;
-  background: #fef3c7;
-  border-radius: 4px;
-
-  .mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
-  }
-}
-
-/* =========================
-   UNAVAILABLE PANEL
-   ========================= */
-
-.unavailable-panel {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-
-  .mat-expansion-panel-header {
-    background: #f9fafb;
+// Buttons personalizados
+::ng-deep .mat-mdc-button {
+  &.mat-primary {
+    background-color: var(--primary-blue) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    padding: 12px 24px !important;
 
     &:hover {
-      background: #f3f4f6;
+      background-color: #2563eb !important;
+    }
+
+    &:disabled {
+      background-color: var(--gray-200) !important;
+      color: var(--gray-600) !important;
+    }
+  }
+
+  &.mat-stroked-button {
+    border-radius: 8px !important;
+    border-color: var(--gray-200) !important;
+    color: var(--gray-600) !important;
+    font-weight: 500 !important;
+
+    &:hover {
+      background-color: var(--gray-50) !important;
+      border-color: var(--gray-300) !important;
     }
   }
 }
 
-.unavailable-content {
-  padding: 16px;
-  background: #fafafa;
-}
-
-.unavailable-group {
-  margin-bottom: 16px;
+// Expansion panel personalizado para steps
+::ng-deep .mat-expansion-panel {
+  border-radius: 12px !important;
+  box-shadow: none !important;
+  border: 1px solid var(--gray-200) !important;
+  margin-bottom: 16px !important;
 
   &:last-child {
-    margin-bottom: 0;
+    margin-bottom: 0 !important;
+  }
+
+  .mat-expansion-panel-header {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 16px 24px !important;
+    height: auto !important;
+
+    &:hover {
+      background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%) !important;
+    }
+
+    .mat-expansion-panel-header-title {
+      font-weight: 500 !important;
+      color: var(--gray-900) !important;
+    }
+
+    .mat-expansion-panel-header-description {
+      color: var(--gray-600) !important;
+      font-size: 14px !important;
+    }
+  }
+
+  .mat-expansion-panel-content {
+    .mat-expansion-panel-body {
+      padding: 24px !important;
+    }
+  }
+
+  &.mat-expanded {
+    .mat-expansion-panel-header {
+      border-radius: 12px 12px 0 0 !important;
+    }
+  }
+
+  &:not(.mat-expanded) {
+    .mat-expansion-panel-header {
+      border-radius: 12px !important;
+    }
   }
 }
 
-.group-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+// Chips personalizados
+::ng-deep .mat-mdc-chip {
+  background-color: white !important;
+  border: 1px solid var(--gray-200) !important;
+  border-radius: 8px !important;
+  color: var(--gray-700) !important;
+  font-weight: 500 !important;
+  height: auto !important;
+  padding: 8px 12px !important;
 
-.teacher-list {
-  space-y: 6px;
-}
-
-.teacher-item {
-  background: #ffffff;
-  border-radius: 6px;
-  padding: 8px 12px;
-  border: 1px solid #e5e7eb;
-}
-
-.teacher-basic-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-
-  .teacher-name {
-    font-weight: 500;
-    color: #374151;
-    font-size: 12px;
+  .mat-mdc-chip-action-label {
+    font-size: 14px !important;
+    padding: 0 !important;
   }
-
-  .teacher-status {
-    font-size: 10px;
-    color: #9ca3af;
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 3px;
-  }
-}
-
-.recommended-times,
-.no-schedule-help {
-  display: flex;
-  align-items: center;
-  gap: 4px;
 
   .mat-icon {
-    font-size: 12px;
-    width: 12px;
-    height: 12px;
+    margin-right: 6px !important;
+    font-size: 16px !important;
   }
 }
 
-/* =========================
-   EMPTY STATE
-   ========================= */
-
-.empty-state {
-  padding: 48px 24px;
-  text-align: center;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 2px dashed #d1d5db;
-}
-
-.empty-state-content {
-  max-width: 300px;
-  margin: 0 auto;
-}
-
-.empty-icon {
-  font-size: 48px;
-  width: 48px;
-  height: 48px;
-  color: #9ca3af;
-  margin-bottom: 16px;
-}
-
-.empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #374151;
-  margin: 0 0 8px 0;
-}
-
-.empty-description {
-  font-size: 14px;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.5;
-}
-
-/* =========================
-   RESPONSIVE DESIGN
-   ========================= */
-
-@media (max-width: 640px) {
-  .teacher-categories-container {
-    max-height: 60vh;
-  }
-
-  .teacher-card {
-    padding: 12px;
-  }
-
-  .card-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-  }
-
-  .status-badge {
-    align-self: flex-start;
-  }
-
-  .conflict-item-details {
-    flex-direction: column;
-    gap: 4px;
-  }
-}
-
-/* =========================
-   ANIMATIONS
-   ========================= */
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.teacher-category {
-  animation: slideInUp 0.3s ease-out;
-}
-
-.conflict-details {
-  animation: slideInUp 0.2s ease-out;
-}
-
-/* =========================
-   ACCESSIBILITY
-   ========================= */
-
-.teacher-card:focus {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .teacher-card,
-  .toggle-details-btn .mat-icon,
-  .teacher-category,
-  .conflict-details {
-    animation: none;
-    transition: none;
-  }
-
-  .teacher-card:hover {
-    transform: none;
-  }
-}
-// ✅ AGREGAR estos estilos
-.disabled-card {
-  opacity: 0.7;
-  cursor: not-allowed;
-
-  &:hover {
-    transform: none;
-    box-shadow: none;
-  }
-}
-
-.conflict-action {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-// ✅ Estilo para el snackbar de conflicto
+// Toast/Snackbar personalizado para conflictos
 ::ng-deep .conflict-snackbar {
-  background-color: #f59e0b !important;
+  background-color: var(--warning-orange) !important;
   color: white !important;
+  border-radius: 8px !important;
 
   .mat-mdc-snack-bar-action {
     color: white !important;
     font-weight: 600 !important;
+
+    .mat-mdc-button {
+      color: white !important;
+    }
+  }
+}
+
+// Estados de disponibilidad personalizados
+.availability-badge {
+  &.available {
+    background-color: #dcfce7 !important;
+    color: #166534 !important;
+    border: 1px solid #bbf7d0 !important;
+  }
+
+  &.conflict {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+    border: 1px solid #fed7aa !important;
+  }
+
+  &.unavailable {
+    background-color: #fee2e2 !important;
+    color: #991b1b !important;
+    border: 1px solid #fecaca !important;
+  }
+}
+
+// Mejoras de accesibilidad
+.teacher-card:focus-visible,
+.session-type-card:focus-visible {
+  outline: 2px solid var(--primary-blue) !important;
+  outline-offset: 2px !important;
+}
+
+// Media queries para responsive
+@media (max-width: 768px) {
+  ::ng-deep .mat-mdc-dialog-container {
+    .mat-mdc-dialog-surface {
+      margin: 16px !important;
+      max-width: calc(100vw - 32px) !important;
+      max-height: calc(100vh - 32px) !important;
+    }
+  }
+
+  .step-container {
+    .px-6 {
+      padding-left: 16px !important;
+      padding-right: 16px !important;
+    }
+  }
+
+  .teacher-cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+// Animaciones reducidas para usuarios que las prefieren así
+@media (prefers-reduced-motion: reduce) {
+  .step-content,
+  .teacher-card,
+  .session-type-card {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .teacher-card:hover,
+  .session-type-card:hover {
+    transform: none !important;
+  }
+}
+
+// Scroll personalizado para áreas con overflow
+.max-h-\[70vh\] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--gray-300) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--gray-300);
+    border-radius: 3px;
+
+    &:hover {
+      background-color: var(--gray-400);
+    }
+  }
+}
+
+// Efectos de focus para elementos interactivos
+.cursor-pointer:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+// Mejoras en el contraste de texto
+.text-gray-600 {
+  color: #4b5563 !important;
+}
+
+.text-gray-700 {
+  color: #374151 !important;
+}
+
+.text-gray-900 {
+  color: #111827 !important;
+}
+
+// Estados de carga mejorados
+.loading-container {
+  .mat-mdc-progress-spinner {
+    margin-right: 12px;
+  }
+}
+
+// Transiciones suaves para cambios de estado
+.step-container[class*="opacity-"] {
+  transition: opacity 0.3s ease !important;
+}
+// Arreglar radio buttons en las cards
+::ng-deep .mat-mdc-radio-button .mdc-radio {
+  opacity: 1 !important;
+}
+
+::ng-deep .mat-mdc-radio-button {
+  .mdc-form-field {
+    display: none !important; // Solo ocultar el texto, no el botón
   }
 }

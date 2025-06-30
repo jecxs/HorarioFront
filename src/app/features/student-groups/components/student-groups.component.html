@@ -1,210 +1,259 @@
 <!-- src/app/features/student-groups/components/student-groups.component.html -->
-<div class="groups-container">
-  <!-- Header Section -->
-  <div class="page-header">
-    <div class="header-content">
-      <div class="title-section">
-        <h1 class="page-title">
-          <mat-icon>groups</mat-icon>
-          Grupos de Estudiantes
-        </h1>
-        <p class="page-subtitle">
-          Gestiona las secciones de estudiantes organizadas por carreras y ciclos
-        </p>
-      </div>
+<div class="min-h-screen bg-gray-50/50 p-4 lg:p-6">
+  <div class="max-w-7xl mx-auto space-y-6">
 
-      <div class="header-actions">
+    <!-- Header Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+        <div class="space-y-2">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+              <mat-icon class="text-white text-2xl">groups</mat-icon>
+            </div>
+            <div>
+              <h1 class="text-3xl font-bold text-gray-900 tracking-tight">
+                Grupos de Estudiantes
+              </h1>
+              <p class="text-gray-600 text-sm mt-1">
+                Gestiona las secciones de estudiantes organizadas por carreras y ciclos
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button
           mat-raised-button
           color="primary"
           (click)="openCreateDialog()"
-          class="create-button">
-          <mat-icon>add</mat-icon>
-          <span [class.hide-text]="isHandset$ | async">Crear Grupo</span>
+          class="!bg-gradient-to-r !from-blue-600 !to-blue-700 !text-white !border-0 !rounded-xl !px-6 !py-3 !shadow-lg hover:!shadow-xl !transition-all !duration-200 !font-medium">
+          <mat-icon class="mr-2">add</mat-icon>
+          <span [class.hidden]="isHandset$ | async">Crear Grupo</span>
+        </button>
+      </div>
+
+      <!-- Current Period Alert -->
+      <div *ngIf="currentPeriod" class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <div class="flex items-center gap-3">
+          <mat-icon class="text-blue-600">info</mat-icon>
+          <span class="text-blue-800 text-sm">
+            Los grupos se crearán en el periodo:
+            <span class="font-semibold">{{ currentPeriod.name }}</span>
+            ({{ currentPeriod.startDate | date }} - {{ currentPeriod.endDate | date }})
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6">
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 group hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <p class="text-3xl font-bold text-gray-900">{{ totalGroups }}</p>
+            <p class="text-sm font-medium text-gray-600">Total de Grupos</p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 bg-blue-100 rounded-xl group-hover:bg-blue-200 transition-colors">
+            <mat-icon class="text-blue-600">groups</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <div *ngIf="currentPeriod" class="bg-white rounded-2xl shadow-sm border border-green-200 p-6 group hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <p class="text-3xl font-bold text-green-600">{{ groupsInCurrentPeriod }}</p>
+            <p class="text-sm font-medium text-gray-600">En Periodo Actual</p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 bg-green-100 rounded-xl group-hover:bg-green-200 transition-colors">
+            <mat-icon class="text-green-600">event</mat-icon>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 group hover:shadow-md transition-all duration-200">
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <p class="text-3xl font-bold text-gray-900">{{ careers.length }}</p>
+            <p class="text-sm font-medium text-gray-600">Carreras Activas</p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 bg-purple-100 rounded-xl group-hover:bg-purple-200 transition-colors">
+            <mat-icon class="text-purple-600">school</mat-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filtrar por Carrera</mat-label>
+          <mat-select [formControl]="selectedCareerFilter" [value]="selectedCareerFilter.value">
+            <mat-option value="">Todas las carreras</mat-option>
+            <mat-option *ngFor="let career of careers" [value]="career.uuid">
+              {{ career.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Filtrar por Ciclo</mat-label>
+          <mat-select [formControl]="selectedCycleFilter" [value]="selectedCycleFilter.value">
+            <mat-option value="">Todos los ciclos</mat-option>
+            <mat-option *ngFor="let cycle of getAvailableCycles()" [value]="cycle">
+              Ciclo {{ cycle }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="filter-field">
+          <mat-label>Buscar grupo</mat-label>
+          <input matInput [formControl]="searchFilter" placeholder="Nombre del grupo...">
+          <mat-icon matSuffix>search</mat-icon>
+        </mat-form-field>
+
+        <button
+          mat-stroked-button
+          (click)="clearFilters()"
+          class="!border-gray-300 !text-gray-700 !rounded-xl !h-14 hover:!bg-gray-50 !transition-colors !duration-200">
+          <mat-icon class="mr-2">clear</mat-icon>
+          <span [class.hidden]="isHandset$ | async">Limpiar</span>
         </button>
       </div>
     </div>
 
-    <!-- Current Period Alert -->
-    <div class="period-info" *ngIf="currentPeriod">
-      <mat-icon>info</mat-icon>
-      <span>
-        Los grupos se crearán en el periodo:
-        <strong>{{ currentPeriod.name }}</strong>
-        ({{ currentPeriod.startDate | date }} - {{ currentPeriod.endDate | date }})
-      </span>
-    </div>
-  </div>
-
-  <!-- Stats Cards -->
-  <div class="stats-section" [class.mobile]="isHandset$ | async">
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ totalGroups }}</div>
-          <div class="stat-label">Total de Grupos</div>
-          <mat-icon class="stat-icon">groups</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card current-period" *ngIf="currentPeriod">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ groupsInCurrentPeriod }}</div>
-          <div class="stat-label">En Periodo Actual</div>
-          <mat-icon class="stat-icon">event</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-
-    <mat-card class="stat-card">
-      <mat-card-content>
-        <div class="stat-content">
-          <div class="stat-number">{{ careers.length }}</div>
-          <div class="stat-label">Carreras Activas</div>
-          <mat-icon class="stat-icon">school</mat-icon>
-        </div>
-      </mat-card-content>
-    </mat-card>
-  </div>
-
-  <!-- Filters Section -->
-  <mat-card class="filters-card">
-    <mat-card-content>
-      <div class="filters-content" [class.mobile]="isHandset$ | async">
-        <div class="filters-row">
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Filtrar por Carrera</mat-label>
-            <mat-select [formControl]="selectedCareerFilter" [value]="selectedCareerFilter.value">
-              <mat-option value="">Todas las carreras</mat-option>
-              <mat-option *ngFor="let career of careers" [value]="career.uuid">
-                {{ career.name }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter-field">
-            <mat-label>Filtrar por Ciclo</mat-label>
-            <mat-select [formControl]="selectedCycleFilter" [value]="selectedCycleFilter.value">
-              <mat-option value="">Todos los ciclos</mat-option>
-              <mat-option *ngFor="let cycle of getAvailableCycles()" [value]="cycle">
-                Ciclo {{ cycle }}
-              </mat-option>
-            </mat-select>
-          </mat-form-field>
-
-          <mat-form-field appearance="outline" class="filter-field search-field">
-            <mat-label>Buscar grupo</mat-label>
-            <input matInput [formControl]="searchFilter" placeholder="Nombre del grupo...">
-            <mat-icon matSuffix>search</mat-icon>
-          </mat-form-field>
-
+    <!-- Groups Content -->
+    <div class="space-y-6">
+      <!-- No Data State -->
+      <div *ngIf="filteredGroupsByCareer.length === 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center">
+        <div class="flex flex-col items-center space-y-4">
+          <div class="flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full">
+            <mat-icon class="text-gray-400 text-4xl">search_off</mat-icon>
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-xl font-semibold text-gray-900">No se encontraron grupos</h3>
+            <p class="text-gray-600">No hay grupos que coincidan con los filtros aplicados.</p>
+          </div>
           <button
-            mat-stroked-button
-            color="accent"
+            mat-raised-button
+            color="primary"
             (click)="clearFilters()"
-            class="clear-filters-btn">
-            <mat-icon>clear</mat-icon>
-            <span [class.hide-text]="isHandset$ | async">Limpiar</span>
+            class="!rounded-xl !px-6">
+            Limpiar filtros
           </button>
         </div>
       </div>
-    </mat-card-content>
-  </mat-card>
 
-  <!-- Groups by Career -->
-  <div class="groups-content">
-    <div *ngIf="filteredGroupsByCareer.length === 0" class="no-data">
-      <mat-icon>info</mat-icon>
-      <h3>No se encontraron grupos</h3>
-      <p>No hay grupos que coincidan con los filtros aplicados.</p>
-      <button mat-button color="primary" (click)="clearFilters()">
-        Limpiar filtros
-      </button>
-    </div>
-
-    <div *ngFor="let careerData of filteredGroupsByCareer" class="career-section">
-      <mat-card class="career-card">
-        <mat-card-header class="career-header">
-          <div class="career-info">
-            <div class="career-title">
-              <h2>{{ careerData.career.name }}</h2>
-              <mat-chip class="modality-chip">
-                {{ careerData.career.modality.name }}
-              </mat-chip>
+      <!-- Career Sections -->
+      <div *ngFor="let careerData of filteredGroupsByCareer" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Career Header -->
+        <div class="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 p-6">
+          <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <div class="space-y-1">
+                <h2 class="text-xl font-bold text-gray-900">{{ careerData.career.name }}</h2>
+                <div class="flex items-center gap-3">
+                  <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {{ careerData.career.modality.name }}
+                  </span>
+                </div>
+              </div>
             </div>
-            <div class="career-stats">
-              <span class="group-count">
-                <mat-icon>groups</mat-icon>
-                {{ careerData.totalGroups }} grupos
-              </span>
-              <span class="cycles-info">
-                <mat-icon>layers</mat-icon>
-                {{ careerData.career.modality.durationYears * 2 }} ciclos
-              </span>
+
+            <div class="flex items-center gap-6 text-sm text-gray-600">
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-gray-500 text-lg">groups</mat-icon>
+                <span class="font-medium">{{ careerData.totalGroups }} grupos</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-gray-500 text-lg">layers</mat-icon>
+                <span class="font-medium">{{ careerData.career.modality.durationYears * 2 }} ciclos</span>
+              </div>
             </div>
           </div>
-        </mat-card-header>
+        </div>
 
-        <mat-card-content class="groups-grid">
-          <div
-            *ngFor="let group of careerData.groups"
-            class="group-card"
-            [class.current-period]="isCurrentPeriodGroup(group)">
+        <!-- Groups Grid -->
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Group Cards -->
+            <div
+              *ngFor="let group of careerData.groups"
+              class="relative bg-gray-50 rounded-xl border border-gray-200 p-5 hover:shadow-md hover:border-gray-300 transition-all duration-200 group"
+              [class.!bg-green-50]="isCurrentPeriodGroup(group)"
+              [class.!border-green-200]="isCurrentPeriodGroup(group)">
 
-            <div class="group-header">
-              <div class="group-name">
-                <h3>{{ group.name }}</h3>
-                <mat-chip
-                  class="period-chip"
-                  [class.current]="isCurrentPeriodGroup(group)">
-                  {{ group.periodName }}
-                </mat-chip>
+              <!-- Current Period Badge -->
+              <div *ngIf="isCurrentPeriodGroup(group)" class="absolute top-3 right-3">
+                <span class="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-lg">
+                  <mat-icon class="text-green-600 text-sm">star</mat-icon>
+                  Actual
+                </span>
               </div>
 
-              <div class="group-actions">
-                <button
-                  mat-icon-button
-                  (click)="openEditDialog(group)"
-                  matTooltip="Editar grupo">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button
-                  mat-icon-button
-                  color="warn"
-                  (click)="confirmDelete(group)"
-                  matTooltip="Eliminar grupo">
-                  <mat-icon>delete</mat-icon>
-                </button>
+              <!-- Group Header -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="space-y-2 flex-1 pr-2">
+                  <h3 class="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                    {{ group.name }}
+                  </h3>
+                  <span
+                    class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium"
+                    [class.bg-green-100]="isCurrentPeriodGroup(group)"
+                    [class.text-green-800]="isCurrentPeriodGroup(group)"
+                    [class.bg-gray-100]="!isCurrentPeriodGroup(group)"
+                    [class.text-gray-700]="!isCurrentPeriodGroup(group)">
+                    {{ group.periodName }}
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    mat-icon-button
+                    (click)="openEditDialog(group)"
+                    class="!w-8 !h-8 !text-gray-600 hover:!text-blue-600 hover:!bg-blue-50 !transition-colors"
+                    matTooltip="Editar grupo">
+                    <mat-icon class="text-lg">edit</mat-icon>
+                  </button>
+                  <button
+                    mat-icon-button
+                    (click)="confirmDelete(group)"
+                    class="!w-8 !h-8 !text-gray-600 hover:!text-red-600 hover:!bg-red-50 !transition-colors"
+                    matTooltip="Eliminar grupo">
+                    <mat-icon class="text-lg">delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Group Details -->
+              <div class="space-y-3">
+                <div class="flex items-center gap-3 text-sm text-gray-600">
+                  <mat-icon class="text-gray-500 text-lg">layers</mat-icon>
+                  <span>Ciclo {{ group.cycleNumber }}</span>
+                </div>
+                <div class="flex items-center gap-3 text-sm text-gray-600">
+                  <mat-icon class="text-gray-500 text-lg">event</mat-icon>
+                  <span>{{ group.periodName }}</span>
+                </div>
               </div>
             </div>
 
-            <div class="group-details">
-              <div class="detail-item">
-                <mat-icon>layers</mat-icon>
-                <span>Ciclo {{ group.cycleNumber }}</span>
+            <!-- Add Group Card -->
+            <div
+              class="border-2 border-dashed border-gray-300 rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-200 group min-h-[180px]"
+              (click)="openCreateDialog()">
+              <div class="flex flex-col items-center space-y-3">
+                <div class="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl group-hover:bg-blue-100 transition-colors">
+                  <mat-icon class="text-gray-500 group-hover:text-blue-600 text-2xl transition-colors">add</mat-icon>
+                </div>
+                <span class="text-sm font-medium text-gray-600 group-hover:text-blue-600 transition-colors text-center">
+                  Agregar grupo a<br>{{ careerData.career.name }}
+                </span>
               </div>
-              <div class="detail-item">
-                <mat-icon>event</mat-icon>
-                <span>{{ group.periodName }}</span>
-              </div>
-            </div>
-
-            <!-- Badge para periodo actual -->
-            <div class="current-badge" *ngIf="isCurrentPeriodGroup(group)">
-              <mat-icon>star</mat-icon>
-              <span>Periodo Actual</span>
             </div>
           </div>
-
-          <!-- Placeholder para crear nuevo grupo en esta carrera -->
-          <div class="add-group-card" (click)="openCreateDialog()">
-            <mat-icon>add</mat-icon>
-            <span>Agregar grupo a {{ careerData.career.name }}</span>
-          </div>
-        </mat-card-content>
-      </mat-card>
+        </div>
+      </div>
     </div>
   </div>
 </div>

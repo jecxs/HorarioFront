@@ -14,10 +14,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
-
+import { MatInputModule } from '@angular/material/input';
 // Services
 import { ClassSessionService } from '../../services/class-session.service';
-import { StudentGroupService, StudentGroup } from '../../../student-groups/services/student-group.service';
+import {StudentGroupService, StudentGroup, Career} from '../../../student-groups/services/student-group.service';
 import { TimeSlotService, TimeSlot } from '../../../time-slots/services/time-slot.service';
 import { PeriodService } from '../../../periods/services/period.service';
 
@@ -59,6 +59,7 @@ import { AssignmentDialogComponent, AssignmentDialogData } from '../assignment-d
     MatSnackBarModule,
     MatDialogModule,
     MatFormFieldModule,
+    MatInputModule,
     CourseMetadataHeaderComponent
   ],
   templateUrl: './schedule-by-group.component.html',
@@ -76,7 +77,10 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   private courseService = inject(CourseService); // ✅ AGREGAR
   private courseMetadataService = inject(CourseMetadataService); // ✅ AGREGAR
   private route = inject(ActivatedRoute);
-
+  private originalModalitiesOptions: any[] = [];
+  private originalCareersOptions: Career[] = [];
+  private originalStudentGroups: StudentGroup[] = [];
+  Math = Math;
 
   // ✅ NUEVAS PROPIEDADES para colapsar turnos
   collapsedTimeSlots: Set<string> = new Set(); // UUIDs de turnos colapsados
@@ -93,6 +97,23 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   groupCourses: CourseResponse[] = []; // ✅ AGREGAR
   loadingCourses = false; // ✅ AGREGAR
 
+  //filtros
+  modalitiesOptions: any[] = [];
+  careersOptions: Career[] = [];
+  cyclesOptions: number[] = [];
+  filteredGroups: StudentGroup[] = [];
+
+  // ✅ AGREGAR: Form controls para filtros
+  modalityFilter = new FormControl<string>('');
+  careerFilter = new FormControl<string>('');
+  cycleFilter = new FormControl<number | ''>('');
+  searchFilter = new FormControl<string>('');
+
+
+// ✅ AGREGAR: Estado de filtros
+  showFilters = false;
+  filtersExpanded = false;
+
   // State
   selectedGroup: StudentGroup | null = null;
   loading = false;
@@ -107,6 +128,25 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     this.loadInitialData();
     this.setupGroupSelection();
     this.handleQueryParams();
+  }
+
+
+  closeFilters(): void {
+    this.filtersExpanded = false;
+  }
+  /**
+   * Obtiene el nombre de la modalidad por UUID
+   */
+  getModalityName(modalityUuid: string): string {
+    const modality = this.originalModalitiesOptions.find(m => m.uuid === modalityUuid);
+    return modality ? modality.name : '';
+  }
+  /**
+   * Obtiene el nombre de la carrera por UUID
+   */
+  getCareerName(careerUuid: string): string {
+    const career = this.careersOptions.find(c => c.uuid === careerUuid);
+    return career ? career.name : '';
   }
 
   // ✅ NUEVO MÉTODO
@@ -192,17 +232,234 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   }
 
   private loadStudentGroups(): void {
-    this.studentGroupService.getAllGroups()
-      .pipe(takeUntil(this.destroy$))
+    // ✅ CARGAR DATOS PARA FILTROS
+    combineLatest([
+      this.studentGroupService.getAllGroups(),
+      this.studentGroupService.getAllCareers(),
+      this.studentGroupService.getAllModalities()
+    ]).pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
-          this.studentGroups = Array.isArray(response.data) ? response.data : [response.data];
+        next: ([groupsResponse, careersResponse, modalitiesResponse]) => {
+          // ✅ GUARDAR DATOS ORIGINALES
+          this.originalStudentGroups = Array.isArray(groupsResponse.data) ? groupsResponse.data : [groupsResponse.data];
+          this.originalCareersOptions = Array.isArray(careersResponse.data) ? careersResponse.data : [careersResponse.data];
+          this.originalModalitiesOptions = Array.isArray(modalitiesResponse.data) ? modalitiesResponse.data : [modalitiesResponse.data];
+
+          // ✅ INICIALIZAR LISTAS MOSTRADAS
+          this.studentGroups = [...this.originalStudentGroups];
+          this.careersOptions = [...this.originalCareersOptions];
+          this.modalitiesOptions = [...this.originalModalitiesOptions];
+
+          console.log('📊 Datos cargados:');
+          console.log('  - Grupos:', this.originalStudentGroups.length);
+          console.log('  - Carreras:', this.originalCareersOptions.length);
+          console.log('  - Modalidades:', this.originalModalitiesOptions.length);
+
+          // ✅ CONFIGURAR FILTROS Y APLICAR FILTRADO INICIAL
+          this.setupFilters();
+          this.applyGroupFilters();
         },
         error: (error) => {
           console.error('Error loading groups:', error);
           this.showSnackBar('Error al cargar los grupos', 'error');
         }
       });
+  }
+// ✅ AGREGAR: Configurar filtros reactivos
+  private setupFilters(): void {
+    // Filtro en cascada: modalidad -> carrera -> ciclo
+    this.modalityFilter.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(modalityUuid => {
+        this.careerFilter.setValue('');
+        this.cycleFilter.setValue('');
+        this.updateCareerOptions(modalityUuid || undefined);
+        this.applyGroupFilters();
+      });
+
+    this.careerFilter.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(careerUuid => {
+        this.cycleFilter.setValue('');
+        this.updateCycleOptions(careerUuid || undefined);
+        this.applyGroupFilters();
+      });
+
+    this.cycleFilter.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.applyGroupFilters();
+      });
+
+    // Búsqueda con debounce
+    this.searchFilter.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.applyGroupFilters();
+      });
+  }
+
+// ✅ AGREGAR: Actualizar opciones de carrera basado en modalidad
+  private updateCareerOptions(modalityUuid?: string): void {
+    console.log('🔄 Actualizando carreras para modalidad:', modalityUuid);
+
+    if (!modalityUuid) {
+      // Si no hay modalidad seleccionada, mostrar todas las carreras
+      this.careersOptions = [...this.originalCareersOptions];
+      this.cyclesOptions = [];
+      console.log('  ✅ Mostrando todas las carreras:', this.careersOptions.length);
+      return;
+    }
+
+    // ✅ FILTRAR desde la lista ORIGINAL
+    this.careersOptions = this.originalCareersOptions.filter(career => {
+      const belongsToModality = career.modality.uuid === modalityUuid;
+      if (belongsToModality) {
+        console.log(`  ✅ Carrera incluida: ${career.name}`);
+      }
+      return belongsToModality;
+    });
+
+    this.cyclesOptions = [];
+    console.log(`  📋 Total carreras filtradas: ${this.careersOptions.length}`);
+  }
+
+  private updateCycleOptions(careerUuid?: string): void {
+    console.log('🔄 Actualizando ciclos para carrera:', careerUuid);
+
+    this.cyclesOptions = [];
+
+    if (!careerUuid) {
+      console.log('  ⚠️ No hay carrera seleccionada');
+      return;
+    }
+
+    const selectedCareer = this.careersOptions.find(c => c.uuid === careerUuid);
+    if (selectedCareer) {
+      this.cyclesOptions = selectedCareer.cycles
+        .map(cycle => cycle.number)
+        .sort((a, b) => a - b);
+      console.log(`  ✅ Ciclos encontrados: [${this.cyclesOptions.join(', ')}]`);
+    } else {
+      console.log('  ❌ Carrera no encontrada en opciones filtradas');
+    }
+  }
+
+  private applyGroupFilters(): void {
+    console.log('🔍 Aplicando filtros de grupos...');
+    console.log('  📊 Filtros activos:');
+    console.log('    - Modalidad:', this.modalityFilter.value || 'ninguna');
+    console.log('    - Carrera:', this.careerFilter.value || 'ninguna');
+    console.log('    - Ciclo:', this.cycleFilter.value || 'ninguno');
+    console.log('    - Búsqueda:', this.searchFilter.value || 'ninguna');
+
+    // ✅ PARTIR SIEMPRE DE LA LISTA ORIGINAL
+    let filtered = [...this.originalStudentGroups];
+    console.log(`  📋 Grupos iniciales: ${filtered.length}`);
+
+    // Filtro por modalidad
+    if (this.modalityFilter.value) {
+      const modalityUuid = this.modalityFilter.value;
+      const previousCount = filtered.length;
+
+      filtered = filtered.filter(group => {
+        // ✅ BUSCAR LA CARRERA EN LA LISTA ORIGINAL
+        const career = this.originalCareersOptions.find(c => c.uuid === group.careerUuid);
+        const belongsToModality = career && career.modality.uuid === modalityUuid;
+
+        if (belongsToModality) {
+          console.log(`    ✅ Grupo incluido: ${group.name} (${career.name})`);
+        }
+
+        return belongsToModality;
+      });
+
+      console.log(`  🏫 Filtro modalidad: ${previousCount} → ${filtered.length}`);
+    }
+
+    // Filtro por carrera
+    if (this.careerFilter.value) {
+      const previousCount = filtered.length;
+      filtered = filtered.filter(group => {
+        const belongsToCareer = group.careerUuid === this.careerFilter.value;
+        if (belongsToCareer) {
+          console.log(`    ✅ Grupo incluido: ${group.name}`);
+        }
+        return belongsToCareer;
+      });
+      console.log(`  🎓 Filtro carrera: ${previousCount} → ${filtered.length}`);
+    }
+
+    // Filtro por ciclo
+    if (this.cycleFilter.value) {
+      const previousCount = filtered.length;
+      filtered = filtered.filter(group => {
+        const belongsToCycle = group.cycleNumber === this.cycleFilter.value;
+        if (belongsToCycle) {
+          console.log(`    ✅ Grupo incluido: ${group.name} (Ciclo ${group.cycleNumber})`);
+        }
+        return belongsToCycle;
+      });
+      console.log(`  📚 Filtro ciclo: ${previousCount} → ${filtered.length}`);
+    }
+
+    // Filtro por búsqueda de texto
+    if (this.searchFilter.value) {
+      const searchTerm = this.searchFilter.value.toLowerCase();
+      const previousCount = filtered.length;
+
+      filtered = filtered.filter(group => {
+        const nameMatch = group.name.toLowerCase().includes(searchTerm);
+        const careerMatch = group.careerName.toLowerCase().includes(searchTerm);
+        const matches = nameMatch || careerMatch;
+
+        if (matches) {
+          console.log(`    ✅ Grupo incluido: ${group.name} (búsqueda: "${searchTerm}")`);
+        }
+
+        return matches;
+      });
+
+      console.log(`  🔍 Filtro búsqueda: ${previousCount} → ${filtered.length}`);
+    }
+
+    this.filteredGroups = filtered;
+    console.log(`  ✅ Resultado final: ${this.filteredGroups.length} grupos`);
+  }
+
+// ✅ AGREGAR: Toggle de filtros
+  toggleFilters(): void {
+    this.filtersExpanded = !this.filtersExpanded;
+  }
+
+// ✅ AGREGAR: Limpiar filtros
+  clearAllFilters(): void {
+    console.log('🧹 Limpiando todos los filtros...');
+
+    this.modalityFilter.setValue('');
+    this.careerFilter.setValue('');
+    this.cycleFilter.setValue('');
+    this.searchFilter.setValue('');
+
+    // ✅ RESTAURAR LISTAS COMPLETAS
+    this.careersOptions = [...this.originalCareersOptions];
+    this.cyclesOptions = [];
+
+    console.log('  ✅ Filtros limpiados y listas restauradas');
+  }
+
+// ✅ AGREGAR: Obtener conteo de filtros activos
+  getActiveFiltersCount(): number {
+    let count = 0;
+    if (this.modalityFilter.value) count++;
+    if (this.careerFilter.value) count++;
+    if (this.cycleFilter.value) count++;
+    if (this.searchFilter.value) count++;
+    return count;
   }
 
 
@@ -851,4 +1108,5 @@ export class ConfirmDialogComponent {
     };
     return classes[this.data.type] || 'bg-slate-100';
   }
+
 }

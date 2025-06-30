@@ -172,22 +172,29 @@ interface SidebarItem {
               </div>
 
               <!-- Center Section - Period Selector -->
+              <!-- Center Section - Period Selector - VERSIÓN CORREGIDA -->
               <div class="hidden md:flex items-center gap-4" *ngIf="periods.length > 0 && !isTeacher">
-                <div class="flex items-center gap-2 px-4 py-2 bg-slate-100/80 rounded-lg">
-                  <mat-icon class="text-blue-600 text-lg">event</mat-icon>
-                  <span class="text-sm font-medium text-slate-700">Periodo:</span>
+                <div class="flex items-center gap-2 px-3 py-2 bg-slate-100/80 rounded-lg min-w-0">
+                  <mat-icon class="text-blue-600 text-lg flex-shrink-0">event</mat-icon>
+                  <span class="text-sm font-medium text-slate-700 flex-shrink-0">Periodo:</span>
                   <mat-select
                     [value]="currentPeriod?.uuid"
                     (selectionChange)="onPeriodChange($event.value)"
-                    class="border-0 bg-transparent text-sm font-semibold text-slate-800 min-w-0">
+                    class="border-0 bg-transparent text-sm font-semibold text-slate-800 min-w-[180px] max-w-[250px]"
+                    panelClass="period-select-panel">
                     <mat-select-trigger>
-                      <span class="truncate">{{ currentPeriod?.name || 'Seleccionar' }}</span>
+                      <span class="truncate max-w-[150px] inline-block">{{ currentPeriod?.name || 'Seleccionar' }}</span>
                     </mat-select-trigger>
                     <mat-option *ngFor="let period of periods" [value]="period.uuid">
-                      {{ period.name }}
+                      <div class="flex flex-col">
+                        <span class="font-medium">{{ period.name }}</span>
+                        <span class="text-xs text-slate-500">
+                                {{ period.startDate | date:'d MMM y' }} - {{ period.endDate | date:'d MMM y' }}
+                         </span>
+                      </div>
                     </mat-option>
                     <mat-divider></mat-divider>
-                    <mat-option [value]="'manage'" class="text-blue-600">
+                    <mat-option [value]="'manage'" class="text-blue-600 manage-periods-option">
                       <div class="flex items-center gap-2">
                         <mat-icon class="text-lg">settings</mat-icon>
                         <span>Gestionar periodos</span>
@@ -316,10 +323,10 @@ interface SidebarItem {
           <main class="flex-1 overflow-auto">
             <!-- Period Alert -->
             <div
-              *ngIf="currentPeriod && !isTeacher"
-              class="mx-6 mt-4 p-4 bg-blue-50/80 border border-blue-200/50 rounded-xl backdrop-blur-sm">
+              *ngIf="currentPeriod && !isTeacher && showPeriodAlert"
+              class="mx-6 mt-4 p-4 bg-blue-50/80 border border-blue-200/50 rounded-xl backdrop-blur-sm transition-all duration-300 ease-in-out">
               <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                   <mat-icon class="text-blue-600 text-lg">info</mat-icon>
                 </div>
                 <div class="flex-1">
@@ -330,7 +337,11 @@ interface SidebarItem {
                     {{ currentPeriod.startDate | date:'d MMM y' }} - {{ currentPeriod.endDate | date:'d MMM y' }}
                   </p>
                 </div>
-                <button mat-icon-button class="text-blue-400 hover:text-blue-600">
+                <button
+                  mat-icon-button
+                  class="text-blue-400 hover:text-blue-600 hover:bg-blue-100/50 rounded-lg transition-all duration-200 flex-shrink-0"
+                  (click)="closePeriodAlert()"
+                  [matTooltip]="'Cerrar alerta'">
                   <mat-icon class="text-lg">close</mat-icon>
                 </button>
               </div>
@@ -435,7 +446,7 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
   private periodService = inject(PeriodService);
   private router = inject(Router);
   private snackBar = inject(MatSnackBar);
-
+  showPeriodAlert = true;
   // User state
   currentUser: UserInfo | null = null;
   userDisplayName = 'Usuario';
@@ -592,6 +603,11 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
 
     // Inicializar notificaciones
     this.initializeNotifications();
+  }
+
+  closePeriodAlert(): void {
+    this.showPeriodAlert = false;
+    this.showNotification('Alerta de periodo cerrada', 'info');
   }
 
   private initializeUserInfo(): void {

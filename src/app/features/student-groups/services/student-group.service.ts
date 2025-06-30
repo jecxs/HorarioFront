@@ -48,6 +48,14 @@ export interface Career {
   cycles: Cycle[];
 }
 
+// ✅ AGREGAR: Interface para filtros
+export interface GroupFilters {
+  modalityUuid?: string;
+  careerUuid?: string;
+  cycleNumber?: number;
+  searchText?: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -86,5 +94,8 @@ export class StudentGroupService extends BaseApiService {
   // ✅ Sin filtro de periodo - las modalidades son globales
   getAllModalities(): Observable<any> {
     return this.get<any[]>('/protected/educational-modalities');
+  }
+  getCyclesByCareer(careerUuid: string): Observable<any> {
+    return this.get<Cycle[]>(`/protected/career/${careerUuid}/cycles`);
   }
 }

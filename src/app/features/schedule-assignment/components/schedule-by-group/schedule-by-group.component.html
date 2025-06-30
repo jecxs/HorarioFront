@@ -37,30 +37,298 @@
             </div>
           </div>
 
-          <!-- Compact Group Selector -->
-          <div class="w-64">
-            <mat-form-field appearance="outline" class="compact-select w-full">
-              <mat-label>Grupo</mat-label>
-              <mat-select [formControl]="groupControl">
-                <mat-option *ngFor="let group of studentGroups" [value]="group.uuid">
-                  <div class="flex items-center justify-between w-full">
-                    <span class="font-medium">{{ group.name }}</span>
-                    <span class="text-xs text-slate-500">Ciclo {{ group.cycleNumber }}</span>
-                  </div>
-                </mat-option>
-              </mat-select>
-            </mat-form-field>
-          </div>
+          <!-- ✅ NUEVO: Selector de Grupo Compacto con Overlay -->
+          <div class="relative">
+            <div class="flex items-center space-x-3">
+              <!-- Selector Principal -->
+              <div class="w-80">
+                <mat-form-field appearance="outline" class="compact-select w-full">
+                  <mat-label>
+                    <div class="flex items-center space-x-2">
+                      <mat-icon class="text-sm">groups</mat-icon>
+                      <span>Seleccionar Grupo</span>
+                      <span *ngIf="getActiveFiltersCount() > 0"
+                            class="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full ml-1">
+                        {{ getActiveFiltersCount() }}
+                      </span>
+                    </div>
+                  </mat-label>
+                  <mat-select [formControl]="groupControl" placeholder="Buscar grupo...">
+                    <mat-option *ngFor="let group of filteredGroups" [value]="group.uuid">
+                      <div class="flex items-center justify-between w-full py-1">
+                        <div class="flex flex-col">
+                          <span class="font-medium text-sm">{{ group.name }}</span>
+                          <span class="text-xs text-slate-500">
+                            {{ group.careerName }} • Ciclo {{ group.cycleNumber }}
+                          </span>
+                        </div>
+                      </div>
+                    </mat-option>
+                  </mat-select>
+                </mat-form-field>
+              </div>
 
+              <!-- Botón de Filtros Elegante -->
+              <button
+                mat-button
+                (click)="toggleFilters()"
+                class="h-12 px-4 rounded-lg border-2 transition-all duration-200 flex items-center space-x-2 relative"
+                [class.border-blue-500]="filtersExpanded"
+                [class.bg-blue-50]="filtersExpanded"
+                [class.text-blue-700]="filtersExpanded"
+                [class.border-slate-300]="!filtersExpanded"
+                [class.hover:border-slate-400]="!filtersExpanded"
+                [class.hover:bg-slate-50]="!filtersExpanded"
+                matTooltip="Filtros avanzados"
+                matTooltipPosition="below">
+
+                <mat-icon
+                  class="transition-transform duration-200"
+                  [class.rotate-180]="filtersExpanded">
+                  tune
+                </mat-icon>
+                <span class="font-medium text-sm">Filtros</span>
+
+                <!-- Badge de filtros activos -->
+                <div *ngIf="getActiveFiltersCount() > 0 && !filtersExpanded"
+                     class="absolute -top-2 -right-2 w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                  {{ getActiveFiltersCount() }}
+                </div>
+              </button>
+            </div>
+
+            <!-- ✅ NUEVO: Panel de Filtros Flotante Elegante -->
+            <!-- ✅ OPTIMIZADO: Panel de Filtros Flotante Compacto -->
+            <div *ngIf="filtersExpanded"
+                 class="absolute top-full right-0 mt-2 w-[500px] bg-white rounded-xl shadow-2xl border border-slate-200 z-50
+            animate-in slide-in-from-top-3 duration-300 max-h-[80vh] overflow-y-auto"
+                 (clickOutside)="closeFilters()">
+
+              <!-- Header del Panel - Más Compacto -->
+              <div class="sticky top-0 bg-white border-b border-slate-100 p-4 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                      <mat-icon class="text-white text-sm">filter_alt</mat-icon>
+                    </div>
+                    <div>
+                      <h3 class="font-semibold text-slate-900">Filtros Avanzados</h3>
+                      <p class="text-xs text-slate-500">{{ filteredGroups.length }} resultado(s)</p>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center space-x-2">
+                    <!-- Limpiar filtros -->
+                    <button
+                      mat-button
+                      (click)="clearAllFilters()"
+                      [disabled]="getActiveFiltersCount() === 0"
+                      class="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded-lg transition-colors
+                 disabled:text-slate-400 disabled:hover:bg-transparent">
+                      <mat-icon class="mr-1 text-sm">clear_all</mat-icon>
+                      Limpiar
+                    </button>
+
+                    <!-- Cerrar -->
+                    <button
+                      mat-icon-button
+                      (click)="closeFilters()"
+                      class="w-7 h-7 hover:bg-slate-100 rounded-lg transition-colors">
+                      <mat-icon class="text-slate-400 text-sm">close</mat-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contenido del Panel - Más Compacto -->
+              <div class="p-4 space-y-4">
+
+                <!-- Grid de Filtros - Ahora en 1 columna para mayor compacidad -->
+                <div class="space-y-3">
+
+                  <!-- Filtro por Modalidad -->
+                  <div class="space-y-1">
+                    <label class="flex items-center space-x-2 text-xs font-medium text-slate-700">
+                      <mat-icon class="text-blue-600 text-sm">school</mat-icon>
+                      <span>Modalidad Educativa</span>
+                    </label>
+                    <mat-form-field appearance="outline" class="w-full compact-field">
+                      <mat-select [formControl]="modalityFilter" placeholder="Seleccionar modalidad">
+                        <mat-option value="">
+                          <div class="flex items-center space-x-2 py-1">
+                            <mat-icon class="text-slate-400 text-sm">all_inclusive</mat-icon>
+                            <span class="text-sm">Todas las modalidades</span>
+                          </div>
+                        </mat-option>
+                        <mat-option *ngFor="let modality of modalitiesOptions" [value]="modality.uuid">
+                          <div class="flex items-center space-x-2 py-1">
+                            <mat-icon class="text-blue-600 text-sm">{{ modality.durationYears <= 3 ? 'business' : 'account_balance' }}</mat-icon>
+                            <div class="flex flex-col">
+                              <span class="font-medium text-sm">{{ modality.name }}</span>
+                              <span class="text-xs text-slate-500">{{ modality.durationYears }} años</span>
+                            </div>
+                          </div>
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Filtro por Carrera -->
+                  <div class="space-y-1">
+                    <label class="flex items-center space-x-2 text-xs font-medium text-slate-700">
+                      <mat-icon class="text-green-600 text-sm">work</mat-icon>
+                      <span>Carrera Profesional</span>
+                    </label>
+                    <mat-form-field appearance="outline" class="w-full compact-field">
+                      <mat-select [formControl]="careerFilter"
+                                  [disabled]="!modalityFilter.value"
+                                  placeholder="Seleccionar carrera">
+                        <mat-option value="">
+                          <div class="flex items-center space-x-2 py-1">
+                            <mat-icon class="text-slate-400 text-sm">all_inclusive</mat-icon>
+                            <span class="text-sm">Todas las carreras</span>
+                          </div>
+                        </mat-option>
+                        <mat-option *ngFor="let career of careersOptions" [value]="career.uuid">
+                          <div class="flex items-center space-x-2 py-1">
+                            <mat-icon class="text-green-600 text-sm">badge</mat-icon>
+                            <div class="flex flex-col">
+                              <span class="font-medium text-sm">{{ career.name }}</span>
+                              <span class="text-xs text-slate-500">{{ career.cycles?.length || 0 }} ciclos</span>
+                            </div>
+                          </div>
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Filtro por Ciclo -->
+                  <div class="space-y-1">
+                    <label class="flex items-center space-x-2 text-xs font-medium text-slate-700">
+                      <mat-icon class="text-purple-600 text-sm">layers</mat-icon>
+                      <span>Ciclo Académico</span>
+                    </label>
+                    <mat-form-field appearance="outline" class="w-full compact-field">
+                      <mat-select [formControl]="cycleFilter"
+                                  [disabled]="!careerFilter.value"
+                                  placeholder="Seleccionar ciclo">
+                        <mat-option value="">
+                          <div class="flex items-center space-x-2 py-1">
+                            <mat-icon class="text-slate-400 text-sm">all_inclusive</mat-icon>
+                            <span class="text-sm">Todos los ciclos</span>
+                          </div>
+                        </mat-option>
+                        <mat-option *ngFor="let cycle of cyclesOptions" [value]="cycle">
+                          <div class="flex items-center space-x-2 py-1">
+                            <div class="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center">
+                              <span class="text-xs font-bold text-purple-600">{{ cycle }}</span>
+                            </div>
+                            <span class="font-medium text-sm">Ciclo {{ cycle }}</span>
+                          </div>
+                        </mat-option>
+                      </mat-select>
+                    </mat-form-field>
+                  </div>
+
+                  <!-- Búsqueda por Texto -->
+                  <div class="space-y-1">
+                    <label class="flex items-center space-x-2 text-xs font-medium text-slate-700">
+                      <mat-icon class="text-orange-600 text-sm">search</mat-icon>
+                      <span>Búsqueda por Texto</span>
+                    </label>
+                    <mat-form-field appearance="outline" class="w-full compact-field">
+                      <input matInput
+                             [formControl]="searchFilter"
+                             placeholder="Nombre del grupo...">
+                      <mat-icon matSuffix class="text-slate-400 text-sm">search</mat-icon>
+                    </mat-form-field>
+                  </div>
+                </div>
+
+                <!-- Estado de Filtros Activos - Más Compacto -->
+                <div *ngIf="getActiveFiltersCount() > 0"
+                     class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div class="flex items-start space-x-2">
+                    <mat-icon class="text-blue-600 text-sm mt-0.5">info</mat-icon>
+                    <div class="flex-1">
+                      <h4 class="font-medium text-blue-900 text-xs">Filtros Aplicados</h4>
+                      <div class="mt-1 flex flex-wrap gap-1">
+            <span *ngIf="modalityFilter.value"
+                  class="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">
+              <mat-icon class="mr-1 text-xs">school</mat-icon>
+              {{ getModalityName(modalityFilter.value) }}
+              <button (click)="modalityFilter.setValue('')"
+                      class="ml-1 hover:bg-blue-200 rounded-full p-0.5">
+                <mat-icon class="text-xs">close</mat-icon>
+              </button>
+            </span>
+
+                        <span *ngIf="careerFilter.value"
+                              class="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+              <mat-icon class="mr-1 text-xs">work</mat-icon>
+                          {{ getCareerName(careerFilter.value) }}
+                          <button (click)="careerFilter.setValue('')"
+                                  class="ml-1 hover:bg-green-200 rounded-full p-0.5">
+                <mat-icon class="text-xs">close</mat-icon>
+              </button>
+            </span>
+
+                        <span *ngIf="cycleFilter.value"
+                              class="inline-flex items-center px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
+              <mat-icon class="mr-1 text-xs">layers</mat-icon>
+              Ciclo {{ cycleFilter.value }}
+                          <button (click)="cycleFilter.setValue('')"
+                                  class="ml-1 hover:bg-purple-200 rounded-full p-0.5">
+                <mat-icon class="text-xs">close</mat-icon>
+              </button>
+            </span>
+
+                        <span *ngIf="searchFilter.value"
+                              class="inline-flex items-center px-2 py-0.5 bg-orange-100 text-orange-800 text-xs rounded-full">
+              <mat-icon class="mr-1 text-xs">search</mat-icon>
+              "{{ searchFilter.value }}"
+              <button (click)="searchFilter.setValue('')"
+                      class="ml-1 hover:bg-orange-200 rounded-full p-0.5">
+                <mat-icon class="text-xs">close</mat-icon>
+              </button>
+            </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Estadísticas Compactas -->
+                <div class="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                      <mat-icon class="text-slate-600 text-sm">analytics</mat-icon>
+                      <span class="font-medium text-slate-700 text-sm">Resultados</span>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-lg font-bold text-slate-900">{{ filteredGroups.length }}</div>
+                      <div class="text-xs text-slate-500">de {{ studentGroups.length }} grupos</div>
+                    </div>
+                  </div>
+
+                  <!-- Barra de progreso más pequeña -->
+                  <div class="mt-2 bg-slate-200 rounded-full h-1.5 overflow-hidden">
+                    <div class="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full transition-all duration-500"
+                         [style.width.%]="(filteredGroups.length / Math.max(studentGroups.length, 1)) * 100">
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <!-- Compact Action Button -->
           <button
             mat-raised-button
             color="primary"
             [disabled]="!selectedGroup"
             (click)="openAssignmentDialog()"
-            class="h-10 px-4 rounded-lg">
+            class="h-12 px-6 rounded-lg shadow-md hover:shadow-lg transition-all duration-200">
             <mat-icon class="mr-2 text-sm">add</mat-icon>
-            <span class="text-sm">Nueva Clase</span>
+            <span class="text-sm font-medium">Nueva Clase</span>
           </button>
         </div>
       </div>
@@ -334,4 +602,9 @@
     </div>
 
   </div>
+</div>
+<!-- ✅ NUEVO: Overlay para cerrar filtros al hacer click fuera -->
+<div *ngIf="filtersExpanded"
+     class="fixed inset-0 bg-black/10 z-40"
+     (click)="closeFilters()">
 </div>

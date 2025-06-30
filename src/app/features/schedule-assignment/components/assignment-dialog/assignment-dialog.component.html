@@ -1,607 +1,610 @@
-<!-- assignment-dialog.component.html -->
-<h2 mat-dialog-title>
-  {{ data.mode === 'create' ? 'Nueva Asignación de Clase' : 'Editar Asignación' }}
-</h2>
+<!-- assignment-dialog.component.html - Versión mejorada con Tailwind -->
+<div class="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-auto" style="min-width: min(700px, 90vw);">
+  <!-- Header mejorado -->
+  <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-lg">
+    <h2 class="text-xl font-semibold text-gray-900 flex items-center gap-3">
+      <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+        <mat-icon class="text-white text-lg">schedule</mat-icon>
+      </div>
+      {{ data.mode === 'create' ? 'Nueva Asignación de Clase' : 'Editar Asignación' }}
+    </h2>
+  </div>
 
-<mat-dialog-content class="dialog-content">
-  <form [formGroup]="assignmentForm">
+  <!-- Context info con diseño más limpio -->
+  <div class="px-6 py-4 bg-gray-50 border-b border-gray-100">
+    <div class="flex flex-wrap gap-3">
+      <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200" *ngIf="data.studentGroup">
+        <div class="w-5 h-5 bg-blue-100 rounded-full flex items-center justify-center">
+          <mat-icon class="text-blue-600 text-sm">groups</mat-icon>
+        </div>
+        <span class="text-sm font-medium text-gray-700">{{ data.studentGroup.name }}</span>
+      </div>
 
-    <!-- Información del contexto -->
-    <div class="context-info">
-      <mat-chip-set>
-        <mat-chip *ngIf="data.studentGroup">
-          <mat-icon>groups</mat-icon>
-          Grupo: {{ data.studentGroup.name }}
-        </mat-chip>
-        <mat-chip *ngIf="data.dayOfWeek">
-          <mat-icon>today</mat-icon>
-          {{ getDayName(data.dayOfWeek) }}
-        </mat-chip>
-        <mat-chip *ngIf="data.teachingHours && data.teachingHours.length > 0">
-          <mat-icon>schedule</mat-icon>
-          {{ formatTimeRange(data.teachingHours) }}
-        </mat-chip>
-      </mat-chip-set>
+      <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200" *ngIf="data.dayOfWeek">
+        <div class="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
+          <mat-icon class="text-green-600 text-sm">today</mat-icon>
+        </div>
+        <span class="text-sm font-medium text-gray-700">{{ getDayName(data.dayOfWeek) }}</span>
+      </div>
+
+      <div class="flex items-center gap-2 bg-white px-3 py-2 rounded-lg shadow-sm border border-gray-200" *ngIf="data.teachingHours && data.teachingHours.length > 0">
+        <div class="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center">
+          <mat-icon class="text-purple-600 text-sm">schedule</mat-icon>
+        </div>
+        <span class="text-sm font-medium text-gray-700">{{ formatTimeRange(data.teachingHours) }}</span>
+      </div>
     </div>
+  </div>
 
-    <!-- Step 1: Selección de Curso -->
-    <mat-expansion-panel [expanded]="currentStep === 1" (opened)="currentStep = 1">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <span class="step-number">1</span>
-          Seleccionar Curso
-        </mat-panel-title>
-        <mat-panel-description *ngIf="selectionState.course">
-          {{ selectionState.course?.name }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
+  <div class="max-h-[70vh] overflow-y-auto">
+    <form [formGroup]="assignmentForm" class="space-y-6 p-6">
 
-      <div class="step-content">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Curso</mat-label>
-          <mat-select formControlName="courseUuid" (selectionChange)="onCourseSelected($event.value)">
-            <mat-option>
-              <ngx-mat-select-search
-                [formControl]="courseFilterCtrl"
-                placeholderLabel="Buscar curso..."
-                noEntriesFoundLabel="No se encontraron cursos">
-              </ngx-mat-select-search>
-            </mat-option>
-            <mat-option *ngFor="let course of filteredCourses$ | async" [value]="course.uuid">
-              <div class="option-content">
-                <span class="option-main">{{ course.name }}</span>
-                <span class="option-secondary">{{ course.code }} - Ciclo {{ course.cycle.number }}</span>
+      <!-- Step 1: Selección de Curso -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md">
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 cursor-pointer"
+             (click)="currentStep = 1">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                1
               </div>
-            </mat-option>
-          </mat-select>
-          <mat-hint *ngIf="loadingCourses">Cargando cursos...</mat-hint>
-        </mat-form-field>
+              <h3 class="text-lg font-medium text-gray-900">Seleccionar Curso</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600" *ngIf="selectionState.course">{{ selectionState.course?.name }}</span>
+              <mat-icon class="text-gray-400 transition-transform duration-200"
+                        [class.rotate-180]="currentStep === 1">expand_more</mat-icon>
+            </div>
+          </div>
+        </div>
 
-        <!-- IntelliSense para curso -->
-        <div class="intellisense-panel" *ngIf="selectionState.course">
-          <div class="course-details">
-            <div class="detail-item">
-              <mat-icon>access_time</mat-icon>
-              <span>{{ selectionState.course?.weeklyTheoryHours }}h teoría,
-                {{ selectionState.course?.weeklyPracticeHours }}h práctica</span>
-            </div>
-            <div class="detail-item">
-              <mat-icon>psychology</mat-icon>
-              <span>Área: {{ selectionState.course?.teachingKnowledgeArea?.name }}</span>
-            </div>
-            <div class="detail-item" *ngIf="selectionState.course?.preferredSpecialty">
-              <mat-icon>science</mat-icon>
-              <span>Laboratorio preferido: {{ selectionState.course?.preferredSpecialty?.name }}</span>
+        <div class="px-6 py-4 space-y-4" *ngIf="currentStep === 1">
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Curso</label>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-select formControlName="courseUuid" (selectionChange)="onCourseSelected($event.value)"
+                          class="!min-h-[48px]">
+                <mat-option>
+                  <ngx-mat-select-search
+                    [formControl]="courseFilterCtrl"
+                    placeholderLabel="Buscar curso..."
+                    noEntriesFoundLabel="No se encontraron cursos">
+                  </ngx-mat-select-search>
+                </mat-option>
+                <mat-option *ngFor="let course of filteredCourses$ | async" [value]="course.uuid">
+                  <div class="py-2">
+                    <div class="font-medium text-gray-900">{{ course.name }}</div>
+                    <div class="text-sm text-gray-500">{{ course.code }} - Ciclo {{ course.cycle.number }}</div>
+                  </div>
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <!-- Course details card -->
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3" *ngIf="selectionState.course">
+            <h4 class="text-sm font-semibold text-blue-900 flex items-center gap-2">
+              <mat-icon class="text-blue-600 text-lg">info</mat-icon>
+              Detalles del Curso
+            </h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-blue-600 text-base">access_time</mat-icon>
+                <span class="text-gray-700">{{ selectionState.course?.weeklyTheoryHours }}h teoría, {{ selectionState.course?.weeklyPracticeHours }}h práctica</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <mat-icon class="text-blue-600 text-base">psychology</mat-icon>
+                <span class="text-gray-700">{{ selectionState.course?.teachingKnowledgeArea?.name }}</span>
+              </div>
+              <div class="flex items-center gap-2" *ngIf="selectionState.course?.preferredSpecialty">
+                <mat-icon class="text-blue-600 text-base">science</mat-icon>
+                <span class="text-gray-700">Lab: {{ selectionState.course?.preferredSpecialty?.name }}</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </mat-expansion-panel>
 
-    <!-- ✅ Step 2: Selección de Tipo de Sesión -->
-    <mat-expansion-panel [expanded]="currentStep === 2"
-                         [disabled]="!selectionState.course"
-                         (opened)="currentStep = 2">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <span class="step-number">2</span>
-          Tipo de Sesión
-        </mat-panel-title>
-        <mat-panel-description *ngIf="selectionState.selectedSessionType">
-          {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
+      <!-- Step 2: Tipo de Sesión -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md"
+           [class.opacity-50]="!selectionState.course">
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 cursor-pointer"
+             (click)="selectionState.course && (currentStep = 2)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                2
+              </div>
+              <h3 class="text-lg font-medium text-gray-900">Tipo de Sesión</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600" *ngIf="selectionState.selectedSessionType">
+                {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
+              </span>
+              <mat-icon class="text-gray-400 transition-transform duration-200"
+                        [class.rotate-180]="currentStep === 2">expand_more</mat-icon>
+            </div>
+          </div>
+        </div>
 
-      <div class="step-content">
-        <div class="session-type-selection">
-          <h4 class="selection-title">
-            <mat-icon>school</mat-icon>
-            ¿Qué tipo de sesión desea asignar?
-          </h4>
-          <p class="selection-subtitle">
-            Seleccione el tipo de clase según el contenido a impartir
-          </p>
+        <div class="px-6 py-4 space-y-4" *ngIf="currentStep === 2 && selectionState.course">
+          <div class="space-y-4">
+            <div class="text-center">
+              <h4 class="text-base font-medium text-gray-900 mb-2">¿Qué tipo de sesión desea asignar?</h4>
+              <p class="text-sm text-gray-600">Seleccione el tipo de clase según el contenido a impartir</p>
+            </div>
 
-          <mat-radio-group
-            formControlName="sessionType"
-            (change)="onSessionTypeSelected($event.value)"
-            class="session-type-options">
+            <mat-radio-group formControlName="sessionType"
+                             (change)="onSessionTypeSelected($event.value)"
+                             class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            <div *ngFor="let option of sessionTypeOptions"
-                 class="session-type-option-container"
-                 [class.disabled]="!option.isAvailable">
+              <label *ngFor="let option of sessionTypeOptions"
+                     class="relative border-2 rounded-lg p-4 transition-all duration-200 cursor-pointer hover:shadow-md block"
+                     [class.border-blue-500]="assignmentForm.get('sessionType')?.value === option.value"
+                     [class.border-gray-200]="assignmentForm.get('sessionType')?.value !== option.value"
+                     [class.bg-blue-50]="assignmentForm.get('sessionType')?.value === option.value"
+                     [class.opacity-50]="!option.isAvailable">
 
-              <mat-radio-button
-                [value]="option.value"
-                [disabled]="!option.isAvailable"
-                class="session-type-radio">
+                <mat-radio-button [value]="option.value"
+                                  [disabled]="!option.isAvailable"
+                                  class="absolute top-2 right-2">
+                </mat-radio-button>
 
-                <div class="option-card">
-                  <div class="option-header">
-                    <div class="option-icon">
-                      <mat-icon [class]="option.value === 'THEORY' ? 'theory-icon' : 'practice-icon'">
-                        {{ option.icon }}
-                      </mat-icon>
+                <div class="space-y-3">
+                  <div class="flex items-start gap-3">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                         [class.bg-blue-100]="option.value === 'THEORY'"
+                         [class.bg-purple-100]="option.value === 'PRACTICE'">
+                      <mat-icon [class.text-blue-600]="option.value === 'THEORY'"
+                                [class.text-purple-600]="option.value === 'PRACTICE'"
+                                class="text-xl">{{ option.icon }}</mat-icon>
                     </div>
-                    <div class="option-info">
-                      <h5 class="option-title">{{ option.label }}</h5>
-                      <p class="option-description">{{ option.description }}</p>
+                    <div class="flex-1">
+                      <h5 class="font-medium text-gray-900">{{ option.label }}</h5>
+                      <p class="text-sm text-gray-600">{{ option.description }}</p>
                     </div>
                   </div>
 
-                  <div class="option-stats">
-                    <div class="stat-item">
-                      <span class="stat-label">Horas semanales:</span>
-                      <span class="stat-value">{{ option.weeklyHours }}h</span>
+                  <div class="grid grid-cols-2 gap-3 text-xs">
+                    <div class="bg-gray-50 rounded-lg p-2 text-center">
+                      <div class="text-gray-500">Semanales</div>
+                      <div class="font-semibold text-gray-900">{{ option.weeklyHours }}h</div>
                     </div>
-                    <div class="stat-item">
-                      <span class="stat-label">Asignadas:</span>
-                      <span class="stat-value"
-                            [class.over-limit]="option.assignedHours > option.weeklyHours">
+                    <div class="bg-gray-50 rounded-lg p-2 text-center">
+                      <div class="text-gray-500">Asignadas</div>
+                      <div class="font-semibold"
+                           [class.text-red-600]="option.assignedHours > option.weeklyHours"
+                           [class.text-gray-900]="option.assignedHours <= option.weeklyHours">
                         {{ option.assignedHours }}h
-                      </span>
-                    </div>
-                  </div>
-
-                  <div class="option-recommendation" *ngIf="option.recommendation">
-                    <mat-icon class="recommendation-icon"
-                              [class]="option.isAvailable ? 'available' : 'warning'">
-                      {{ option.isAvailable ? 'check_circle' : 'warning' }}
-                    </mat-icon>
-                    <span class="recommendation-text">{{ option.recommendation }}</span>
-                  </div>
-                </div>
-              </mat-radio-button>
-            </div>
-          </mat-radio-group>
-
-          <!-- Información adicional -->
-          <div class="type-selection-info" *ngIf="sessionTypeOptions.length > 0">
-            <mat-icon>info</mat-icon>
-            <div class="info-content">
-              <p><strong>Teoría:</strong> Clases magistrales, explicaciones conceptuales, evaluaciones escritas.</p>
-              <p><strong>Práctica:</strong> Laboratorios, talleres, trabajos prácticos, demostraciones.</p>
-            </div>
-          </div>
-
-          <!-- Advertencia si no hay opciones disponibles -->
-          <div class="no-options-warning" *ngIf="sessionTypeOptions.length === 0">
-            <mat-icon>warning</mat-icon>
-            <div class="warning-content">
-              <h5>No hay tipos de sesión disponibles</h5>
-              <p>Este curso no tiene horas teóricas ni prácticas definidas. Verifique la configuración del curso.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </mat-expansion-panel>
-
-    <!-- Step 3: Selección de Docente -->
-    <!-- Step 3: Selección de Docente Mejorada -->
-    <mat-expansion-panel [expanded]="currentStep === 3"
-                         [disabled]="!selectionState.selectedSessionType"
-                         (opened)="currentStep = 3">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <span class="step-number">3</span>
-          Seleccionar Docente
-        </mat-panel-title>
-        <mat-panel-description *ngIf="selectionState.teacher">
-          {{ selectionState.teacher?.fullName }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-
-      <div class="step-content">
-        <!-- Loading State -->
-        <div *ngIf="loadingTeachers" class="loading-container">
-          <mat-spinner diameter="24"></mat-spinner>
-          <span class="ml-3 text-slate-600">Verificando disponibilidad y conflictos de docentes...</span>
-        </div>
-
-        <!-- ✅ NUEVA UI: Categorías de Docentes -->
-        <div *ngIf="!loadingTeachers" class="teacher-categories-container">
-
-          <!-- Header con estadísticas -->
-          <div class="categories-header">
-            <div class="flex items-center space-x-4 mb-4">
-              <div class="flex items-center space-x-2">
-                <mat-icon class="text-slate-600">groups</mat-icon>
-                <span class="font-medium text-slate-800">Docentes Elegibles</span>
-              </div>
-              <div class="flex items-center space-x-4 text-sm text-slate-600">
-            <span class="flex items-center">
-              <div class="w-3 h-3 rounded-full bg-green-500 mr-1"></div>
-              {{ groupedTeachers.available.length }} disponibles
-            </span>
-                <span class="flex items-center">
-              <div class="w-3 h-3 rounded-full bg-orange-500 mr-1"></div>
-                  {{ groupedTeachers.withConflicts.length }} con conflictos
-            </span>
-                <span class="flex items-center">
-              <div class="w-3 h-3 rounded-full bg-slate-400 mr-1"></div>
-                  {{ groupedTeachers.unavailable.length + groupedTeachers.noSchedule.length }} no disponibles
-            </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- ✅ CATEGORÍA 1: Docentes Disponibles -->
-          <div *ngIf="groupedTeachers.available.length > 0" class="teacher-category available-category">
-            <div class="category-header">
-              <div class="flex items-center space-x-2">
-                <mat-icon class="text-green-600">check_circle</mat-icon>
-                <h4 class="font-medium text-green-800">Disponibles ({{ groupedTeachers.available.length }})</h4>
-              </div>
-              <p class="text-sm text-green-600 mt-1">{{ getCategoryHelpText('available') }}</p>
-            </div>
-
-            <div class="teacher-cards-grid">
-              <div *ngFor="let teacher of groupedTeachers.available"
-                   class="teacher-card available-card"
-                   (click)="onTeacherSelectedWithConflictCheck(teacher.uuid)">
-
-                <div class="card-header">
-                  <div class="teacher-info">
-                    <h5 class="teacher-name">{{ teacher.fullName }}</h5>
-                    <p class="teacher-email">{{ teacher.email }}</p>
-                  </div>
-                  <div class="status-badge available-badge">
-                    <mat-icon>check_circle</mat-icon>
-                    <span>Disponible</span>
-                  </div>
-                </div>
-
-                <div class="card-content">
-                  <div class="knowledge-areas">
-                    <div class="area-tags">
-                  <span *ngFor="let area of teacher.knowledgeAreas; let last = last"
-                        class="area-tag"
-                        [class.highlight]="isMatchingKnowledgeArea(area)">
-                    {{ area.name }}{{ !last ? ',' : '' }}
-                  </span>
-                    </div>
-                  </div>
-
-                  <div *ngIf="teacher.recommendedTimeSlots" class="availability-info">
-                    <mat-icon class="text-green-600">schedule</mat-icon>
-                    <span>Horario: {{ teacher.recommendedTimeSlots }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- ✅ CATEGORÍA 2: Docentes con Conflictos -->
-          <!-- ✅ REEMPLAZAR la sección de docentes con conflictos -->
-          <div *ngIf="groupedTeachers.withConflicts.length > 0" class="teacher-category conflict-category">
-            <div class="category-header">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                  <mat-icon class="text-orange-600">warning</mat-icon>
-                  <h4 class="font-medium text-orange-800">Con Conflictos de Horario ({{ groupedTeachers.withConflicts.length }})</h4>
-                </div>
-                <button mat-icon-button
-                        (click)="toggleConflictDetails()"
-                        class="toggle-details-btn">
-                  <mat-icon [class.rotate-180]="showConflictDetails">expand_more</mat-icon>
-                </button>
-              </div>
-              <p class="text-sm text-orange-600 mt-1">{{ getCategoryHelpText('withConflicts') }}</p>
-            </div>
-
-            <div class="teacher-cards-grid">
-              <!-- ✅ CAMBIAR: Quitar (click) y agregar cursor-not-allowed -->
-              <div *ngFor="let teacher of groupedTeachers.withConflicts"
-                   class="teacher-card conflict-card disabled-card">
-
-                <div class="card-header">
-                  <div class="teacher-info">
-                    <h5 class="teacher-name">{{ teacher.fullName }}</h5>
-                    <p class="teacher-email">{{ teacher.email }}</p>
-                  </div>
-                  <div class="status-badge conflict-badge">
-                    <mat-icon>event_busy</mat-icon>
-                    <span>{{ getStatusDescription(teacher.availabilityStatus) }}</span>
-                  </div>
-                </div>
-
-                <div class="card-content">
-                  <!-- Información básica -->
-                  <div class="knowledge-areas">
-                    <div class="area-tags">
-            <span *ngFor="let area of teacher.knowledgeAreas; let last = last"
-                  class="area-tag"
-                  [class.highlight]="isMatchingKnowledgeArea(area)">
-              {{ area.name }}{{ !last ? ',' : '' }}
-            </span>
-                    </div>
-                  </div>
-
-                  <!-- ✅ INFORMACIÓN DE CONFLICTOS -->
-                  <div class="conflict-summary">
-                    <div class="conflict-overview">
-                      <mat-icon class="text-orange-600">info</mat-icon>
-                      <span class="conflict-text">{{ getConflictSummary(teacher) }}</span>
-                    </div>
-
-                    <!-- Detalles expandibles de conflictos -->
-                    <div *ngIf="showConflictDetails && teacher.conflictingClasses"
-                         class="conflict-details">
-                      <div *ngFor="let conflict of teacher.conflictingClasses"
-                           class="conflict-item">
-                        <div class="conflict-item-header">
-                          <span class="course-name">{{ conflict.courseName }}</span>
-                          <span class="group-name">{{ conflict.studentGroupName }}</span>
-                        </div>
-                        <div class="conflict-item-details">
-                          <div class="time-info">
-                            <mat-icon>schedule</mat-icon>
-                            <span>{{ conflict.startTime }} - {{ conflict.endTime }}</span>
-                          </div>
-                          <div class="space-info">
-                            <mat-icon>room</mat-icon>
-                            <span>{{ conflict.learningSpaceName }}</span>
-                          </div>
-                          <div class="type-info">
-                            <mat-icon>{{ conflict.sessionType === 'THEORY' ? 'menu_book' : 'science' }}</mat-icon>
-                            <span>{{ conflict.sessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}</span>
-                          </div>
-                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <!-- ✅ NUEVO: Botón para ver horario del grupo en conflicto -->
-                  <div class="conflict-action">
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      (click)="handleTeacherConflict(teacher)"
-                      class="w-full">
-                      <mat-icon class="mr-2">visibility</mat-icon>
-                      Ver horario en conflicto
-                    </button>
+                  <div class="flex items-center gap-2 text-xs" *ngIf="option.recommendation">
+                    <mat-icon class="text-sm"
+                              [class.text-green-500]="option.isAvailable"
+                              [class.text-orange-500]="!option.isAvailable">
+                      {{ option.isAvailable ? 'check_circle' : 'warning' }}
+                    </mat-icon>
+                    <span class="text-gray-600">{{ option.recommendation }}</span>
                   </div>
+                </div>
+              </label>
+            </mat-radio-group>
+            <!-- Info adicional -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4" *ngIf="sessionTypeOptions.length > 0">
+              <div class="flex gap-3">
+                <mat-icon class="text-blue-600 text-lg mt-0.5">info</mat-icon>
+                <div class="text-sm space-y-1">
+                  <p><span class="font-medium text-blue-900">Teoría:</span> <span class="text-gray-700">Clases magistrales, explicaciones conceptuales, evaluaciones escritas.</span></p>
+                  <p><span class="font-medium text-blue-900">Práctica:</span> <span class="text-gray-700">Laboratorios, talleres, trabajos prácticos, demostraciones.</span></p>
                 </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
 
-          <!-- ✅ CATEGORÍA 3: Docentes No Disponibles (Colapsada por defecto) -->
-          <mat-expansion-panel *ngIf="groupedTeachers.unavailable.length > 0 || groupedTeachers.noSchedule.length > 0"
-                               class="unavailable-panel">
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                <div class="flex items-center space-x-2">
-                  <mat-icon class="text-slate-500">info</mat-icon>
-                  <span class="text-slate-700">No Disponibles ({{ groupedTeachers.unavailable.length + groupedTeachers.noSchedule.length }})</span>
-                </div>
-              </mat-panel-title>
-              <mat-panel-description>
-                Docentes que no pueden ser asignados en este horario
-              </mat-panel-description>
-            </mat-expansion-panel-header>
+      <!-- Step 3: Selección de Docente -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md"
+           [class.opacity-50]="!selectionState.selectedSessionType">
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 cursor-pointer"
+             (click)="selectionState.selectedSessionType && (currentStep = 3)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-purple-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                3
+              </div>
+              <h3 class="text-lg font-medium text-gray-900">Seleccionar Docente</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600" *ngIf="selectionState.teacher">{{ selectionState.teacher?.fullName }}</span>
+              <mat-icon class="text-gray-400 transition-transform duration-200"
+                        [class.rotate-180]="currentStep === 3">expand_more</mat-icon>
+            </div>
+          </div>
+        </div>
 
-            <div class="unavailable-content">
-              <!-- Docentes fuera de horario -->
-              <div *ngIf="groupedTeachers.unavailable.length > 0" class="unavailable-group">
-                <h5 class="group-title">Fuera de Horario de Disponibilidad</h5>
-                <div class="teacher-list">
-                  <div *ngFor="let teacher of groupedTeachers.unavailable" class="teacher-item unavailable-item">
-                    <div class="teacher-basic-info">
-                      <span class="teacher-name">{{ teacher.fullName }}</span>
-                      <span class="teacher-status">{{ getStatusDescription(teacher.availabilityStatus) }}</span>
-                    </div>
-                    <div *ngIf="teacher.recommendedTimeSlots" class="recommended-times">
-                      <mat-icon class="text-slate-400">schedule</mat-icon>
-                      <span class="text-sm text-slate-600">Disponible: {{ teacher.recommendedTimeSlots }}</span>
-                    </div>
+        <div class="px-6 py-4" *ngIf="currentStep === 3 && selectionState.selectedSessionType">
+          <!-- Loading -->
+          <div *ngIf="loadingTeachers" class="flex items-center justify-center py-8">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span class="ml-3 text-gray-600">Verificando disponibilidad de docentes...</span>
+          </div>
+
+          <!-- Teachers content -->
+          <div *ngIf="!loadingTeachers" class="space-y-6">
+            <!-- Header stats -->
+            <div class="bg-gray-50 rounded-lg p-4">
+              <div class="flex items-center justify-between">
+                <h4 class="font-medium text-gray-900 flex items-center gap-2">
+                  <mat-icon class="text-gray-600">groups</mat-icon>
+                  Docentes Elegibles
+                </h4>
+                <div class="flex items-center gap-4 text-sm">
+                  <div class="flex items-center gap-1">
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="text-gray-600">{{ groupedTeachers.available.length }} disponibles</span>
+                  </div>
+                  <div class="flex items-center gap-1">
+                    <div class="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span class="text-gray-600">{{ groupedTeachers.withConflicts.length }} con conflictos</span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <!-- Docentes sin horario configurado -->
-              <div *ngIf="groupedTeachers.noSchedule.length > 0" class="unavailable-group">
-                <h5 class="group-title">Sin Horario Configurado</h5>
-                <div class="teacher-list">
-                  <div *ngFor="let teacher of groupedTeachers.noSchedule" class="teacher-item no-schedule-item">
-                    <div class="teacher-basic-info">
-                      <span class="teacher-name">{{ teacher.fullName }}</span>
-                      <span class="teacher-status">{{ getStatusDescription(teacher.availabilityStatus) }}</span>
+            <!-- Available teachers -->
+            <div *ngIf="groupedTeachers.available.length > 0" class="space-y-4">
+              <h5 class="text-sm font-semibold text-green-800 flex items-center gap-2">
+                <mat-icon class="text-green-600 text-lg">check_circle</mat-icon>
+                Disponibles ({{ groupedTeachers.available.length }})
+              </h5>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div *ngFor="let teacher of groupedTeachers.available"
+                     class="bg-green-50 border border-green-200 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md hover:bg-green-100"
+                     (click)="onTeacherSelectedWithConflictCheck(teacher.uuid)">
+
+                  <div class="flex justify-between items-start mb-3">
+                    <div>
+                      <h6 class="font-medium text-gray-900">{{ teacher.fullName }}</h6>
+                      <p class="text-sm text-gray-600">{{ teacher.email }}</p>
                     </div>
-                    <div class="no-schedule-help">
-                      <mat-icon class="text-slate-400">help_outline</mat-icon>
-                      <span class="text-sm text-slate-600">Debe configurar su horario de disponibilidad</span>
+                    <div class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      Disponible
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div class="flex flex-wrap gap-1">
+                      <span *ngFor="let area of teacher.knowledgeAreas"
+                            class="px-2 py-1 text-xs rounded-full"
+                            [class.bg-blue-100]="isMatchingKnowledgeArea(area)"
+                            [class.text-blue-800]="isMatchingKnowledgeArea(area)"
+                            [class.bg-gray-100]="!isMatchingKnowledgeArea(area)"
+                            [class.text-gray-700]="!isMatchingKnowledgeArea(area)">
+                        {{ area.name }}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center gap-2 text-sm text-green-700" *ngIf="teacher.recommendedTimeSlots">
+                      <mat-icon class="text-sm">schedule</mat-icon>
+                      <span>{{ teacher.recommendedTimeSlots }}</span>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </mat-expansion-panel>
 
-          <!-- ✅ ESTADO VACÍO: Sin docentes elegibles -->
-          <div *ngIf="eligibleTeachersDetailed.length === 0" class="empty-state">
-            <div class="empty-state-content">
-              <mat-icon class="empty-icon">school</mat-icon>
-              <h4 class="empty-title">No hay docentes elegibles</h4>
-              <p class="empty-description">
-                No se encontraron docentes con el área de conocimiento requerida para este curso.
-              </p>
+            <!-- Teachers with conflicts -->
+            <div *ngIf="groupedTeachers.withConflicts.length > 0" class="space-y-4">
+              <div class="flex items-center justify-between">
+                <h5 class="text-sm font-semibold text-orange-800 flex items-center gap-2">
+                  <mat-icon class="text-orange-600 text-lg">warning</mat-icon>
+                  Con Conflictos ({{ groupedTeachers.withConflicts.length }})
+                </h5>
+                <button class="text-sm text-orange-600 hover:text-orange-700 flex items-center gap-1"
+                        (click)="toggleConflictDetails()">
+                  <mat-icon class="text-sm transition-transform duration-200"
+                            [class.rotate-180]="showConflictDetails">expand_more</mat-icon>
+                  {{ showConflictDetails ? 'Ocultar' : 'Ver' }} detalles
+                </button>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div *ngFor="let teacher of groupedTeachers.withConflicts"
+                     class="bg-orange-50 border border-orange-200 rounded-lg p-4 opacity-75">
+
+                  <div class="flex justify-between items-start mb-3">
+                    <div>
+                      <h6 class="font-medium text-gray-900">{{ teacher.fullName }}</h6>
+                      <p class="text-sm text-gray-600">{{ teacher.email }}</p>
+                    </div>
+                    <div class="bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                      Conflicto
+                    </div>
+                  </div>
+
+                  <div class="space-y-3">
+                    <div class="flex flex-wrap gap-1">
+                      <span *ngFor="let area of teacher.knowledgeAreas"
+                            class="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-700">
+                        {{ area.name }}
+                      </span>
+                    </div>
+
+                    <div class="bg-orange-100 border border-orange-200 rounded-lg p-3" *ngIf="showConflictDetails">
+                      <p class="text-sm text-orange-800 mb-2">{{ getConflictSummary(teacher) }}</p>
+                      <button class="w-full bg-orange-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 transition-colors"
+                              (click)="handleTeacherConflict(teacher)">
+                        Ver horario en conflicto
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="eligibleTeachersDetailed.length === 0" class="text-center py-12">
+              <mat-icon class="text-6xl text-gray-300 mb-4">school</mat-icon>
+              <h4 class="text-lg font-medium text-gray-900 mb-2">No hay docentes elegibles</h4>
+              <p class="text-gray-600">No se encontraron docentes con el área de conocimiento requerida.</p>
             </div>
           </div>
         </div>
       </div>
-    </mat-expansion-panel>
 
-    <!-- Step 4: Selección de Aula -->
-    <mat-expansion-panel [expanded]="currentStep === 4"
-                         [disabled]="!selectionState.teacher"
-                         (opened)="currentStep = 4">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <span class="step-number">4</span>
-          Seleccionar Aula
-        </mat-panel-title>
-        <mat-panel-description *ngIf="selectionState.learningSpace">
-          {{ selectionState.learningSpace?.name }}
-        </mat-panel-description>
-      </mat-expansion-panel-header>
-
-      <div class="step-content">
-        <!-- ✅ Mostrar el tipo de aula que se está buscando -->
-        <div class="space-type-info" *ngIf="selectionState.selectedSessionType">
-          <mat-icon [class]="selectionState.selectedSessionType === 'THEORY' ? 'theory-icon' : 'practice-icon'">
-            {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
-          </mat-icon>
-          <span>
-            Buscando {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }}
-            disponibles para sesión {{ selectionState.selectedSessionType === 'THEORY' ? 'teórica' : 'práctica' }}
-          </span>
+      <!-- Step 4: Selección de Aula -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md"
+           [class.opacity-50]="!selectionState.teacher">
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 cursor-pointer"
+             (click)="selectionState.teacher && (currentStep = 4)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                4
+              </div>
+              <h3 class="text-lg font-medium text-gray-900">Seleccionar Aula</h3>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-gray-600" *ngIf="selectionState.learningSpace">{{ selectionState.learningSpace?.name }}</span>
+              <mat-icon class="text-gray-400 transition-transform duration-200"
+                        [class.rotate-180]="currentStep === 4">expand_more</mat-icon>
+            </div>
+          </div>
         </div>
 
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Aula/Laboratorio</mat-label>
-          <mat-select formControlName="learningSpaceUuid" (selectionChange)="onSpaceSelected($event.value)">
-            <mat-optgroup *ngFor="let group of groupedSpaces" [label]="group.label">
-              <mat-option *ngFor="let space of group.spaces" [value]="space.uuid">
-                <div class="option-content">
-                  <span class="option-main">{{ space.name }}</span>
-                  <span class="option-secondary">
-                    Capacidad: {{ space.capacity }} -
-                    {{ space.teachingType.name === 'THEORY' ? 'Teórica' : 'Práctica' }}
-                    <span *ngIf="space.specialty"> - {{ space.specialty.name }}</span>
-                  </span>
+        <div class="px-6 py-4 space-y-4" *ngIf="currentStep === 4 && selectionState.teacher">
+          <!-- Space type info -->
+          <div class="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4" *ngIf="selectionState.selectedSessionType">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg flex items-center justify-center"
+                   [class.bg-blue-100]="selectionState.selectedSessionType === 'THEORY'"
+                   [class.bg-purple-100]="selectionState.selectedSessionType === 'PRACTICE'">
+                <mat-icon [class.text-blue-600]="selectionState.selectedSessionType === 'THEORY'"
+                          [class.text-purple-600]="selectionState.selectedSessionType === 'PRACTICE'"
+                          class="text-xl">
+                  {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
+                </mat-icon>
+              </div>
+              <div>
+                <h4 class="font-medium text-gray-900">
+                  Buscando {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }}
+                </h4>
+                <p class="text-sm text-gray-600">
+                  Espacios disponibles para sesión {{ selectionState.selectedSessionType === 'THEORY' ? 'teórica' : 'práctica' }}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Learning space selection -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Aula/Laboratorio</label>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-select formControlName="learningSpaceUuid"
+                          (selectionChange)="onSpaceSelected($event.value)"
+                          class="!min-h-[48px]">
+                <mat-optgroup *ngFor="let group of groupedSpaces" [label]="group.label">
+                  <mat-option *ngFor="let space of group.spaces" [value]="space.uuid">
+                    <div class="py-2">
+                      <div class="font-medium text-gray-900 flex items-center gap-2">
+                        <mat-icon class="text-gray-600 text-lg">{{ space.teachingType.name === 'THEORY' ? 'school' : 'science' }}</mat-icon>
+                        {{ space.name }}
+                      </div>
+                      <div class="text-sm text-gray-500 flex items-center gap-4">
+                        <span>Capacidad: {{ space.capacity }}</span>
+                        <span>{{ space.teachingType.name === 'THEORY' ? 'Teórica' : 'Práctica' }}</span>
+                        <span *ngIf="space.specialty">{{ space.specialty.name }}</span>
+                      </div>
+                    </div>
+                  </mat-option>
+                </mat-optgroup>
+              </mat-select>
+              <mat-hint *ngIf="loadingSpaces" class="flex items-center gap-2">
+                <mat-spinner diameter="16"></mat-spinner>
+                Verificando disponibilidad de {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas' : 'laboratorios' }}...
+              </mat-hint>
+              <mat-hint *ngIf="!loadingSpaces && eligibleSpaces.length === 0 && selectionState.selectedSessionType"
+                        class="text-orange-600">
+                No hay {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }} disponibles en este horario
+              </mat-hint>
+            </mat-form-field>
+          </div>
+
+          <!-- Preferred specialty info -->
+          <div class="bg-purple-50 border border-purple-200 rounded-lg p-4"
+               *ngIf="selectionState.course?.preferredSpecialty && selectionState.selectedSessionType === 'PRACTICE'">
+            <div class="flex gap-3">
+              <mat-icon class="text-purple-600 text-lg mt-0.5">star</mat-icon>
+              <div>
+                <h5 class="font-medium text-purple-900">Laboratorio Preferido</h5>
+                <p class="text-sm text-purple-700 mt-1">{{ selectionState.course?.preferredSpecialty?.name }}</p>
+                <p class="text-xs text-purple-600 mt-1">Los laboratorios de esta especialidad aparecen primero en la lista</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 5: Confirmación -->
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden transition-all duration-200 hover:shadow-md"
+           [class.opacity-50]="!selectionState.learningSpace">
+        <div class="px-6 py-4 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200 cursor-pointer"
+             (click)="selectionState.learningSpace && (currentStep = 5)">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                5
+              </div>
+              <h3 class="text-lg font-medium text-gray-900">Confirmar Asignación</h3>
+            </div>
+            <mat-icon class="text-gray-400 transition-transform duration-200"
+                      [class.rotate-180]="currentStep === 5">expand_more</mat-icon>
+          </div>
+        </div>
+
+        <div class="px-6 py-4 space-y-6" *ngIf="currentStep === 5 && selectionState.learningSpace">
+          <!-- Assignment summary -->
+          <div class="bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-lg p-6">
+            <h4 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <mat-icon class="text-green-600">assignment_turned_in</mat-icon>
+              Resumen de la Asignación
+            </h4>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center gap-3 mb-2">
+                  <mat-icon class="text-blue-600">book</mat-icon>
+                  <span class="text-sm text-gray-600">Curso</span>
                 </div>
-              </mat-option>
-            </mat-optgroup>
-          </mat-select>
-          <mat-hint *ngIf="loadingSpaces">
-            <mat-spinner diameter="16"></mat-spinner>
-            Verificando disponibilidad de {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas' : 'laboratorios' }}...
-          </mat-hint>
-          <mat-hint *ngIf="!loadingSpaces && eligibleSpaces.length === 0 && selectionState.selectedSessionType">
-            No hay {{ selectionState.selectedSessionType === 'THEORY' ? 'aulas teóricas' : 'laboratorios' }} disponibles en este horario
-          </mat-hint>
-        </mat-form-field>
+                <p class="font-medium text-gray-900">{{ selectionState.course?.name }}</p>
+                <p class="text-sm text-gray-600">{{ selectionState.course?.code }}</p>
+              </div>
 
-        <!-- ✅ Información sobre especialidades preferidas -->
-        <div class="specialty-info" *ngIf="selectionState.course?.preferredSpecialty && selectionState.selectedSessionType === 'PRACTICE'">
-          <mat-icon>star</mat-icon>
-          <div class="info-content">
-            <strong>Laboratorio preferido:</strong> {{ selectionState.course?.preferredSpecialty?.name }}
-            <p>Los laboratorios de esta especialidad aparecen primero en la lista</p>
+              <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center gap-3 mb-2">
+                  <mat-icon [class.text-blue-600]="selectionState.selectedSessionType === 'THEORY'"
+                            [class.text-purple-600]="selectionState.selectedSessionType === 'PRACTICE'">
+                    {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
+                  </mat-icon>
+                  <span class="text-sm text-gray-600">Tipo de Sesión</span>
+                </div>
+                <p class="font-medium text-gray-900">
+                  {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
+                </p>
+              </div>
+
+              <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center gap-3 mb-2">
+                  <mat-icon class="text-green-600">person</mat-icon>
+                  <span class="text-sm text-gray-600">Docente</span>
+                </div>
+                <p class="font-medium text-gray-900">{{ selectionState.teacher?.fullName }}</p>
+                <p class="text-sm text-gray-600">{{ selectionState.teacher?.email }}</p>
+              </div>
+
+              <div class="bg-white rounded-lg p-4 border border-gray-200">
+                <div class="flex items-center gap-3 mb-2">
+                  <mat-icon class="text-orange-600">room</mat-icon>
+                  <span class="text-sm text-gray-600">Aula</span>
+                </div>
+                <p class="font-medium text-gray-900">{{ selectionState.learningSpace?.name }}</p>
+                <p class="text-sm text-gray-600">Capacidad: {{ selectionState.learningSpace?.capacity }}</p>
+              </div>
+
+              <div class="bg-white rounded-lg p-4 border border-gray-200 md:col-span-2">
+                <div class="flex items-center gap-3 mb-2">
+                  <mat-icon class="text-purple-600">schedule</mat-icon>
+                  <span class="text-sm text-gray-600">Horario</span>
+                </div>
+                <p class="font-medium text-gray-900">{{ formatTimeRange(data.teachingHours || []) }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Notes field -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">Notas (Opcional)</label>
+            <mat-form-field appearance="outline" class="w-full">
+              <textarea matInput
+                        formControlName="notes"
+                        rows="3"
+                        placeholder="Agregar observaciones o notas sobre esta clase..."
+                        class="resize-none">
+              </textarea>
+            </mat-form-field>
+          </div>
+
+          <!-- Validation results -->
+          <div class="space-y-4" *ngIf="validationResult">
+            <!-- Errors -->
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4" *ngIf="validationResult.errors.length > 0">
+              <h5 class="font-medium text-red-900 flex items-center gap-2 mb-3">
+                <mat-icon class="text-red-600">error</mat-icon>
+                Errores que deben corregirse
+              </h5>
+              <ul class="space-y-2">
+                <li *ngFor="let error of validationResult.errors"
+                    class="flex items-start gap-2 text-sm text-red-700">
+                  <mat-icon class="text-red-500 text-base mt-0.5">cancel</mat-icon>
+                  {{ error }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Warnings -->
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4" *ngIf="validationResult.warnings.length > 0">
+              <h5 class="font-medium text-orange-900 flex items-center gap-2 mb-3">
+                <mat-icon class="text-orange-600">warning</mat-icon>
+                Advertencias
+              </h5>
+              <ul class="space-y-2">
+                <li *ngFor="let warning of validationResult.warnings"
+                    class="flex items-start gap-2 text-sm text-orange-700">
+                  <mat-icon class="text-orange-500 text-base mt-0.5">warning</mat-icon>
+                  {{ warning }}
+                </li>
+              </ul>
+            </div>
+
+            <!-- Suggestions -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4" *ngIf="validationResult.suggestions.length > 0">
+              <h5 class="font-medium text-blue-900 flex items-center gap-2 mb-3">
+                <mat-icon class="text-blue-600">lightbulb</mat-icon>
+                Sugerencias
+              </h5>
+              <ul class="space-y-2">
+                <li *ngFor="let suggestion of validationResult.suggestions"
+                    class="flex items-start gap-2 text-sm text-blue-700">
+                  <mat-icon class="text-blue-500 text-base mt-0.5">tips_and_updates</mat-icon>
+                  {{ suggestion }}
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
-    </mat-expansion-panel>
 
-    <!-- Step 5: Confirmación y Validación -->
-    <mat-expansion-panel [expanded]="currentStep === 5"
-                         [disabled]="!selectionState.learningSpace"
-                         (opened)="currentStep = 5">
-      <mat-expansion-panel-header>
-        <mat-panel-title>
-          <span class="step-number">5</span>
-          Confirmar Asignación
-        </mat-panel-title>
-      </mat-expansion-panel-header>
+    </form>
+  </div>
 
-      <div class="step-content">
-        <!-- Resumen de la asignación -->
-        <div class="assignment-summary">
-          <h4>Resumen de la Asignación</h4>
-          <mat-list>
-            <mat-list-item>
-              <mat-icon matListItemIcon>book</mat-icon>
-              <span matListItemTitle>{{ selectionState.course?.name }}</span>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon matListItemIcon [class]="selectionState.selectedSessionType === 'THEORY' ? 'theory-icon' : 'practice-icon'">
-                {{ selectionState.selectedSessionType === 'THEORY' ? 'menu_book' : 'science' }}
-              </mat-icon>
-              <span matListItemTitle>
-                Sesión {{ selectionState.selectedSessionType === 'THEORY' ? 'Teórica' : 'Práctica' }}
-              </span>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon matListItemIcon>person</mat-icon>
-              <span matListItemTitle>{{ selectionState.teacher?.fullName }}</span>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon matListItemIcon>room</mat-icon>
-              <span matListItemTitle>{{ selectionState.learningSpace?.name }}</span>
-            </mat-list-item>
-            <mat-list-item>
-              <mat-icon matListItemIcon>schedule</mat-icon>
-              <span matListItemTitle>{{ formatTimeRange(data.teachingHours || []) }}</span>
-            </mat-list-item>
-          </mat-list>
-        </div>
-
-        <!-- Notas adicionales -->
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Notas (Opcional)</mat-label>
-          <textarea matInput
-                    formControlName="notes"
-                    rows="3"
-                    placeholder="Agregar observaciones o notas sobre esta clase...">
-          </textarea>
-        </mat-form-field>
-
-        <!-- Validación en tiempo real -->
-        <div class="validation-panel" *ngIf="validationResult">
-          <div class="validation-section" *ngIf="validationResult.errors.length > 0">
-            <h4 class="error-title">
-              <mat-icon>error</mat-icon>
-              Errores
-            </h4>
-            <mat-list>
-              <mat-list-item *ngFor="let error of validationResult.errors">
-                <mat-icon matListItemIcon color="warn">cancel</mat-icon>
-                <span matListItemTitle>{{ error }}</span>
-              </mat-list-item>
-            </mat-list>
-          </div>
-
-          <div class="validation-section" *ngIf="validationResult.warnings.length > 0">
-            <h4 class="warning-title">
-              <mat-icon>warning</mat-icon>
-              Advertencias
-            </h4>
-            <mat-list>
-              <mat-list-item *ngFor="let warning of validationResult.warnings">
-                <mat-icon matListItemIcon color="accent">warning</mat-icon>
-                <span matListItemTitle>{{ warning }}</span>
-              </mat-list-item>
-            </mat-list>
-          </div>
-
-          <div class="validation-section" *ngIf="validationResult.suggestions.length > 0">
-            <h4 class="suggestion-title">
-              <mat-icon>lightbulb</mat-icon>
-              Sugerencias
-            </h4>
-            <mat-list>
-              <mat-list-item *ngFor="let suggestion of validationResult.suggestions">
-                <mat-icon matListItemIcon>tips_and_updates</mat-icon>
-                <span matListItemTitle>{{ suggestion }}</span>
-              </mat-list-item>
-            </mat-list>
-          </div>
-        </div>
-      </div>
-    </mat-expansion-panel>
-
-  </form>
-</mat-dialog-content>
-
-<mat-dialog-actions align="end">
-  <button mat-button (click)="onCancel()">Cancelar</button>
-  <button mat-raised-button
-          color="primary"
-          (click)="onSave()"
-          [disabled]="!canSave">
-    <mat-spinner diameter="20" *ngIf="saving"></mat-spinner>
-    {{ saving ? 'Guardando...' : (data.mode === 'create' ? 'Crear' : 'Actualizar') }}
-  </button>
-</mat-dialog-actions>
+  <!-- Footer actions -->
+  <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+    <button mat-button
+            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            (click)="onCancel()">
+      Cancelar
+    </button>
+    <button mat-raised-button
+            color="primary"
+            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            (click)="onSave()"
+            [disabled]="!canSave">
+      <mat-spinner diameter="16" *ngIf="saving"></mat-spinner>
+      {{ saving ? 'Guardando...' : (data.mode === 'create' ? 'Crear' : 'Actualizar') }}
+    </button>
+  </div>
+</div>

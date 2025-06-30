@@ -1,620 +1,410 @@
 // src/app/features/docentes/components/docente-list/docente-list.component.scss
 
-// Variables
-$primary-color: #3f51b5;
-$accent-color: #ff4081;
-$warn-color: #f44336;
-$success-color: #4caf50;
-$background-color: #f5f7fa;
-$card-bg-color: #ffffff;
-$text-color: #333333;
-$light-text: #666666;
-$border-color: #e0e0e0;
-$shadow-color: rgba(0, 0, 0, 0.1);
+// Variables para mantener consistencia con el dashboard
+$primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+$primary-color: #4f46e5;
+$purple-color: #7c3aed;
+$success-color: #10b981;
+$warning-color: #f59e0b;
+$error-color: #ef4444;
+$text-primary: #111827;
+$text-secondary: #6b7280;
+$text-muted: #9ca3af;
+$bg-primary: #ffffff;
+$bg-secondary: #f9fafb;
+$bg-tertiary: #f3f4f6;
+$border-color: #e5e7eb;
+$shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+$shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+$shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+$border-radius: 0.75rem;
+$border-radius-lg: 1rem;
 
-// Main container
-.docente-list-container {
-  padding: 24px;
-  background-color: $background-color;
-  min-height: 100%;
-}
+// Overrides de Angular Material para mantener consistencia
+::ng-deep {
+  // Form fields personalizados
+  .mat-mdc-form-field {
+    .mat-mdc-text-field-wrapper {
+      border-radius: $border-radius !important;
 
-// Header section
-.list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+      .mat-mdc-form-field-outline {
+        border-radius: $border-radius !important;
+        border-color: $border-color !important;
 
-  .header-content {
-    .page-title {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 0;
-      font-size: 28px;
-      color: $primary-color;
-
-      mat-icon {
-        font-size: 32px;
-        height: 32px;
-        width: 32px;
+        &.mat-mdc-form-field-outline-thick {
+          border-color: $primary-color !important;
+        }
       }
     }
 
-    .page-subtitle {
-      margin: 8px 0 0 0;
-      color: $light-text;
-      font-size: 16px;
+    .mat-mdc-form-field-label {
+      color: $text-secondary !important;
+    }
+
+    .mat-mdc-input-element {
+      color: $text-primary !important;
     }
   }
 
-  .add-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-}
+  // Botones mejorados
+  .mat-mdc-raised-button {
+    border-radius: $border-radius !important;
+    box-shadow: $shadow-md !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
 
-// Filters section
-.filters-section {
-  margin-bottom: 24px;
+    &.mat-primary {
+      background: $primary-gradient !important;
+      color: white !important;
 
-  .filters-card {
-    border-radius: 8px;
-    box-shadow: 0 4px 8px $shadow-color;
-    background-color: $card-bg-color;
-  }
-
-  .filters-content {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .filter-field {
-    flex: 1;
-    min-width: 200px;
-  }
-
-  .clear-filters-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    align-self: center;
-  }
-}
-
-// Content card
-.content-card {
-  border-radius: 8px;
-  box-shadow: 0 4px 8px $shadow-color;
-  background-color: $card-bg-color;
-  padding: 8px;
-  overflow: hidden;
-}
-
-// Loading container
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  gap: 16px;
-  color: $light-text;
-}
-
-// Table styles
-.docentes-content {
-  width: 100%;
-}
-
-.table-container {
-  overflow-x: auto;
-  width: 100%;
-}
-
-.docentes-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0 8px;
-
-  .header-cell {
-    color: $light-text;
-    font-weight: 500;
-    padding: 12px 16px;
-    font-size: 14px;
-    background-color: #fafafa;
-    border-bottom: 2px solid $primary-color;
-    white-space: nowrap;
-
-    mat-icon {
-      vertical-align: middle;
-      margin-right: 8px;
-      font-size: 18px;
-      height: 18px;
-      width: 18px;
+      &:hover {
+        box-shadow: $shadow-lg !important;
+        transform: translateY(-1px);
+      }
     }
   }
 
-  .table-row {
-    transition: background-color 0.2s;
-    box-shadow: 0 2px 4px $shadow-color;
-    border-radius: 4px;
-    background-color: $card-bg-color;
+  .mat-mdc-outlined-button {
+    border-radius: $border-radius !important;
+    border-color: $border-color !important;
+    color: $text-secondary !important;
+    font-weight: 500 !important;
+    text-transform: none !important;
 
     &:hover {
-      background-color: rgba($primary-color, 0.04);
+      background-color: $bg-secondary !important;
+      border-color: $text-muted !important;
     }
   }
 
-  .expanded-row {
-    background-color: rgba($primary-color, 0.04);
-  }
+  .mat-mdc-icon-button {
+    border-radius: 0.5rem !important;
 
-  td {
-    padding: 16px;
-    border-bottom: none;
-    border-top: 1px solid $border-color;
-
-    &:first-child {
-      border-left: 1px solid $border-color;
-      border-top-left-radius: 4px;
-      border-bottom-left-radius: 4px;
-    }
-
-    &:last-child {
-      border-right: 1px solid $border-color;
-      border-top-right-radius: 4px;
-      border-bottom-right-radius: 4px;
+    &:hover {
+      background-color: rgba($primary-color, 0.1) !important;
     }
   }
 
-  // Specific cell styles
-  .name-cell, .email-cell, .department-cell, .areas-cell, .account-cell, .actions-cell {
-    vertical-align: middle;
+  // Cards personalizados
+  .mat-mdc-card {
+    border-radius: $border-radius-lg !important;
+    box-shadow: $shadow-sm !important;
+    border: 1px solid $border-color !important;
+
+    &:hover {
+      box-shadow: $shadow-md !important;
+    }
   }
 
-  .name-content {
-    font-weight: 500;
-    color: $text-color;
+  // Tabla personalizada
+  .mat-mdc-table {
+    border-radius: $border-radius !important;
+    overflow: hidden;
+    box-shadow: none !important;
+
+    .mat-mdc-header-row {
+      background-color: $bg-secondary !important;
+
+      .mat-mdc-header-cell {
+        color: $text-secondary !important;
+        font-weight: 600 !important;
+        font-size: 0.75rem !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        border-bottom: 1px solid $border-color !important;
+      }
+    }
+
+    .mat-mdc-row {
+      transition: background-color 0.2s ease !important;
+      min-height: 100px !important;
+      border-bottom: 1px solid $border-color !important;
+
+      &:hover {
+        background-color: $bg-secondary !important;
+      }
+
+      .mat-mdc-cell {
+        color: $text-primary !important;
+        border-bottom: none !important;
+        padding: 18px 16px !important;
+      }
+    }
+  }
+
+  // Chips personalizados
+  .mat-mdc-chip-set {
+    .mat-mdc-chip {
+      border-radius: 9999px !important;
+      font-size: 0.75rem !important;
+      font-weight: 500 !important;
+
+      &.mat-mdc-chip-selected {
+        background-color: rgba($primary-color, 0.1) !important;
+        color: $primary-color !important;
+      }
+    }
+  }
+
+  // Select personalizado
+  .mat-mdc-select-panel {
+    border-radius: $border-radius !important;
+    box-shadow: $shadow-lg !important;
+    border: 1px solid $border-color !important;
+  }
+
+  // Spinner personalizado
+  .mat-mdc-progress-spinner {
+    circle {
+      stroke: $primary-color !important;
+    }
+  }
+
+  // Tooltips
+  .mat-mdc-tooltip {
+    background-color: $text-primary !important;
+    color: white !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+}
+
+// Clases específicas del componente
+.docente-list-container {
+  // Animaciones suaves para transiciones
+  * {
+    transition: all 0.2s ease;
+  }
+}
+
+// Estados de cuenta con indicadores visuales mejorados
+.account-status-indicator {
+  &.active {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      border-radius: inherit;
+      z-index: -1;
+      opacity: 0.3;
+      filter: blur(4px);
+    }
+  }
+
+  &.inactive {
+    background-color: $bg-tertiary;
+    color: $text-muted;
+  }
+}
+
+// Avatar mejorado con gradientes
+.avatar-gradient {
+  background: linear-gradient(135deg,
+    rgba($primary-color, 0.1) 0%,
+    rgba($purple-color, 0.1) 100%);
+  border: 2px solid rgba($primary-color, 0.2);
+
+  &:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba($primary-color, 0.3);
+  }
+}
+
+// Badges con diseño mejorado
+.custom-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+
+  &.primary {
+    background: linear-gradient(135deg,
+      rgba($primary-color, 0.1) 0%,
+      rgba($purple-color, 0.1) 100%);
+    color: $primary-color;
+    border: 1px solid rgba($primary-color, 0.2);
+  }
+
+  &.success {
+    background-color: rgba($success-color, 0.1);
+    color: $success-color;
+    border: 1px solid rgba($success-color, 0.2);
+  }
+
+  &.muted {
+    background-color: $bg-tertiary;
+    color: $text-muted;
+    border: 1px solid $border-color;
+  }
+}
+
+// Botones de acción con estados hover mejorados
+.action-button {
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  border: none;
+  background: transparent;
+  color: $text-muted;
+  cursor: pointer;
+
+  &:hover {
+    &.view { color: $primary-color; background-color: rgba($primary-color, 0.1); }
+    &.schedule { color: $purple-color; background-color: rgba($purple-color, 0.1); }
+    &.credentials { color: $success-color; background-color: rgba($success-color, 0.1); }
+    &.edit { color: $primary-color; background-color: rgba($primary-color, 0.1); }
+    &.delete { color: $error-color; background-color: rgba($error-color, 0.1); }
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+// Cards móviles con mejor espaciado y sombras
+.mobile-docente-card {
+  background: $bg-primary;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-lg;
+  padding: 1.5rem;
+  box-shadow: $shadow-sm;
+  transition: all 0.3s ease;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-2px);
+  }
+}
+
+// Mejoras para la tabla en desktop
+.desktop-table {
+  .header-gradient {
+    background: linear-gradient(135deg, $bg-secondary 0%, $bg-tertiary 100%);
+  }
+
+  .row-hover {
+    &:hover {
+      background: linear-gradient(135deg,
+        rgba($primary-color, 0.02) 0%,
+        rgba($purple-color, 0.02) 100%);
+    }
+  }
+}
+
+// Estados vacíos con mejor diseño
+.empty-state {
+  .empty-icon-container {
+    width: 4rem;
+    height: 4rem;
+    background: $bg-tertiary;
+    border-radius: 50%;
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-
-  .email-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    .email-text {
-      color: $text-color;
-    }
-
-    .phone-text {
-      color: $light-text;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-
-      .phone-icon {
-        font-size: 14px;
-        height: 14px;
-        width: 14px;
-      }
-    }
-  }
-
-  .department-info {
-    display: flex;
-    flex-direction: column;
-
-    .department-name {
-      font-weight: 500;
-      color: $text-color;
-    }
-
-    .department-code {
-      font-size: 12px;
-      color: $light-text;
-    }
-  }
-
-  .areas-info {
-    .areas-count {
-      display: block;
-      margin-bottom: 4px;
-      font-size: 12px;
-      color: $light-text;
-    }
-
-    .areas-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-
-      .area-chip {
-        background-color: rgba($primary-color, 0.1);
-        color: $primary-color;
-        font-size: 12px;
-        height: 24px;
-      }
-
-      .more-chip {
-        background-color: rgba($light-text, 0.1);
-        color: $light-text;
-        font-size: 12px;
-        height: 24px;
-      }
-    }
-  }
-
-  .account-cell {
-    .account-status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-
-      .active-account {
-        color: $success-color;
-      }
-
-      .inactive-account {
-        color: $light-text;
-      }
-    }
-  }
-
-  .actions-cell {
-    .action-buttons {
-      display: flex;
-      gap: 8px;
-      justify-content: flex-end;
-    }
-  }
-}
-
-// Expanded detail row
-.expanded-detail {
-  .detail-container {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    background-color: rgba($primary-color, 0.04);
-    border-radius: 4px;
-    margin: 0 4px 16px 4px;
-
-    &.visible {
-      max-height: 500px;
-      transition: max-height 0.5s ease-in;
-    }
-  }
-
-  .detail-content {
-    padding: 16px;
-  }
-
-  .detail-section {
-    background-color: $card-bg-color;
-    border-radius: 4px;
-    padding: 16px;
-    box-shadow: 0 2px 4px $shadow-color;
-  }
-
-  .detail-title {
-    margin: 0 0 16px 0;
-    font-size: 18px;
-    font-weight: 500;
-    color: $primary-color;
-    border-bottom: 1px solid $border-color;
-    padding-bottom: 8px;
-  }
-
-  .detail-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-  }
-
-  .detail-column {
-    flex: 1;
-    min-width: 250px;
-  }
-
-  .detail-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
+    justify-content: center;
+    margin: 0 auto 1rem auto;
 
     mat-icon {
-      color: $primary-color;
-      margin-top: 2px;
-    }
-
-    .detail-text {
-      flex: 1;
-
-      .detail-label {
-        display: block;
-        font-weight: 500;
-        margin-bottom: 4px;
-        color: $light-text;
-      }
-
-      .detail-value {
-        color: $text-color;
-      }
-
-      .account-status-detail {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-
-        &.active-account {
-          color: $success-color;
-        }
-
-        &.inactive-account {
-          color: $warn-color;
-        }
-      }
+      color: $text-muted;
+      font-size: 2rem;
+      width: 2rem;
+      height: 2rem;
     }
   }
+}
 
-  .detail-actions {
+// Loading state mejorado
+.loading-state {
+  .loading-content {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    margin-top: 16px;
-  }
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 3rem;
 
-  .area-chip-detail {
-    background-color: rgba($primary-color, 0.1);
-    color: $primary-color;
-  }
-}
-
-// Empty state
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 16px;
-  text-align: center;
-
-  .empty-icon {
-    font-size: 64px;
-    height: 64px;
-    width: 64px;
-    color: $light-text;
-    margin-bottom: 16px;
-  }
-
-  h3 {
-    margin: 0 0 8px 0;
-    font-weight: 500;
-    color: $text-color;
-  }
-
-  p {
-    margin: 0 0 24px 0;
-    color: $light-text;
-  }
-
-  &.mobile {
-    padding: 32px 16px;
-
-    .empty-icon {
-      font-size: 48px;
-      height: 48px;
-      width: 48px;
-    }
-  }
-}
-
-// Mobile cards view
-.mobile-cards {
-  display: none;
-  flex-direction: column;
-  gap: 16px;
-  padding: 8px;
-}
-
-.mobile-card {
-  .docente-card {
-    box-shadow: 0 2px 8px $shadow-color;
-    border-radius: 8px;
-    overflow: hidden;
-  }
-
-  .card-header-content {
-    display: flex;
-    gap: 16px;
-    width: 100%;
-  }
-
-  .card-icon {
-    font-size: 32px;
-    height: 32px;
-    width: 32px;
-    color: $primary-color;
-
-    &.has-account {
-      color: $success-color;
-    }
-  }
-
-  .card-title-section {
-    flex: 1;
-
-    h3 {
-      margin: 0;
-      font-size: 18px;
+    .loading-text {
+      color: $text-secondary;
       font-weight: 500;
     }
   }
+}
 
-  .card-badges {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 4px;
-
-    .email-badge, .account-badge {
-      font-size: 12px;
-      padding: 2px 8px;
-      border-radius: 12px;
-      white-space: nowrap;
+// Responsive mejoras
+@media (max-width: 1024px) {
+  .mobile-responsive {
+    .filter-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
     }
 
-    .email-badge {
-      background-color: rgba($primary-color, 0.1);
-      color: $primary-color;
-    }
-
-    .account-badge {
-      background-color: rgba($success-color, 0.1);
-      color: $success-color;
-
-      &:not(.active-account) {
-        background-color: rgba($light-text, 0.1);
-        color: $light-text;
-      }
-    }
-  }
-
-  .card-info {
-    margin: 12px 0;
-
-    .info-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 8px;
-      color: $light-text;
-      font-size: 14px;
-
-      mat-icon {
-        font-size: 16px;
-        height: 16px;
-        width: 16px;
-      }
-    }
-  }
-
-  .areas-preview {
-    margin-top: 12px;
-
-    .areas-label {
-      font-size: 14px;
-      color: $light-text;
-      margin-bottom: 4px;
-      display: block;
-    }
-
-    .areas-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px;
-    }
-
-    .area-chip-mobile {
-      background-color: rgba($primary-color, 0.1);
-      color: $primary-color;
-      font-size: 12px;
-      height: 24px;
-    }
-
-    .more-chip-mobile {
-      background-color: rgba($light-text, 0.1);
-      color: $light-text;
-      font-size: 12px;
-      height: 24px;
-    }
-  }
-
-  .card-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    padding: 8px;
-    gap: 8px;
-
-    button {
-      flex: 1;
-      min-width: 0;
-    }
-  }
-
-  .mobile-detail {
-    padding: 0 16px 16px 16px;
-
-    .mobile-detail-content {
-      padding-top: 16px;
-    }
-
-    h4 {
-      margin: 0 0 12px 0;
-      font-size: 16px;
-      color: $primary-color;
-    }
-
-    .mobile-detail-item {
-      margin-bottom: 12px;
-
-      strong {
-        font-weight: 500;
-        color: $text-color;
-      }
-
-      .mobile-areas-list {
-        margin-top: 4px;
-        font-size: 14px;
-      }
-
-      .active-account {
-        color: $success-color;
-      }
-
-      .inactive-account {
-        color: $light-text;
-      }
+    .header-actions {
+      width: 100%;
+      justify-content: stretch;
     }
   }
 }
 
-// Media queries
-@media (max-width: 960px) {
-  .list-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
+// Animaciones sutiles
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
-    .add-btn {
-      align-self: stretch;
-    }
+.fade-in-up {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+// Mejoras para los filtros
+.filters-container {
+  background: $bg-primary;
+  border: 1px solid $border-color;
+  border-radius: $border-radius-lg;
+  padding: 1.5rem;
+  box-shadow: $shadow-sm;
+
+  .filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+  }
+}
+
+// Indicadores visuales mejorados para estados
+.status-indicator {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -0.75rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 50%;
+    transform: translateY(-50%);
   }
 
-  .filters-content {
-    flex-direction: column;
+  &.active::before {
+    background-color: $success-color;
+    box-shadow: 0 0 0 2px rgba($success-color, 0.2);
   }
 
-  .hidden-mobile {
-    display: none;
-  }
-
-  .mobile-cards {
-    display: flex;
-  }
-
-  .detail-grid {
-    flex-direction: column;
+  &.inactive::before {
+    background-color: $text-muted;
   }
 }
