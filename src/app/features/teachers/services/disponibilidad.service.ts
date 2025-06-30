@@ -12,6 +12,7 @@ import {
 interface ExtendedAvailabilityRequest extends TeacherAvailabilityRequest {
   replaceExisting?: boolean;
   overlappingUuids?: string[];
+
 }
 
 @Injectable({
@@ -47,17 +48,23 @@ export class DisponibilidadService extends BaseApiService {
    */
   createAvailability(
     teacherUuid: string,
-    availability: ExtendedAvailabilityRequest
+    availability: ExtendedAvailabilityRequest,
+    usePersonalEndpoint: boolean = false // ✅ AGREGAR este parámetro
   ): Observable<ApiResponse<TeacherAvailabilityResponse>> {
 
     // Si necesitamos reemplazar disponibilidades existentes
     if (availability.replaceExisting && availability.overlappingUuids?.length) {
-      return this.replaceOverlappingAvailabilities(teacherUuid, availability);
+      return this.replaceOverlappingAvailabilities(teacherUuid, availability, usePersonalEndpoint);
     }
+
+    // Determinar el endpoint a usar
+    const endpoint = usePersonalEndpoint
+      ? '/protected/me/availabilities'
+      : `${this.BASE_PATH}/${teacherUuid}/availabilities`;
 
     // Crear disponibilidad normal
     return this.post<TeacherAvailabilityResponse>(
-      `${this.BASE_PATH}/${teacherUuid}/availabilities`,
+      endpoint,
       {
         dayOfWeek: availability.dayOfWeek,
         startTime: availability.startTime,
@@ -91,8 +98,12 @@ export class DisponibilidadService extends BaseApiService {
   /**
    * Elimina todas las disponibilidades de un docente
    */
-  deleteAllTeacherAvailabilities(teacherUuid: string): Observable<ApiResponse<void>> {
-    return this.delete<void>(`${this.BASE_PATH}/${teacherUuid}/availabilities`);
+  deleteAllTeacherAvailabilities(teacherUuid: string, usePersonalEndpoint: boolean = false): Observable<ApiResponse<void>> {
+    const endpoint = usePersonalEndpoint
+      ? '/protected/me/availabilities'
+      : `${this.BASE_PATH}/${teacherUuid}/availabilities`;
+
+    return this.delete<void>(endpoint);
   }
 
   /**
@@ -125,7 +136,8 @@ export class DisponibilidadService extends BaseApiService {
    */
   private replaceOverlappingAvailabilities(
     teacherUuid: string,
-    availability: TeacherAvailabilityRequest & { overlappingUuids?: string[] }
+    availability: TeacherAvailabilityRequest & { overlappingUuids?: string[] },
+    usePersonalEndpoint: boolean = false // ✅ AGREGAR este parámetro
   ): Observable<ApiResponse<TeacherAvailabilityResponse>> {
 
     // Primero eliminar las disponibilidades solapadas
@@ -138,11 +150,16 @@ export class DisponibilidadService extends BaseApiService {
       )
     );
 
+    // Determinar el endpoint a usar para crear
+    const createEndpoint = usePersonalEndpoint
+      ? '/protected/me/availabilities'
+      : `${this.BASE_PATH}/${teacherUuid}/availabilities`;
+
     // Ejecutar todas las eliminaciones y luego crear la nueva
     return forkJoin(deleteOperations).pipe(
       switchMap(() => {
         return this.post<TeacherAvailabilityResponse>(
-          `${this.BASE_PATH}/${teacherUuid}/availabilities`,
+          createEndpoint,
           {
             dayOfWeek: availability.dayOfWeek,
             startTime: availability.startTime,

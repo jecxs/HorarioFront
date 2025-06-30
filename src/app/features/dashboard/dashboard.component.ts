@@ -355,7 +355,7 @@ interface StatCard {
               mat-raised-button
               color="primary"
               class="px-8 py-3"
-              [routerLink]="['/dashboard/docentes']">
+              [routerLink]="['/dashboard/docentes/mi-disponibilidad']">
               <mat-icon class="mr-2">schedule</mat-icon>
               Gestionar Mi Disponibilidad
             </button>

@@ -12,7 +12,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
 import { finalize } from 'rxjs/operators';
-
+import { MeService } from '../../../../shared/services/me.service';
 import { TeacherWithAvailabilitiesResponse } from '../../models/docente.model';
 import { TeacherAvailabilityResponse, DayOfWeek } from '../../models/disponibilidad.model';
 import { DisponibilidadService } from '../../services/disponibilidad.service';
@@ -219,6 +219,7 @@ interface DayAvailabilities {
 })
 export class DisponibilidadListComponent implements OnInit, OnChanges {
   @Input() docente: TeacherWithAvailabilitiesResponse | null = null;
+  @Input() usePersonalEndpoints: boolean = false; // ✅ NUEVA LÍNEA
   @Output() availabilityChange = new EventEmitter<TeacherAvailabilityResponse[]>();
 
   loading = false;
@@ -243,6 +244,7 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
 
   constructor(
     private disponibilidadService: DisponibilidadService,
+    private meService: MeService,
     private dialog: MatDialog,
     private snackBar: MatSnackBar
   ) {}
@@ -330,7 +332,8 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
         teacherUuid: this.docente.uuid,
         teacherName: this.docente.fullName,
         preselectedDay,
-        existingAvailabilities: this.docente.availabilities
+        existingAvailabilities: this.docente.availabilities,
+        usePersonalEndpoints: this.usePersonalEndpoints
       }
     });
 
@@ -350,7 +353,8 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
         teacherUuid: this.docente.uuid,
         teacherName: this.docente.fullName,
         editingAvailability: availability,
-        existingAvailabilities: this.docente.availabilities.filter(a => a.uuid !== availability.uuid)
+        existingAvailabilities: this.docente.availabilities.filter(a => a.uuid !== availability.uuid),
+        usePersonalEndpoints: this.usePersonalEndpoints
       }
     });
 
@@ -408,7 +412,7 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
     }
 
     this.loading = true;
-    this.disponibilidadService.deleteAllTeacherAvailabilities(this.docente.uuid)
+    this.disponibilidadService.deleteAllTeacherAvailabilities(this.docente.uuid, this.usePersonalEndpoints) // ✅ AGREGAR PARÁMETRO
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: () => {
@@ -426,7 +430,13 @@ export class DisponibilidadListComponent implements OnInit, OnChanges {
     if (!this.docente) return;
 
     this.loading = true;
-    this.disponibilidadService.getTeacherAvailabilities(this.docente.uuid)
+
+    // ✅ USAR el servicio correcto dependiendo del flag
+    const refreshObservable = this.usePersonalEndpoints
+      ? this.meService.getCurrentTeacherAvailabilities()
+      : this.disponibilidadService.getTeacherAvailabilities(this.docente.uuid);
+
+    refreshObservable
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (response) => {

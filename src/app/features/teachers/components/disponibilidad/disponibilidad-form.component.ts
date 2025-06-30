@@ -23,6 +23,7 @@ interface DialogData {
   preselectedDay?: DayOfWeek;
   editingAvailability?: TeacherAvailabilityResponse;
   existingAvailabilities?: TeacherAvailabilityResponse[];
+
 }
 
 interface TimeConflict {

@@ -274,7 +274,7 @@ interface SidebarItem {
                   <!-- Menu de docente -->
                   <div *ngIf="isTeacher">
                     <button mat-menu-item class="flex items-center gap-3 py-3"
-                            [routerLink]="['/dashboard/docentes']">
+                            [routerLink]="['/dashboard/docentes/mi-disponibilidad']"> <!-- ✅ CORREGIR la ruta -->
                       <mat-icon class="text-slate-600">schedule</mat-icon>
                       <span>Mi Disponibilidad</span>
                     </button>
@@ -358,7 +358,14 @@ interface SidebarItem {
                     Bienvenido, {{ getFirstName() }}. Aquí puedes gestionar tu disponibilidad horaria.
                   </p>
                   <p class="text-xs text-green-600 mt-1">
-                    Accede a "Mi Disponibilidad" para configurar tus horarios disponibles.
+                    <!-- ✅ AGREGAR un botón directo -->
+                    <span>Accede a "Mi Disponibilidad" para configurar tus horarios disponibles.</span>
+                    <button
+                      mat-button
+                      [routerLink]="['/dashboard/docentes/mi-disponibilidad']"
+                      class="ml-2 text-green-700 hover:text-green-800 text-xs underline">
+                      Ir ahora →
+                    </button>
                   </p>
                 </div>
               </div>
@@ -502,14 +509,23 @@ export class DashboardLayoutComponent implements OnInit, OnDestroy {
       description: 'Gestionar periodos académicos',
       roles: ['COORDINATOR', 'ASSISTANT']
     },
+    // ✅ SEPARAR en dos elementos diferentes según el rol
     {
       title: 'Docentes',
       icon: 'person',
-      route: '/dashboard/docentes',
+      route: '/dashboard/docentes', // Para administradores
       exact: false,
       badge: '',
-      description: 'Gestión de profesores',
-      roles: ['COORDINATOR', 'ASSISTANT', 'TEACHER']
+      description: 'Gestión de todos los docentes',
+      roles: ['COORDINATOR', 'ASSISTANT'] // ✅ Solo administradores
+    },
+    {
+      title: 'Mi Disponibilidad',
+      icon: 'schedule',
+      route: '/dashboard/docentes/mi-disponibilidad', // Para docentes
+      exact: false,
+      description: 'Gestiona tu disponibilidad horaria',
+      roles: ['TEACHER'] // ✅ Solo docentes
     },
     {
       title: 'Grupos',
