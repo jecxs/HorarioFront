@@ -21,6 +21,12 @@ export class LoginComponent implements OnInit {
   form!: FormGroup;
   errorMessage = '';
   isLoading = false;
+  showPassword = false;
+  currentPeriod = {
+    name: '2026I',
+    startDate: '1 mar 2026',
+    endDate: '15 jul 2026'
+  };
 
   constructor(
     private fb: FormBuilder,
@@ -36,10 +42,21 @@ export class LoginComponent implements OnInit {
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
     });
+
+    // Limpiar errores cuando el usuario empiece a escribir
+    this.form.valueChanges.subscribe(() => {
+      if (this.errorMessage) {
+        this.errorMessage = '';
+      }
+    });
   }
 
   get f() {
     return this.form.controls as { [key: string]: import('@angular/forms').AbstractControl };
+  }
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   onSubmit(): void {
@@ -58,13 +75,16 @@ export class LoginComponent implements OnInit {
       next: (res) => {
         console.log('✅ Login exitoso, redirigiendo...');
         this.isLoading = false;
-        this.router.navigate(['/dashboard']);
+        // Pequeño delay para mejorar la UX
+        setTimeout(() => {
+          this.router.navigate(['/dashboard']);
+        }, 500);
       },
       error: (err) => {
         console.error('❌ Error en login:', err);
         this.isLoading = false;
 
-        // Manejar diferentes tipos de errores
+        // Manejar diferentes tipos de errores con mensajes más amigables
         if (err.status === 403) {
           this.errorMessage = 'Credenciales incorrectas. Verifica tu email y contraseña.';
         } else if (err.status === 401) {
@@ -76,7 +96,21 @@ export class LoginComponent implements OnInit {
         } else {
           this.errorMessage = 'Error interno del servidor. Intenta nuevamente.';
         }
+
+        // Agregar clase de animación de error
+        this.addErrorAnimation();
       }
     });
+  }
+
+  private addErrorAnimation(): void {
+    // Agregar una pequeña animación de shake para el error
+    const errorElement = document.querySelector('.animate-shake');
+    if (errorElement) {
+      errorElement.classList.remove('animate-shake');
+      setTimeout(() => {
+        errorElement.classList.add('animate-shake');
+      }, 10);
+    }
   }
 }
