@@ -17,6 +17,7 @@ import { TeacherAvailabilityResponse } from '../../models/disponibilidad.model';
 import { DocenteService } from '../../services/docente.service';
 import { DisponibilidadListComponent } from '../disponibilidad/disponibilidad-list.component';
 import { DocenteCredencialesComponent } from '../docente-credenciales/docente-credenciales.component';
+import {TeacherAssignedClassesComponent} from '../teacher-assigned-classes/teacher-assigned-classes.component';
 
 @Component({
   selector: 'app-docente-perfil',
@@ -31,7 +32,8 @@ import { DocenteCredencialesComponent } from '../docente-credenciales/docente-cr
     MatChipsModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    DisponibilidadListComponent
+    DisponibilidadListComponent,
+    TeacherAssignedClassesComponent
   ],
   templateUrl: './docente-perfil.component.html',
   styleUrls: ['./docente-perfil.component.scss']
@@ -58,27 +60,69 @@ export class DocentePerfilComponent implements OnInit {
       this.navigateBack();
     }
 
-    // Detectar si hay un parámetro para ir directamente a la pestaña de disponibilidad
+    // ✅ MEJORADO: Detectar tabs específicos desde query params
+    this.handleTabSelection();
+  }
+  // ✅ NUEVO MÉTODO: Manejar selección de tab desde query params
+  private handleTabSelection(): void {
     const tab = this.route.snapshot.queryParamMap.get('tab');
-    if (tab === 'disponibilidad') {
-      this.activeTab = 1; // Índice de la pestaña de disponibilidad
+
+    switch (tab) {
+      case 'disponibilidad':
+        this.activeTab = 1;
+        break;
+      case 'clases':  // ✅ NUEVO
+      case 'clases-asignadas':  // ✅ NUEVO - alias alternativo
+        this.activeTab = 2;
+        break;
+      case 'general':
+      default:
+        this.activeTab = 0;
+        break;
+    }
+
+    // ✅ Log para debugging
+    if (tab) {
+      console.log(`🎯 Navegando a tab: ${tab} (índice: ${this.activeTab})`);
     }
   }
 
   loadDocenteWithAvailabilities(uuid: string): void {
     this.loading = true;
+    console.log('🔄 Cargando información completa del docente:', uuid);
+
     this.docenteService.getTeacherWithAvailabilities(uuid)
       .pipe(finalize(() => this.loading = false))
       .subscribe({
         next: (response) => {
           this.docente = response.data;
+          console.log('✅ Docente cargado exitosamente:', this.docente?.fullName);
+
+          // ✅ NUEVO: Mostrar mensaje contextual si viene de clases asignadas
+          this.showContextualMessage();
         },
         error: (error) => {
-          console.error('Error al cargar el docente:', error);
+          console.error('❌ Error al cargar el docente:', error);
           this.showMessage('Error al cargar la información del docente', 'error');
           this.navigateBack();
         }
       });
+  }
+  private showContextualMessage(): void {
+    const source = this.route.snapshot.queryParamMap.get('from');
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+
+    if (source === 'schedule-management' && tab === 'clases') {
+      this.showMessage(
+        'Visualizando las clases asignadas del docente desde el módulo de horarios',
+        'info'
+      );
+    } else if (source === 'conflict' && tab === 'clases') {
+      this.showMessage(
+        'Revisando clases del docente debido a un conflicto de horario detectado',
+        'error'
+      );
+    }
   }
 
   onAvailabilityChange(availabilities: TeacherAvailabilityResponse[]): void {
@@ -88,7 +132,14 @@ export class DocentePerfilComponent implements OnInit {
   }
 
   navigateBack(): void {
-    this.router.navigate(['/dashboard/docentes']);
+    // ✅ MEJORADO: Preservar contexto de navegación si existe
+    const returnTo = this.route.snapshot.queryParamMap.get('returnTo');
+
+    if (returnTo === 'schedule-management') {
+      this.router.navigate(['/dashboard/horarios']);
+    } else {
+      this.router.navigate(['/dashboard/docentes']);
+    }
   }
 
   editDocente(): void {
@@ -102,6 +153,37 @@ export class DocentePerfilComponent implements OnInit {
       const dialogRef = this.docenteService.openCredentialsDialog(this.docente);
     }
   }
+  switchToTab(tabIndex: number): void {
+    this.activeTab = tabIndex;
+
+    // Actualizar URL para reflejar el cambio
+    const tabNames = ['general', 'disponibilidad', 'clases'];
+    const currentParams = { ...this.route.snapshot.queryParams };
+
+    if (tabIndex > 0) {
+      currentParams['tab'] = tabNames[tabIndex];
+    } else {
+      delete currentParams['tab'];
+    }
+
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: currentParams,
+      replaceUrl: true
+    });
+  }
+
+  // ✅ NUEVO MÉTODO: Obtener información del tab activo
+  getActiveTabInfo(): { name: string; icon: string } {
+    const tabs = [
+      { name: 'Información General', icon: 'person' },
+      { name: 'Disponibilidad', icon: 'schedule' },
+      { name: 'Clases Asignadas', icon: 'event_note' }
+    ];
+
+    return tabs[this.activeTab] || tabs[0];
+  }
+
 
   private showMessage(message: string, type: 'success' | 'error' | 'info'): void {
     this.snackBar.open(message, 'Cerrar', {

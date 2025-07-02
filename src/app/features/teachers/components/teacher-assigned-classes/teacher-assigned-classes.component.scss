@@ -1,0 +1,699 @@
+.assigned-classes-container {
+  padding: 1rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ===== HEADER ===== */
+.classes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.header-info {
+  flex: 1;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 500;
+  color: #1976d2;
+}
+
+.header-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+/* ===== LOADING & EMPTY STATES ===== */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.loading-text {
+  margin-top: 1rem;
+  color: #666;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 2px dashed #ddd;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  width: 4rem;
+  height: 4rem;
+  color: #bbb;
+  margin-bottom: 1rem;
+}
+
+.empty-message {
+  color: #666;
+  margin: 0.5rem 0 1.5rem 0;
+  max-width: 300px;
+}
+
+/* ===== SUMMARY CARDS ===== */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summary-card {
+  padding: 1rem;
+  border-radius: 8px;
+}
+
+.summary-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.summary-content mat-icon {
+  font-size: 2rem;
+  width: 2rem;
+  height: 2rem;
+}
+
+.summary-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-number {
+  font-size: 1.5rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.theory-card {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border-left: 4px solid #2196f3;
+}
+
+.theory-card .summary-number { color: #1976d2; }
+.theory-card mat-icon { color: #1976d2; }
+
+.practice-card {
+  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  border-left: 4px solid #4caf50;
+}
+
+.practice-card .summary-number { color: #388e3c; }
+.practice-card mat-icon { color: #388e3c; }
+
+.total-card {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffcc02 100%);
+  border-left: 4px solid #ff9800;
+}
+
+.total-card .summary-number { color: #f57c00; }
+.total-card mat-icon { color: #f57c00; }
+
+/* ===== SCHEDULE BOARD ===== */
+.schedule-board {
+  margin-bottom: 1.5rem;
+}
+
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 140px repeat(6, 1fr);
+  gap: 1px;
+  background: #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 1rem;
+}
+
+.schedule-header {
+  display: contents;
+}
+
+.time-header {
+  background: #37474f;
+  color: white;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.day-header {
+  background: #455a64;
+  color: white;
+  padding: 1rem 0.75rem;
+  text-align: center;
+}
+
+.day-name {
+  font-weight: 500;
+  font-size: 0.9rem;
+  display: block;
+}
+
+.day-stats {
+  font-size: 0.75rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+.schedule-row {
+  display: contents;
+}
+
+.time-cell {
+  background: #fafafa;
+  padding: 0.75rem 0.5rem;
+  border-right: 2px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+.time-cell.time-slot-start {
+  border-top: 3px solid #1976d2;
+}
+
+.hour-info {
+  text-align: center;
+}
+
+.hour-number {
+  font-weight: bold;
+  color: #1976d2;
+  font-size: 0.8rem;
+  display: block;
+}
+
+.hour-time {
+  font-size: 0.7rem;
+  color: #666;
+  display: block;
+}
+
+.time-slot-name {
+  font-size: 0.7rem;
+  color: #1976d2;
+  font-weight: 500;
+  text-align: center;
+  margin-top: 0.25rem;
+  padding: 0.25rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+}
+
+.schedule-cell {
+  background: white;
+  padding: 0.5rem;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* ✅ NUEVOS ESTILOS: Para sesiones multi-hora */
+.schedule-cell.part-of-multi-hour-session {
+  background: rgba(255, 255, 255, 0.9);
+  border-top: none !important;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    right: 0;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.3;
+  }
+
+  &::after {
+    content: '↑ Continuación';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.7rem;
+    color: #666;
+    font-style: italic;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
+
+.schedule-cell.part-of-multi-hour-session.theory-session {
+  background: rgba(25, 118, 210, 0.1);
+
+  &::before {
+    background: #1976d2;
+  }
+
+  &::after {
+    color: #1976d2;
+  }
+}
+
+.schedule-cell.part-of-multi-hour-session.practice-session {
+  background: rgba(56, 142, 60, 0.1);
+
+  &::before {
+    background: #388e3c;
+  }
+
+  &::after {
+    color: #388e3c;
+  }
+}
+
+.session-card {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  padding: 0.5rem;
+  color: white;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.session-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.session-card.theory-session {
+  background: linear-gradient(135deg, #1976d2 0%, #1565c0 100%);
+}
+
+.session-card.practice-session {
+  background: linear-gradient(135deg, #388e3c 0%, #2e7d32 100%);
+}
+
+/* ✅ NUEVO: Indicador especial para sesiones multi-hora */
+.session-card.multi-hour-session {
+  border-bottom: 3px solid rgba(255, 255, 255, 0.8);
+
+  &::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg,
+      rgba(255,255,255,0.8) 0%,
+      rgba(255,255,255,0.8) 70%,
+      transparent 70%,
+      transparent 100%);
+    animation: multiHourIndicator 2s infinite;
+  }
+}
+
+@keyframes multiHourIndicator {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.course-name {
+  font-weight: 500;
+  font-size: 0.8rem;
+  line-height: 1.1;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.session-type-chip {
+  background: rgba(255,255,255,0.2) !important;
+  color: white !important;
+  font-size: 0.7rem !important;
+  height: 20px !important;
+  padding: 0 0.25rem !important;
+}
+
+.session-type-chip mat-icon {
+  font-size: 0.8rem !important;
+  width: 0.8rem !important;
+  height: 0.8rem !important;
+}
+
+.session-details {
+  margin-top: 0.25rem;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.125rem;
+  font-size: 0.7rem;
+}
+
+.detail-row mat-icon {
+  font-size: 0.8rem !important;
+  width: 0.8rem !important;
+  height: 0.8rem !important;
+}
+
+.detail-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.multi-hour-indicator {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.25rem;
+  background: rgba(255,255,255,0.9);
+  color: #333;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.empty-cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbb;
+  font-style: italic;
+  font-size: 0.8rem;
+}
+
+.empty-text {
+  opacity: 0.6;
+}
+
+/* ===== DAY VIEW ===== */
+.day-view-card {
+  margin-bottom: 1.5rem;
+}
+
+.day-panel {
+  margin-bottom: 0.5rem;
+}
+
+.day-header-content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.day-badge {
+  background: #e3f2fd !important;
+  color: #1976d2 !important;
+}
+
+.day-classes {
+  padding: 1rem 0;
+}
+
+.class-card {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-left: 4px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+.class-card:hover {
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  transform: translateY(-1px);
+}
+
+.class-card.theory-session {
+  border-left-color: #1976d2;
+}
+
+.class-card.practice-session {
+  border-left-color: #388e3c;
+}
+
+.class-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.class-title h4 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.class-time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.duration {
+  font-weight: 500;
+  color: #1976d2;
+}
+
+.class-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.75rem;
+}
+
+.detail-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.detail-item mat-icon {
+  color: #666;
+  margin-top: 0.1rem;
+}
+
+.detail-item span {
+  font-weight: 500;
+  color: #333;
+}
+
+.detail-item small {
+  display: block;
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.class-notes {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.no-classes {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #999;
+  font-style: italic;
+}
+
+/* ===== FOOTER ACTIONS ===== */
+.actions-footer {
+  margin-top: 2rem;
+}
+
+.footer-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+/* ✅ NUEVO: Estilos para ocultar acciones de gestión para docentes */
+.actions-footer.teacher-view {
+  display: none;
+}
+
+.header-actions.teacher-view {
+  display: none;
+}
+
+/* ✅ NUEVO: Indicador visual de permisos limitados */
+.limited-access-notice {
+  background: #fff3e0;
+  border: 1px solid #ffb74d;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #f57c00;
+  font-size: 0.9rem;
+}
+
+.limited-access-notice mat-icon {
+  color: #ff9800;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .assigned-classes-container {
+    padding: 0.5rem;
+  }
+
+  .classes-header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .schedule-grid {
+    grid-template-columns: 100px repeat(5, 1fr);
+    font-size: 0.8rem;
+  }
+
+  .time-cell {
+    padding: 0.5rem 0.25rem;
+  }
+
+  .session-card {
+    font-size: 0.7rem;
+    padding: 0.25rem;
+  }
+
+  .class-details {
+    grid-template-columns: 1fr;
+  }
+
+  /* ✅ RESPONSIVE: Ocultar indicador de continuación en móviles */
+  .schedule-cell.part-of-multi-hour-session::after {
+    font-size: 0.6rem;
+  }
+}
+
+/* ===== CUSTOM TOOLTIP ===== */
+:host ::ng-deep .schedule-tooltip {
+  background-color: rgba(0, 0, 0, 0.9) !important;
+  color: white !important;
+  font-size: 12px !important;
+  max-width: 300px !important;
+  white-space: pre-line !important;
+}
+
+/* ✅ NUEVO: Animaciones para mejor UX */
+.session-card {
+  animation: fadeInCard 0.3s ease-out;
+}
+
+@keyframes fadeInCard {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.schedule-cell.part-of-multi-hour-session {
+  animation: fadeInContinuation 0.5s ease-out;
+}
+
+@keyframes fadeInContinuation {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ✅ NUEVO: Mejor contraste para accesibilidad */
+.schedule-cell.part-of-multi-hour-session.theory-session::after {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.schedule-cell.part-of-multi-hour-session.practice-session::after {
+  background: rgba(255, 255, 255, 0.9);
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}

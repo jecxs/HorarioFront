@@ -1,0 +1,326 @@
+<div class="assigned-classes-container">
+  <!-- Header -->
+  <div class="classes-header">
+    <div class="header-info">
+      <h3 class="header-title">
+        <mat-icon>schedule</mat-icon>
+        Clases Asignadas
+      </h3>
+      <p class="header-subtitle" *ngIf="sessions.length > 0">
+        {{ getTotalHours() }} horas pedagógicas semanales en {{ sessions.length }} clases
+      </p>
+    </div>
+
+    <!-- ✅ CORREGIDO: Admin Controls - Solo para COORDINATOR y ASSISTANT -->
+    <div class="header-actions" *ngIf="canManageSchedules() && teacher" [class.teacher-view]="isCurrentUserTeacher()">
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="navigateToScheduleManagement()"
+        matTooltip="Ir a la gestión de horarios para asignar más clases">
+        <mat-icon>edit_calendar</mat-icon>
+        Gestionar Clases
+      </button>
+    </div>
+  </div>
+
+  <!-- ✅ NUEVO: Aviso de acceso limitado para docentes -->
+  <div *ngIf="isCurrentUserTeacher()" class="limited-access-notice">
+    <mat-icon>info</mat-icon>
+    <span>Vista de solo lectura: Aquí puedes consultar tus clases asignadas. Para cambios contacta al administrador.</span>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p class="loading-text">Cargando clases asignadas...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!loading && sessions.length === 0" class="empty-state">
+    <mat-icon class="empty-icon">event_busy</mat-icon>
+    <h4>No hay clases asignadas</h4>
+    <p class="empty-message">
+      {{ teacher?.fullName }} no tiene clases asignadas en el periodo actual.
+    </p>
+    <button
+      *ngIf="canManageSchedules()"
+      mat-raised-button
+      color="primary"
+      (click)="navigateToScheduleManagement()">
+      <mat-icon>add</mat-icon>
+      Asignar Primera Clase
+    </button>
+  </div>
+
+  <!-- ✅ MEJORADO: Tablero de Horarios con manejo de sesiones multi-hora -->
+  <div *ngIf="!loading && sessions.length > 0" class="classes-content">
+    <!-- Summary Cards -->
+    <div class="summary-cards">
+      <mat-card class="summary-card theory-card">
+        <div class="summary-content">
+          <mat-icon>menu_book</mat-icon>
+          <div class="summary-info">
+            <span class="summary-number">{{ getTheoryHours() }}</span>
+            <span class="summary-label">Horas Teoría</span>
+          </div>
+        </div>
+      </mat-card>
+
+      <mat-card class="summary-card practice-card">
+        <div class="summary-content">
+          <mat-icon>science</mat-icon>
+          <div class="summary-info">
+            <span class="summary-number">{{ getPracticeHours() }}</span>
+            <span class="summary-label">Horas Práctica</span>
+          </div>
+        </div>
+      </mat-card>
+
+      <mat-card class="summary-card total-card">
+        <div class="summary-content">
+          <mat-icon>schedule</mat-icon>
+          <div class="summary-info">
+            <span class="summary-number">{{ getTotalHours() }}</span>
+            <span class="summary-label">Total Semanal</span>
+          </div>
+        </div>
+      </mat-card>
+    </div>
+
+    <!-- ✅ MEJORADO: Tablero de Horarios con manejo correcto de sesiones multi-hora -->
+    <mat-card class="schedule-board">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>view_module</mat-icon>
+          Tablero de Horarios Semanal
+        </mat-card-title>
+        <mat-card-subtitle>
+          Visualización completa de las clases asignadas por día y hora
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <!-- Grid del tablero -->
+        <div class="schedule-grid" *ngIf="scheduleGrid.hourRows.length > 0">
+          <!-- Header con días de la semana -->
+          <div class="schedule-header">
+            <div class="time-header">Horario</div>
+            <div
+              *ngFor="let day of workingDays"
+              class="day-header"
+              [class]="getDayHeaderClass(day)">
+              <div class="day-name">{{ getDayName(day) }}</div>
+              <div class="day-stats">{{ getDayHours(day) }}h</div>
+            </div>
+          </div>
+
+          <!-- Filas de horas -->
+          <div
+            *ngFor="let row of scheduleGrid.hourRows; trackBy: trackByHourRow"
+            class="schedule-row"
+            [class.first-hour-of-slot]="row.isFirstHourOfTimeSlot">
+
+            <!-- Celda de tiempo -->
+            <div class="time-cell" [class.time-slot-start]="row.isFirstHourOfTimeSlot">
+              <div class="hour-info">
+                <span class="hour-number">{{ row.teachingHour.orderInTimeSlot }}°</span>
+                <span class="hour-time">{{ formatTime(row.teachingHour.startTime) }}</span>
+                <span class="hour-time">{{ formatTime(row.teachingHour.endTime) }}</span>
+              </div>
+              <div *ngIf="row.isFirstHourOfTimeSlot" class="time-slot-name">
+                {{ row.timeSlot.name }}
+              </div>
+            </div>
+
+            <!-- Celdas de días -->
+            <div
+              *ngFor="let day of workingDays"
+              class="schedule-cell"
+              [class]="getScheduleCellClass(row, day)">
+
+              <!-- ✅ CORREGIDO: Sesión de clase con manejo de multi-hora -->
+              <div
+                *ngIf="getCellForDay(row, day)?.session as session; else emptyCellTemplate"
+                class="session-card"
+                [class]="getSessionCardClasses(session)"
+                [matTooltip]="getSessionTooltip(session)"
+                matTooltipClass="schedule-tooltip">
+
+                <div class="session-header">
+                  <span class="course-name">{{ session.course.name }}</span>
+                  <mat-chip
+                    [class]="getSessionTypeChipClass(session)"
+                    class="session-type-chip">
+                    <mat-icon>{{ getSessionTypeIcon(session.sessionType.name) }}</mat-icon>
+                  </mat-chip>
+                </div>
+
+                <div class="session-details">
+                  <div class="detail-row">
+                    <mat-icon>group</mat-icon>
+                    <span>{{ session.studentGroup.name }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <mat-icon>room</mat-icon>
+                    <span>{{ session.learningSpace.name }}</span>
+                  </div>
+                </div>
+
+                <!-- ✅ MEJORADO: Indicador de horas múltiples más claro -->
+                <div *ngIf="session.totalHours > 1" class="multi-hour-indicator"
+                     [matTooltip]="'Esta clase abarca ' + session.totalHours + ' horas pedagógicas consecutivas'">
+                  {{ session.totalHours }}h
+                </div>
+              </div>
+
+              <!-- ✅ MEJORADO: Celda vacía con mejor UX -->
+              <ng-template #emptyCellTemplate>
+                <div class="empty-cell">
+                  <span class="empty-text">Libre</span>
+                </div>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensaje si no hay grid -->
+        <div *ngIf="scheduleGrid.hourRows.length === 0" class="no-schedule">
+          <mat-icon>schedule_send</mat-icon>
+          <p>No se pudo construir el tablero de horarios. Verifique la configuración de turnos.</p>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ✅ MEJORADO: Vista por día (como alternativa) -->
+    <mat-card class="day-view-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>event_note</mat-icon>
+          Vista por Días
+        </mat-card-title>
+        <mat-card-subtitle>
+          Detalle de clases organizadas por día de la semana
+        </mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <mat-expansion-panel
+          *ngFor="let day of workingDays"
+          [expanded]="getDayClasses(day).length > 0"
+          [disabled]="getDayClasses(day).length === 0"
+          class="day-panel">
+
+          <mat-expansion-panel-header>
+            <mat-panel-title>
+              <div class="day-header-content">
+                <mat-icon>{{ getDayIcon(day) }}</mat-icon>
+                <span class="day-name">{{ getDayName(day) }}</span>
+                <mat-chip
+                  *ngIf="getDayClasses(day).length > 0"
+                  [matBadge]="getDayClasses(day).length"
+                  matBadgeColor="primary"
+                  class="day-badge">
+                  {{ getDayHours(day) }}h
+                </mat-chip>
+              </div>
+            </mat-panel-title>
+          </mat-expansion-panel-header>
+
+          <!-- Clases del día -->
+          <div class="day-classes">
+            <div
+              *ngFor="let session of getDayClasses(day)"
+              class="class-card"
+              [class]="getSessionCardClass(session)">
+
+              <div class="class-header">
+                <div class="class-title">
+                  <h4>{{ session.course.name }}</h4>
+                  <mat-chip
+                    [class]="getSessionTypeChipClass(session)"
+                    class="session-type-chip">
+                    <mat-icon>{{ getSessionTypeIcon(session.sessionType.name) }}</mat-icon>
+                    {{ getSessionTypeName(session.sessionType.name) }}
+                  </mat-chip>
+                </div>
+                <div class="class-time">
+                  <mat-icon>access_time</mat-icon>
+                  <span>{{ getSessionTimeRange(session) }}</span>
+                  <span class="duration">({{ session.totalHours }}h)</span>
+                </div>
+              </div>
+
+              <div class="class-details">
+                <div class="detail-item">
+                  <mat-icon>group</mat-icon>
+                  <div>
+                    <span>{{ session.studentGroup.name }}</span>
+                    <small>{{ session.studentGroup.careerName }} - Ciclo {{ session.studentGroup.cycleNumber }}</small>
+                  </div>
+                </div>
+
+                <div class="detail-item">
+                  <mat-icon>room</mat-icon>
+                  <div>
+                    <span>{{ session.learningSpace.name }}</span>
+                    <small>Capacidad: {{ session.learningSpace.capacity }} estudiantes</small>
+                  </div>
+                </div>
+
+                <div class="detail-item" *ngIf="session.course.code">
+                  <mat-icon>code</mat-icon>
+                  <div>
+                    <span>{{ session.course.code }}</span>
+                    <small>Código del curso</small>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ✅ MEJORADO: Información adicional para sesiones multi-hora -->
+              <div *ngIf="session.totalHours > 1" class="class-notes">
+                <mat-icon>schedule</mat-icon>
+                <span>Clase de {{ session.totalHours }} horas pedagógicas consecutivas</span>
+              </div>
+
+              <!-- Notes if any -->
+              <div *ngIf="session.notes" class="class-notes">
+                <mat-icon>note</mat-icon>
+                <span>{{ session.notes }}</span>
+              </div>
+            </div>
+
+            <!-- No classes message for this day -->
+            <div *ngIf="getDayClasses(day).length === 0" class="no-classes">
+              <mat-icon>event_available</mat-icon>
+              <span>Sin clases asignadas este día</span>
+            </div>
+          </div>
+        </mat-expansion-panel>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ✅ CORREGIDO: Actions Footer - Solo para Admins -->
+    <div *ngIf="canManageSchedules()" class="actions-footer" [class.teacher-view]="isCurrentUserTeacher()">
+      <mat-divider></mat-divider>
+      <div class="footer-actions">
+        <button
+          mat-button
+          (click)="navigateToScheduleManagement()"
+          matTooltip="Ver y editar todas las clases en el tablero de horarios">
+          <mat-icon>visibility</mat-icon>
+          Ver en Tablero
+        </button>
+
+        <button
+          mat-raised-button
+          color="primary"
+          (click)="navigateToScheduleManagement()"
+          matTooltip="Agregar, editar o eliminar clases">
+          <mat-icon>edit</mat-icon>
+          Gestionar Horarios
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

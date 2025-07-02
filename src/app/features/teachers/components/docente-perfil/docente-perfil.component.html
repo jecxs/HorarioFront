@@ -194,13 +194,11 @@
         </mat-tab>
 
         <!-- Clases Asignadas (pendiente de implementar) -->
-        <mat-tab label="Clases Asignadas" [disabled]="true">
+        <mat-tab label="Clases Asignadas">
           <div class="tab-content">
-            <div class="empty-state">
-              <mat-icon class="empty-icon">event_busy</mat-icon>
-              <h3>Funcionalidad en desarrollo</h3>
-              <p>La visualización de clases asignadas estará disponible próximamente.</p>
-            </div>
+            <app-teacher-assigned-classes
+              [teacher]="docente">
+            </app-teacher-assigned-classes>
           </div>
         </mat-tab>
       </mat-tab-group>
