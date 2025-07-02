@@ -124,7 +124,7 @@ interface DialogData {
               <!-- Modalidad Educativa -->
               <mat-form-field appearance="outline" class="full-width">
                 <mat-label>Modalidad Educativa</mat-label>
-                <mat-select formControlName="modalityUuid" (selectionChange)="onModalityChange($event.value)">
+                <mat-select formControlName="modalityUuid" (selectionChange)="onModalitySelectionChange($event.value)">
                   <mat-option value="">Seleccionar modalidad</mat-option>
                   <mat-option *ngFor="let modality of modalities" [value]="modality.uuid">
                     <div class="modality-option">
@@ -143,7 +143,7 @@ interface DialogData {
                 <mat-label>Carrera</mat-label>
                 <mat-select
                   formControlName="careerUuid"
-                  (selectionChange)="onCareerChange($event.value)"
+                  (selectionChange)="onCareerSelectionChange($event.value)"
                   [disabled]="!basicInfoForm.value.modalityUuid">
                   <mat-option value="">Seleccionar carrera</mat-option>
                   <mat-option *ngFor="let career of filteredCareers" [value]="career.uuid">
@@ -154,6 +154,7 @@ interface DialogData {
                   Debe seleccionar una carrera
                 </mat-error>
               </mat-form-field>
+
 
               <!-- Ciclo -->
               <mat-form-field appearance="outline" class="full-width">
@@ -406,7 +407,6 @@ interface DialogData {
 
       </mat-stepper>
     </div>
-
     <div mat-dialog-actions align="end" class="dialog-actions">
       <button mat-button (click)="onCancel()">Cancelar</button>
     </div>
@@ -778,8 +778,8 @@ export class CourseDialogComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    this.loadInitialData();
     this.setupFormValidation();
+    this.loadInitialData();
 
     if (!this.data.isNew && this.data.course) {
       this.populateFormsWithCourseData();
@@ -836,22 +836,41 @@ export class CourseDialogComponent implements OnInit, OnDestroy {
     ]).pipe(takeUntil(this.destroy$))
       .subscribe({
         next: ([modalitiesRes, careersRes, areasRes, specialtiesRes, typesRes]) => {
+          console.log('📝 Respuesta de carreras completa:', careersRes);
+
+          // 1. Primero asignar todos los datos
           this.modalities = Array.isArray(modalitiesRes.data) ? modalitiesRes.data : [modalitiesRes.data];
           this.careers = Array.isArray(careersRes.data) ? careersRes.data : [careersRes.data];
           this.knowledgeAreas = Array.isArray(areasRes.data) ? areasRes.data : [areasRes.data];
           this.specialties = Array.isArray(specialtiesRes.data) ? specialtiesRes.data : [specialtiesRes.data];
           this.teachingTypes = Array.isArray(typesRes.data) ? typesRes.data : [typesRes.data];
+
+          console.log('🔍 Carreras cargadas:', this.careers);
+          this.careers.forEach(career => {
+            console.log(`📚 Carrera "${career.name}" tiene ${career.cycles?.length || 0} ciclos:`, career.cycles);
+          });
+
+          // 2. ✅ DESPUÉS de cargar datos, popular el formulario si es edición
+          if (!this.data.isNew && this.data.course) {
+            console.log('🔄 Iniciando población de formulario DESPUÉS de cargar datos...');
+            setTimeout(() => {
+              this.populateFormsWithCourseData();
+            }, 100); // Pequeño delay para asegurar que el DOM esté listo
+          }
         },
         error: (error) => {
-          console.error('Error al cargar datos iniciales:', error);
+          console.error('❌ Error al cargar datos iniciales:', error);
         }
       });
   }
 
+
   private populateFormsWithCourseData(): void {
     const course = this.data.course!;
+    console.log('📝 Curso a editar:', course);
+    console.log('📊 Carreras disponibles al popular:', this.careers.length);
 
-    // Popular form básico
+    // 1. Establecer todos los valores del formulario
     this.basicInfoForm.patchValue({
       name: course.name,
       code: course.code,
@@ -860,22 +879,72 @@ export class CourseDialogComponent implements OnInit, OnDestroy {
       cycleUuid: course.cycle.uuid
     });
 
-    // Popular form académico
     this.academicForm.patchValue({
       knowledgeAreaUuid: course.teachingKnowledgeArea.uuid,
       weeklyTheoryHours: course.weeklyTheoryHours,
       weeklyPracticeHours: course.weeklyPracticeHours
     });
 
-    // Popular form especialidad
     this.specialtyForm.patchValue({
       preferredSpecialtyUuid: course.preferredSpecialty?.uuid || ''
     });
 
-    // Actualizar carreras y ciclos filtrados
-    this.onModalityChange(course.modality.uuid);
-    this.onCareerChange(course.career.uuid);
+    console.log('🔧 Configurando filtros para edición...');
+
+    // 2. Configurar filtros en el orden correcto
+    // Primero filtrar carreras por modalidad
+    this.filteredCareers = this.careers.filter(career =>
+      career.modality.uuid === course.modality.uuid
+    );
+    console.log('🔍 Carreras filtradas después del filtro:', this.filteredCareers.length);
+
+    // Luego filtrar ciclos por la carrera específica
+    const selectedCareer = this.careers.find(career => career.uuid === course.career.uuid);
+    if (selectedCareer && selectedCareer.cycles) {
+      this.filteredCycles = selectedCareer.cycles.sort((a: any, b: any) => a.number - b.number);
+      console.log('🔁 Ciclos filtrados:', this.filteredCycles.length);
+    } else {
+      console.warn('⚠️ No se encontró la carrera o no tiene ciclos:', course.career.uuid);
+      this.filteredCycles = [];
+    }
+
+    // 3. Verificación final
+    setTimeout(() => {
+      const formValues = this.basicInfoForm.value;
+      console.log('✅ Verificación final:');
+      console.log('- Modalidad:', formValues.modalityUuid);
+      console.log('- Carrera:', formValues.careerUuid);
+      console.log('- Ciclo:', formValues.cycleUuid);
+      console.log('- Carreras filtradas:', this.filteredCareers.length);
+      console.log('- Ciclos filtrados:', this.filteredCycles.length);
+
+      if (!formValues.careerUuid || !formValues.cycleUuid) {
+        console.error('❌ Valores faltantes detectados');
+
+        // Intentar restaurar los valores
+        if (!formValues.careerUuid) {
+          console.log('🔄 Restaurando carrera UUID:', course.career.uuid);
+          this.basicInfoForm.patchValue({ careerUuid: course.career.uuid });
+        }
+
+        if (!formValues.cycleUuid) {
+          console.log('🔄 Restaurando ciclo UUID:', course.cycle.uuid);
+          this.basicInfoForm.patchValue({ cycleUuid: course.cycle.uuid });
+        }
+      }
+    }, 50);
   }
+  // ✅ MÉTODO ACTUALIZADO: Actualizar las llamadas para no usar parámetros preservar en modo nuevo
+  onModalitySelectionChange(modalityUuid: string): void {
+    // Método para cuando el usuario cambia la modalidad manualmente (sin preservar)
+    this.onModalityChange(modalityUuid, false);
+  }
+
+  onCareerSelectionChange(careerUuid: string): void {
+    // Método para cuando el usuario cambia la carrera manualmente (sin preservar)
+    this.onCareerChange(careerUuid, false);
+  }
+
 
   // Validadores personalizados
   private codeExistsValidator(control: AbstractControl) {
@@ -912,32 +981,89 @@ export class CourseDialogComponent implements OnInit, OnDestroy {
     this.basicInfoForm.patchValue({ code: value }, { emitEvent: false });
   }
 
-  onModalityChange(modalityUuid: string): void {
-    // Filtrar carreras por modalidad
-    this.filteredCareers = this.careers.filter(career =>
-      career.modality.uuid === modalityUuid
-    );
+  onModalityChange(modalityUuid: string, preserveCareer: boolean = false): void {
+    console.log('🔄 Cambiando modalidad:', modalityUuid, 'Preservar carrera:', preserveCareer);
 
-    // Limpiar selecciones dependientes
-    this.basicInfoForm.patchValue({
-      careerUuid: '',
-      cycleUuid: ''
+    if (!modalityUuid) {
+      this.filteredCareers = [];
+      this.filteredCycles = [];
+      return;
+    }
+
+    // Filtrar carreras por modalidad
+    this.filteredCareers = this.careers.filter(career => {
+      const matches = career.modality.uuid === modalityUuid;
+      if (!matches) {
+        console.log(`❌ Carrera "${career.name}" no coincide. Modalidad de carrera:`, career.modality.uuid, 'vs buscada:', modalityUuid);
+      }
+      return matches;
     });
-    this.filteredCycles = [];
+
+    console.log('🔍 Carreras filtradas:', this.filteredCareers.length);
+
+    // Solo limpiar si NO estamos preservando
+    if (!preserveCareer) {
+      this.basicInfoForm.patchValue({
+        careerUuid: '',
+        cycleUuid: ''
+      });
+      this.filteredCycles = [];
+    } else {
+      // Verificar que la carrera actual siga siendo válida
+      const currentCareerUuid = this.basicInfoForm.get('careerUuid')?.value;
+      if (currentCareerUuid) {
+        const isCareerValid = this.filteredCareers.some(career => career.uuid === currentCareerUuid);
+        if (!isCareerValid) {
+          console.warn('⚠️ La carrera actual no es válida para esta modalidad');
+          this.basicInfoForm.patchValue({
+            careerUuid: '',
+            cycleUuid: ''
+          });
+          this.filteredCycles = [];
+        }
+      }
+    }
   }
 
-  onCareerChange(careerUuid: string): void {
-    // Encontrar la carrera seleccionada y obtener sus ciclos
+  onCareerChange(careerUuid: string, preserveCycle: boolean = false): void {
+    console.log('🔄 Cambiando carrera:', careerUuid, 'Preservar ciclo:', preserveCycle);
+
+    if (!careerUuid) {
+      this.filteredCycles = [];
+      if (!preserveCycle) {
+        this.basicInfoForm.patchValue({ cycleUuid: '' });
+      }
+      return;
+    }
+
+    // Buscar la carrera en la lista completa (no en filtradas)
     const selectedCareer = this.careers.find(career => career.uuid === careerUuid);
+    console.log('📋 Carrera encontrada:', selectedCareer?.name);
 
     if (selectedCareer && selectedCareer.cycles) {
       this.filteredCycles = selectedCareer.cycles.sort((a: any, b: any) => a.number - b.number);
+      console.log('✅ Ciclos filtrados:', this.filteredCycles.length);
+
+      // Verificar ciclo actual si estamos preservando
+      if (preserveCycle) {
+        const currentCycleUuid = this.basicInfoForm.get('cycleUuid')?.value;
+        if (currentCycleUuid) {
+          const isCycleValid = this.filteredCycles.some((cycle: any) => cycle.uuid === currentCycleUuid);
+          if (!isCycleValid) {
+            console.warn('⚠️ El ciclo actual no es válido para esta carrera');
+            this.basicInfoForm.patchValue({ cycleUuid: '' });
+          }
+        }
+      }
     } else {
+      console.warn('⚠️ No se encontraron ciclos para la carrera:', careerUuid);
       this.filteredCycles = [];
     }
 
-    // Limpiar ciclo seleccionado
-    this.basicInfoForm.patchValue({ cycleUuid: '' });
+    // Limpiar ciclo solo si NO estamos preservando
+    if (!preserveCycle) {
+      this.basicInfoForm.patchValue({ cycleUuid: '' });
+    }
   }
 
   onHoursChange(): void {

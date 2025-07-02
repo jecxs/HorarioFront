@@ -46,7 +46,7 @@ import {
   TeacherEligibilityResponse,
   TeacherClassConflict,
   GroupedTeachers,
-  TeacherAvailabilityStatus
+  TeacherAvailabilityStatus, SelectedCellInfo
 } from '../../models/class-session.model';
 import { MatSelectSearchComponent } from 'ngx-mat-select-search';
 
@@ -56,7 +56,11 @@ export interface AssignmentDialogData {
   dayOfWeek?: DayOfWeek;
   teachingHours?: TeachingHourResponse[];
   timeSlotUuid?: string;
-  sessionToEdit?: any; // ClassSessionResponse para edición
+  sessionToEdit?: any;
+  // ✅ NUEVOS CAMPOS para selección múltiple
+  selectedCells?: SelectedCellInfo[];
+  isMultiSelection?: boolean;
+  consolidatedHours?: TeachingHourResponse[];
 }
 
 interface SelectionState {
@@ -162,15 +166,17 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   ) {
     this.assignmentForm = this.fb.group({
       courseUuid: ['', Validators.required],
-      sessionType: ['', Validators.required], // ✅ NUEVO CAMPO
+      sessionType: ['', Validators.required],
       teacherUuid: ['', Validators.required],
       learningSpaceUuid: ['', Validators.required],
       sessionTypeUuid: ['', Validators.required],
       notes: ['']
     });
 
-    // Establecer horas seleccionadas
-    if (data.teachingHours) {
+    // ✅ MANEJAR horas múltiples
+    if (data.consolidatedHours && data.consolidatedHours.length > 0) {
+      this.selectionState.selectedHours = data.consolidatedHours;
+    } else if (data.teachingHours) {
       this.selectionState.selectedHours = data.teachingHours;
     }
   }
@@ -484,6 +490,8 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
     };
 
     this.eligibleTeachersDetailed.forEach(teacher => {
+      console.log(`Teacher: ${teacher.fullName}, Status: ${teacher.availabilityStatus}`);
+
       switch (teacher.availabilityStatus) {
         case 'AVAILABLE':
           this.groupedTeachers.available.push(teacher);
@@ -500,12 +508,24 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
 
         case 'TIME_CONFLICT':
         case 'NOT_AVAILABLE':
+          this.groupedTeachers.unavailable.push(teacher);
+          break;
+
         case 'ERROR':
         default:
+          // ✅ NUEVO: Manejar estados no definidos - revisar qué status están llegando
+          console.warn(`Unknown teacher status: ${teacher.availabilityStatus} for ${teacher.fullName}`);
           this.groupedTeachers.unavailable.push(teacher);
           break;
       }
     });
+
+    // Logging para debug
+    console.log('✅ Teachers grouped:');
+    console.log('  - Available:', this.groupedTeachers.available.length);
+    console.log('  - With Conflicts:', this.groupedTeachers.withConflicts.length);
+    console.log('  - Unavailable (fuera de horario):', this.groupedTeachers.unavailable.length);
+    console.log('  - No Schedule:', this.groupedTeachers.noSchedule.length);
 
     // Ordenar cada grupo alfabéticamente
     Object.keys(this.groupedTeachers).forEach(key => {
@@ -651,10 +671,10 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   // ✅ NUEVO: Obtener mensaje de ayuda para cada categoría
   getCategoryHelpText(category: keyof GroupedTeachers): string {
     const helpTexts = {
-      available: 'Docentes que pueden ser asignados sin conflictos',
+      available: 'Docentes que pueden ser asignados sin conflictos en este horario',
       withConflicts: 'Docentes que tienen clases en el mismo horario - requieren confirmación',
-      unavailable: 'Docentes fuera de su horario de disponibilidad',
-      noSchedule: 'Docentes sin horario de disponibilidad configurado'
+      unavailable: 'Docentes con horarios configurados pero fuera de su disponibilidad para este horario específico',
+      noSchedule: 'Docentes sin horario de disponibilidad configurado para este día - verificar manualmente'
     };
     return helpTexts[category];
   }
@@ -860,11 +880,25 @@ export class AssignmentDialogComponent implements OnInit, OnDestroy {
   formatTimeRange(hours: TeachingHourResponse[]): string {
     if (!hours || hours.length === 0) return '';
 
+    if (hours.length === 1) {
+      const hour = hours[0];
+      return `${hour.startTime.substring(0, 5)} - ${hour.endTime.substring(0, 5)}`;
+    }
+
     const sortedHours = [...hours].sort((a, b) => a.orderInTimeSlot - b.orderInTimeSlot);
     const first = sortedHours[0];
     const last = sortedHours[sortedHours.length - 1];
 
-    return `${first.startTime.substring(0, 5)} - ${last.endTime.substring(0, 5)}`;
+    return `${first.startTime.substring(0, 5)} - ${last.endTime.substring(0, 5)} (${hours.length} horas)`;
+  }
+
+  getMultiSelectionInfo(): string {
+    if (!this.data.isMultiSelection || !this.data.selectedCells) {
+      return '';
+    }
+    const cellCount = this.data.selectedCells.length;
+    const timeRange = this.formatTimeRange(this.selectionState.selectedHours);
+    return `${cellCount} hora${cellCount > 1 ? 's' : ''} pedagógica${cellCount > 1 ? 's' : ''} - ${timeRange}`;
   }
 
   private loadEditData(): void {

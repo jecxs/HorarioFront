@@ -25,7 +25,12 @@ import { PeriodService } from '../../../periods/services/period.service';
 import { CourseService } from '../../../courses/services/course.service';
 import { CourseMetadataService } from '../../services/course-metadata.service';
 import { CourseMetadataHeaderComponent } from '../course-metadata-header/course-metadata-header.component';
-import { CourseResponse } from '../../models/class-session.model';
+import {
+  CourseResponse, MultiCellAssignmentData,
+  MultiCellSelection,
+  MultiSelectionHelper,
+  SelectedCellInfo
+} from '../../models/class-session.model';
 
 
 // Models
@@ -113,11 +118,19 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
 // ✅ AGREGAR: Estado de filtros
   showFilters = false;
   filtersExpanded = false;
-
+  //tip de seleccion multiple
+  showInstructionTip = false;
+  tipTimeout: any;
+  private readonly TIP_STORAGE_KEY = 'schedule-multiselection-tip-closed';
   // State
   selectedGroup: StudentGroup | null = null;
   loading = false;
   workingDays = WORKING_DAYS.filter(d => d !== DayOfWeek.SUNDAY);
+  multiSelection: MultiCellSelection = {
+    selectedCells: new Map(),
+    isSelecting: false
+  };
+
 
   constructor(
   ) {
@@ -128,6 +141,12 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
     this.loadInitialData();
     this.setupGroupSelection();
     this.handleQueryParams();
+
+    // ✅ NUEVO: Verificar visibilidad del tip después de que se cargue el componente
+    // Usar setTimeout para asegurar que el DOM esté listo
+    setTimeout(() => {
+      this.checkTipVisibility();
+    }, 1000); // 1 segundo de delay para dar tiempo a que cargue todo
   }
 
 
@@ -211,8 +230,14 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-    // ✅ Limpiar metadatos al destruir el componente
     this.courseMetadataService.clearMetadata();
+    this.clearMultiSelection();
+
+    // Limpiar timer del tip
+    if (this.tipTimeout) {
+      clearTimeout(this.tipTimeout);
+      this.tipTimeout = null;
+    }
   }
 
   private loadInitialData(): void {
@@ -485,6 +510,254 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
           );
         }
       });
+  }
+
+  // ✅ NUEVO MÉTODO: Verificar si el tip ya fue cerrado antes
+  private checkTipVisibility(): void {
+    try {
+      const tipClosed = localStorage.getItem(this.TIP_STORAGE_KEY);
+      this.showInstructionTip = !tipClosed;
+
+      console.log('🔍 Tip visibility check:', {
+        tipClosed: !!tipClosed,
+        showInstructionTip: this.showInstructionTip
+      });
+
+      if (this.showInstructionTip) {
+        this.startTipTimer();
+      }
+    } catch (error) {
+      // Si hay error con localStorage, mostrar el tip por defecto
+      console.warn('⚠️ Error accessing localStorage:', error);
+      this.showInstructionTip = true;
+      this.startTipTimer();
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Iniciar timer para ocultar tip automáticamente
+  private startTipTimer(): void {
+    // Limpiar timer anterior si existe
+    if (this.tipTimeout) {
+      clearTimeout(this.tipTimeout);
+    }
+
+    // Auto-ocultar después de 15 segundos
+    this.tipTimeout = setTimeout(() => {
+      this.hideInstructionTip();
+      console.log('⏰ Tip auto-hidden after timeout');
+    }, 15000); // 15 segundos
+  }
+
+// ✅ NUEVO MÉTODO: Ocultar tip sin persistencia
+  hideInstructionTip(): void {
+    this.showInstructionTip = false;
+    if (this.tipTimeout) {
+      clearTimeout(this.tipTimeout);
+      this.tipTimeout = null;
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Cerrar tip manualmente y guardar preferencia
+  closeTip(): void {
+    try {
+      // Ocultar tip
+      this.hideInstructionTip();
+
+      // Guardar que el usuario cerró el tip
+      localStorage.setItem(this.TIP_STORAGE_KEY, 'true');
+
+      console.log('❌ Tip closed by user and saved to localStorage');
+
+      this.showSnackBar('Tip ocultado', 'info');
+    } catch (error) {
+      console.warn('⚠️ Error saving to localStorage:', error);
+      // Al menos ocultar el tip aunque no se pueda guardar
+      this.hideInstructionTip();
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Resetear tip (útil para testing o si quieres volver a mostrarlo)
+  resetTip(): void {
+    try {
+      localStorage.removeItem(this.TIP_STORAGE_KEY);
+      this.showInstructionTip = true;
+      this.startTipTimer();
+
+      console.log('🔄 Tip reset and will show again');
+      this.showSnackBar('Tip reactivado', 'info');
+    } catch (error) {
+      console.warn('⚠️ Error removing from localStorage:', error);
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Verificar si el tip está permanentemente oculto
+  isTipPermanentlyHidden(): boolean {
+    try {
+      return !!localStorage.getItem(this.TIP_STORAGE_KEY);
+    } catch (error) {
+      return false;
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Manejar click en celda con soporte multi-selección
+  onCellClickWithMultiSelection(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell, event: MouseEvent): void {
+    // Si la celda ya tiene una sesión, editarla directamente
+    if (cell.session) {
+      this.editSession(cell.session);
+      return;
+    }
+
+    // Si no está disponible, no hacer nada
+    if (!cell.isAvailable) {
+      return;
+    }
+
+    const cellKey = MultiSelectionHelper.getCellKey(day, cell.teachingHour.uuid);
+
+    if (event.ctrlKey || event.metaKey) {
+      // Modo selección múltiple
+      this.handleMultiCellSelection(row, day, cell, cellKey);
+    } else {
+      // Click normal - limpiar selección previa y seleccionar solo esta celda
+      this.clearMultiSelection();
+      this.selectSingleCell(row, day, cell, cellKey);
+
+      // Si solo hay una celda seleccionada, abrir diálogo inmediatamente
+      this.openAssignmentDialogForSelection();
+    }
+  }
+
+// ✅ NUEVO MÉTODO: Manejar selección múltiple
+  private handleMultiCellSelection(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell, cellKey: string): void {
+    const cellInfo: SelectedCellInfo = {
+      day,
+      teachingHour: cell.teachingHour,
+      timeSlotUuid: row.timeSlot.uuid,
+      row,
+      isAvailable: cell.isAvailable
+    };
+
+    if (this.multiSelection.selectedCells.has(cellKey)) {
+      // Deseleccionar celda
+      this.multiSelection.selectedCells.delete(cellKey);
+    } else {
+      // Seleccionar celda
+      this.multiSelection.selectedCells.set(cellKey, cellInfo);
+    }
+
+    // Actualizar estado de selección
+    this.multiSelection.isSelecting = this.multiSelection.selectedCells.size > 0;
+
+    console.log(`📋 Celdas seleccionadas: ${this.multiSelection.selectedCells.size}`);
+  }
+
+// ✅ NUEVO MÉTODO: Seleccionar una sola celda
+  private selectSingleCell(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell, cellKey: string): void {
+    const cellInfo: SelectedCellInfo = {
+      day,
+      teachingHour: cell.teachingHour,
+      timeSlotUuid: row.timeSlot.uuid,
+      row,
+      isAvailable: cell.isAvailable
+    };
+
+    this.multiSelection.selectedCells.set(cellKey, cellInfo);
+    this.multiSelection.isSelecting = true;
+  }
+
+// ✅ NUEVO MÉTODO: Verificar si una celda está seleccionada
+  isCellSelected(day: DayOfWeek, hour: TeachingHourResponse): boolean {
+    const cellKey = MultiSelectionHelper.getCellKey(day, hour.uuid);
+    return this.multiSelection.selectedCells.has(cellKey);
+  }
+
+// ✅ NUEVO MÉTODO: Limpiar selección múltiple
+  clearMultiSelection(): void {
+    this.multiSelection.selectedCells.clear();
+    this.multiSelection.isSelecting = false;
+    this.multiSelection.selectionStart = undefined;
+    this.multiSelection.lastSelectedDay = undefined;
+    this.multiSelection.selectedTimeSlot = undefined;
+  }
+
+// ✅ NUEVO MÉTODO: Abrir diálogo para celdas seleccionadas
+  openAssignmentDialogForSelection(): void {
+    if (this.multiSelection.selectedCells.size === 0 || !this.selectedGroup) {
+      return;
+    }
+
+    const selectedCells = Array.from(this.multiSelection.selectedCells.values());
+
+    // Validar selección
+    const validation = MultiSelectionHelper.validateCellSelection(selectedCells);
+    if (!validation.isValid) {
+      this.showSnackBar(validation.errors.join('. '), 'error');
+      return;
+    }
+
+    // Consolidar datos
+    const consolidatedHours = MultiSelectionHelper.consolidateTeachingHours(selectedCells);
+    const firstCell = selectedCells[0];
+
+    const dialogData: MultiCellAssignmentData = {
+      mode: 'create',
+      studentGroup: this.selectedGroup,
+      dayOfWeek: firstCell.day,
+      teachingHours: consolidatedHours,
+      timeSlotUuid: firstCell.timeSlotUuid,
+      selectedCells,
+      selectedTimeSlotUuid: firstCell.timeSlotUuid,
+      consolidatedHours
+    };
+
+    console.log('🚀 Abriendo diálogo para', selectedCells.length, 'celdas seleccionadas');
+    console.log('📅 Día:', firstCell.day);
+    console.log('⏰ Horas:', consolidatedHours.map(h => `${h.startTime}-${h.endTime}`).join(', '));
+
+    const dialogRef = this.dialog.open(AssignmentDialogComponent, {
+      width: '700px',
+      maxWidth: '90vw',
+      data: dialogData,
+      disableClose: true
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      this.clearMultiSelection(); // Limpiar selección al cerrar diálogo
+
+      if (result) {
+        this.showSnackBar('Clase asignada exitosamente', 'success');
+        this.loadGroupData(this.selectedGroup!.uuid);
+      }
+    });
+  }
+
+
+
+// ✅ NUEVO MÉTODO: Obtener resumen de selección
+  getSelectionSummary(): string {
+    const cellCount = this.multiSelection.selectedCells.size;
+    if (cellCount === 0) return '';
+
+    if (cellCount === 1) {
+      const cell = Array.from(this.multiSelection.selectedCells.values())[0];
+      return `${cell.teachingHour.startTime} - ${cell.teachingHour.endTime}`;
+    }
+
+    const cells = Array.from(this.multiSelection.selectedCells.values());
+    const timeRange = MultiSelectionHelper.getTimeRange(cells);
+    return timeRange ? `${timeRange.start} - ${timeRange.end} (${cellCount} horas)` : `${cellCount} celdas`;
+  }
+
+
+// ✅ NUEVO MÉTODO: Cancelar selección múltiple
+  cancelMultiSelection(): void {
+    this.clearMultiSelection();
+    this.showSnackBar('Selección cancelada', 'info');
+  }
+
+// ✅ NUEVO MÉTODO: Aplicar selección múltiple
+  applyMultiSelection(): void {
+    this.openAssignmentDialogForSelection();
   }
 
   private loadTimeSlots(): void {
@@ -879,29 +1152,13 @@ export class ScheduleByGroupComponent implements OnInit, OnDestroy {
 
   // ===== MÉTODOS DE ACCIÓN MEJORADOS =====
 
-  onCellClick(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell): void {
-    if (!cell.session && cell.isAvailable && this.selectedGroup) {
-      const dialogData: AssignmentDialogData = {
-        mode: 'create',
-        studentGroup: this.selectedGroup,
-        dayOfWeek: day,
-        teachingHours: [cell.teachingHour],
-        timeSlotUuid: row.timeSlot.uuid
-      };
-
-      const dialogRef = this.dialog.open(AssignmentDialogComponent, {
-        width: '700px',
-        maxWidth: '90vw',
-        data: dialogData,
-        disableClose: true
-      });
-
-      dialogRef.afterClosed().subscribe(result => {
-        if (result) {
-          this.showSnackBar('Clase asignada exitosamente', 'success');
-          this.loadGroupData(this.selectedGroup!.uuid);
-        }
-      });
+  // ✅ MÉTODO ACTUALIZADO: onCellClick original ahora llama al nuevo método
+  onCellClick(row: ScheduleHourRow, day: DayOfWeek, cell: ScheduleCell, event?: MouseEvent): void {
+    if (event) {
+      this.onCellClickWithMultiSelection(row, day, cell, event);
+    } else {
+      // Fallback para compatibilidad
+      this.onCellClickWithMultiSelection(row, day, cell, new MouseEvent('click'));
     }
   }
 

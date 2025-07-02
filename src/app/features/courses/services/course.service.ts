@@ -1,7 +1,8 @@
 // src/app/features/courses/services/course.service.ts
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import {map, Observable, tap} from 'rxjs';
 import { BaseApiService } from '../../../shared/services/base-api.service';
+import {catchError} from 'rxjs/operators';
 
 export interface Course {
   uuid: string;
@@ -169,8 +170,53 @@ export class CourseService extends BaseApiService {
 
   // Obtener todas las carreras
   getAllCareers(): Observable<any> {
-    return this.get<Career[]>('/protected/career');
+    console.log('🌐 Realizando petición: getAllCareers');
+    return this.get<Career[]>('/protected/career').pipe(
+      tap(response => {
+        console.log('📥 Respuesta cruda de getAllCareers:', response);
+        if (response.data) {
+          const careers = Array.isArray(response.data) ? response.data : [response.data];
+          console.log(`📚 Carreras procesadas (${careers.length}):`, careers);
+
+          careers.forEach((career, index) => {
+            console.log(`🔍 Carrera ${index + 1}:`, {
+              name: career.name,
+              uuid: career.uuid,
+              modality: career.modality?.name,
+              cyclesCount: career.cycles?.length || 0,
+              cycles: career.cycles
+            });
+          });
+        }
+      }),
+      catchError(error => {
+        console.error('❌ Error en getAllCareers:', error);
+        throw error;
+      })
+    );
   }
+
+  // ✅ NUEVO MÉTODO: Para verificar datos específicos
+  getCareerWithCycles(careerUuid: string): Observable<any> {
+    console.log('🔍 Obteniendo carrera específica:', careerUuid);
+    return this.getAllCareers().pipe(
+      map(response => {
+        const careers = Array.isArray(response.data) ? response.data : [response.data];
+        const career = careers.find((c: any) => c.uuid === careerUuid);
+
+        if (career) {
+          console.log('✅ Carrera encontrada:', career);
+          console.log('🔁 Ciclos de la carrera:', career.cycles);
+        } else {
+          console.warn('⚠️ Carrera no encontrada:', careerUuid);
+        }
+
+        return career;
+      })
+    );
+  }
+
+
 
   // === UTILITY METHODS ===
 

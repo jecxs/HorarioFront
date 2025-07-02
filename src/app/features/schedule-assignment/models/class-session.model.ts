@@ -1,6 +1,8 @@
 // src/app/features/schedule-assignment/models/class-session.model.ts
 
 // Interfaces base reutilizables
+import {AssignmentDialogData} from '../components/assignment-dialog/assignment-dialog.component';
+
 export interface BaseUuidEntity {
   uuid: string;
   name?: string;
@@ -284,7 +286,114 @@ export interface ScheduleBoardState {
   warnings: Map<string, string[]>;
 }
 
+export interface MultiCellSelection {
+  selectedCells: Map<string, SelectedCellInfo>; // key: "day-hourUuid"
+  isSelecting: boolean;
+  selectionStart?: SelectedCellInfo;
+  lastSelectedDay?: DayOfWeek;
+  selectedTimeSlot?: string; // UUID del turno seleccionado
+}
+export interface SelectedCellInfo {
+  day: DayOfWeek;
+  teachingHour: TeachingHourResponse;
+  timeSlotUuid: string;
+  row: ScheduleHourRow;
+  isAvailable: boolean;
+}
+export interface MultiCellAssignmentData extends AssignmentDialogData {
+  selectedCells: SelectedCellInfo[];
+  selectedTimeSlotUuid: string;
+  consolidatedHours: TeachingHourResponse[];
+}
+
 // ✅ HELPERS Y UTILIDADES
+// ✅ HELPER para manejo de selecciones
+export class MultiSelectionHelper {
+
+  /**
+   * Genera clave única para una celda
+   */
+  static getCellKey(day: DayOfWeek, hourUuid: string): string {
+    return `${day}-${hourUuid}`;
+  }
+
+  /**
+   * Verifica si las celdas seleccionadas son válidas para una sesión
+   */
+  static validateCellSelection(cells: SelectedCellInfo[]): {
+    isValid: boolean;
+    errors: string[];
+  } {
+    const errors: string[] = [];
+
+    if (cells.length === 0) {
+      errors.push('Debe seleccionar al menos una celda');
+      return { isValid: false, errors };
+    }
+
+    // Verificar que todas las celdas estén disponibles
+    const unavailableCells = cells.filter(cell => !cell.isAvailable);
+    if (unavailableCells.length > 0) {
+      errors.push('Algunas celdas seleccionadas no están disponibles');
+    }
+
+    // Verificar que todas las celdas sean del mismo día
+    const uniqueDays = new Set(cells.map(cell => cell.day));
+    if (uniqueDays.size > 1) {
+      errors.push('Todas las celdas deben ser del mismo día');
+    }
+
+    // Verificar que todas las celdas sean del mismo turno
+    const uniqueTimeSlots = new Set(cells.map(cell => cell.timeSlotUuid));
+    if (uniqueTimeSlots.size > 1) {
+      errors.push('Todas las celdas deben ser del mismo turno');
+    }
+
+    // Verificar que las horas sean consecutivas
+    if (cells.length > 1) {
+      const sortedCells = [...cells].sort((a, b) =>
+        a.teachingHour.orderInTimeSlot - b.teachingHour.orderInTimeSlot
+      );
+
+      for (let i = 1; i < sortedCells.length; i++) {
+        const prevOrder = sortedCells[i - 1].teachingHour.orderInTimeSlot;
+        const currentOrder = sortedCells[i].teachingHour.orderInTimeSlot;
+
+        if (currentOrder !== prevOrder + 1) {
+          errors.push('Las horas seleccionadas deben ser consecutivas');
+          break;
+        }
+      }
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Consolida las horas pedagógicas seleccionadas
+   */
+  static consolidateTeachingHours(cells: SelectedCellInfo[]): TeachingHourResponse[] {
+    return cells
+      .map(cell => cell.teachingHour)
+      .sort((a, b) => a.orderInTimeSlot - b.orderInTimeSlot);
+  }
+
+  /**
+   * Obtiene el rango de tiempo de las celdas seleccionadas
+   */
+  static getTimeRange(cells: SelectedCellInfo[]): { start: string; end: string } | null {
+    if (cells.length === 0) return null;
+
+    const sortedHours = this.consolidateTeachingHours(cells);
+    return {
+      start: sortedHours[0].startTime,
+      end: sortedHours[sortedHours.length - 1].endTime
+    };
+  }
+}
 
 // Helpers para TimeSlots
 export class TimeSlotHelper {

@@ -134,17 +134,29 @@ export class CoursesComponent implements OnInit {
       this.courseService.getAllKnowledgeAreas()
     ]).subscribe({
       next: ([coursesResponse, modalitiesResponse, careersResponse, areasResponse]) => {
+        console.log('📥 Respuestas recibidas:');
+        console.log('- Cursos:', coursesResponse);
+        console.log('- Modalidades:', modalitiesResponse);
+        console.log('- Carreras:', careersResponse);
+        console.log('- Áreas:', areasResponse);
+
         this.allCourses = Array.isArray(coursesResponse.data) ? coursesResponse.data : [coursesResponse.data];
         this.modalities = Array.isArray(modalitiesResponse.data) ? modalitiesResponse.data : [modalitiesResponse.data];
         this.careers = Array.isArray(careersResponse.data) ? careersResponse.data : [careersResponse.data];
         this.knowledgeAreas = Array.isArray(areasResponse.data) ? areasResponse.data : [areasResponse.data];
+
+        // ✅ Verificar que las carreras incluyan ciclos
+        console.log('🔍 Verificando ciclos en carreras:');
+        this.careers.forEach(career => {
+          console.log(`📚 "${career.name}": ${career.cycles?.length || 0} ciclos`, career.cycles);
+        });
 
         this.processCoursesData();
         this.updateStats();
         this.loading = false;
       },
       error: (error) => {
-        console.error('Error al cargar datos:', error);
+        console.error('❌ Error al cargar datos:', error);
         this.snackBar.open('Error al cargar los cursos', 'Cerrar', { duration: 3000 });
         this.loading = false;
       }

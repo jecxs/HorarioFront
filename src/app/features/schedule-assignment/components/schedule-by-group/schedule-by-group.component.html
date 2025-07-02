@@ -510,98 +510,230 @@
                         </div>
                       </div>
                     </div>
-
                     <!-- Compact Day Cells -->
                     <div *ngFor="let day of workingDays" class="relative border-r border-slate-100 last:border-r-0">
-                      <ng-container *ngIf="getCellForDay(row, day) as cell">
+                          <ng-container *ngIf="getCellForDay(row, day) as cell">
 
-                        <!-- Session Card (compact with internal actions) -->
-                        <div *ngIf="cell.session"
-                             class="absolute inset-1 rounded-lg shadow-sm cursor-pointer group transition-all duration-200 hover:shadow-md overflow-hidden"
-                             [class]="getSessionCardClasses(cell.session)"
-                             (click)="editSession(cell.session)"
-                             [matTooltip]="getCellTooltip(cell)"
-                             matTooltipClass="session-tooltip"
-                             matTooltipPosition="above">
-
-                          <div class="p-2 h-full flex flex-col justify-between relative">
-                            <!-- Main Content -->
-                            <div class="flex-1 min-h-0">
-                              <h6 class="font-medium text-white text-xs leading-tight mb-1 truncate">
-                                {{ cell.session.course.name }}
-                              </h6>
-                              <div class="text-xs text-white/80 space-y-0.5">
-                                <div class="flex items-center space-x-1">
-                                  <mat-icon class="text-xs flex-shrink-0">person</mat-icon>
-                                  <span class="truncate">{{ getShortName(cell.session.teacher.fullName) }}</span>
+                            <!-- Session Card (sin cambios) -->
+                            <div *ngIf="cell.session"
+                                 class="absolute inset-1 rounded-lg shadow-sm cursor-pointer group transition-all duration-200 hover:shadow-md overflow-hidden"
+                                 [class]="getSessionCardClasses(cell.session)"
+                                 (click)="editSession(cell.session)"
+                                 [matTooltip]="getCellTooltip(cell)"
+                                 matTooltipClass="session-tooltip"
+                                 matTooltipPosition="above">
+                              <!-- Contenido de sesión existente sin cambios -->
+                              <div class="p-2 h-full flex flex-col justify-between relative">
+                                <div class="flex-1 min-h-0">
+                                  <h6 class="font-medium text-white text-xs leading-tight mb-1 truncate">
+                                    {{ cell.session.course.name }}
+                                  </h6>
+                                  <div class="text-xs text-white/80 space-y-0.5">
+                                    <div class="flex items-center space-x-1">
+                                      <mat-icon class="text-xs flex-shrink-0">person</mat-icon>
+                                      <span class="truncate">{{ getShortName(cell.session.teacher.fullName) }}</span>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                      <mat-icon class="text-xs flex-shrink-0">room</mat-icon>
+                                      <span class="truncate">{{ cell.session.learningSpace.name }}</span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div class="flex items-center space-x-1">
-                                  <mat-icon class="text-xs flex-shrink-0">room</mat-icon>
-                                  <span class="truncate">{{ cell.session.learningSpace.name }}</span>
+                                <div class="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                  <button
+                                    mat-icon-button
+                                    class="w-5 h-5 bg-black/30 hover:bg-black/50 rounded flex items-center justify-center"
+                                    (click)="editSession(cell.session); $event.stopPropagation()"
+                                    matTooltip="Editar clase">
+                                    <mat-icon class="text-white text-xs">edit</mat-icon>
+                                  </button>
+                                  <button
+                                    mat-icon-button
+                                    class="w-5 h-5 bg-black/30 hover:bg-red-600/80 rounded flex items-center justify-center"
+                                    (click)="deleteSession(cell.session); $event.stopPropagation()"
+                                    matTooltip="Eliminar clase">
+                                    <mat-icon class="text-white text-xs">delete</mat-icon>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                            <!-- ✅ NUEVA: Available Cell con soporte de selección múltiple -->
+                            <!-- ✅ CORREGIDA: Available Cell con soporte de selección múltiple -->
+                            <div *ngIf="!cell.session && cell.isAvailable"
+                                 class="absolute inset-1 rounded-lg border transition-all duration-200 cursor-pointer group"
+                                 [class.border-dashed]="!isCellSelected(day, cell.teachingHour)"
+                                 [class.border-solid]="isCellSelected(day, cell.teachingHour)"
+                                 [class.border-emerald-300]="!isCellSelected(day, cell.teachingHour)"
+                                 [class.border-blue-500]="isCellSelected(day, cell.teachingHour)"
+                                 [class.bg-emerald-50]="!isCellSelected(day, cell.teachingHour)"
+                                 [class.bg-blue-100]="isCellSelected(day, cell.teachingHour)"
+                                 [class.hover:bg-emerald-100]="!isCellSelected(day, cell.teachingHour)"
+                                 [class.hover:bg-blue-200]="isCellSelected(day, cell.teachingHour)"
+                                 (click)="onCellClick(row, day, cell, $event)"
+                                 [matTooltip]="getCellTooltip(cell)"
+                                 matTooltipPosition="above">
+
+                              <!-- Contenido de la celda disponible -->
+                              <div class="flex items-center justify-center h-full">
+                                <!-- Icono normal cuando no está seleccionada -->
+                                <mat-icon *ngIf="!isCellSelected(day, cell.teachingHour)"
+                                          class="text-emerald-600 group-hover:scale-110 transition-transform">
+                                  add_circle_outline
+                                </mat-icon>
+
+                                <!-- Icono de selección cuando está seleccionada -->
+                                <div *ngIf="isCellSelected(day, cell.teachingHour)"
+                                     class="flex items-center justify-center w-6 h-6 bg-blue-600 text-white rounded-full">
+                                  <mat-icon class="text-sm">check</mat-icon>
                                 </div>
                               </div>
                             </div>
 
-                            <!-- Action Buttons - Always visible on hover -->
-                            <div class="absolute top-1 right-1 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <button
-                                mat-icon-button
-                                class="w-5 h-5 bg-black/30 hover:bg-black/50 rounded flex items-center justify-center"
-                                (click)="editSession(cell.session); $event.stopPropagation()"
-                                matTooltip="Editar clase"
-                                matTooltipPosition="above">
-                                <mat-icon class="text-white text-xs">edit</mat-icon>
-                              </button>
-                              <button
-                                mat-icon-button
-                                class="w-5 h-5 bg-black/30 hover:bg-red-600/80 rounded flex items-center justify-center"
-                                (click)="deleteSession(cell.session); $event.stopPropagation()"
-                                matTooltip="Eliminar clase"
-                                matTooltipPosition="above">
-                                <mat-icon class="text-white text-xs">delete</mat-icon>
-                              </button>
+                            <!-- Unavailable Cell (sin cambios) -->
+                            <div *ngIf="!cell.session && !cell.isAvailable"
+                                 class="absolute inset-1 rounded-lg bg-slate-100 flex items-center justify-center">
+                              <mat-icon class="text-slate-400 text-lg">block</mat-icon>
                             </div>
+                        </ng-container>
+                  </div>
+          <!-- ✅ NUEVO: Panel flotante de selección múltiple -->
+                      <div *ngIf="multiSelection.isSelecting && multiSelection.selectedCells.size > 0"
+                           class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-xl shadow-2xl border border-slate-200 p-4 z-50 min-w-[400px]">
+
+                        <div class="flex items-center justify-between mb-3">
+                          <div class="flex items-center space-x-3">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <mat-icon class="text-blue-600 text-sm">selection_tool</mat-icon>
+                            </div>
+                            <div>
+                              <h4 class="font-medium text-slate-900">Selección Múltiple</h4>
+                              <p class="text-sm text-slate-600">{{ multiSelection.selectedCells.size }} celda(s) seleccionada(s)</p>
+                            </div>
+                          </div>
+
+                          <button
+                            mat-icon-button
+                            (click)="cancelMultiSelection()"
+                            class="w-8 h-8 hover:bg-slate-100 rounded-lg">
+                            <mat-icon class="text-slate-400">close</mat-icon>
+                          </button>
+                        </div>
+
+                        <div class="bg-slate-50 rounded-lg p-3 mb-3">
+                          <div class="flex items-center space-x-2 text-sm">
+                            <mat-icon class="text-slate-600 text-base">schedule</mat-icon>
+                            <span class="font-medium text-slate-700">Horario:</span>
+                            <span class="text-slate-900">{{ getSelectionSummary() }}</span>
                           </div>
                         </div>
 
-                        <!-- Available Cell (minimal) -->
-                        <div *ngIf="!cell.session && cell.isAvailable"
-                             class="absolute inset-1 rounded-lg border border-dashed border-emerald-300 bg-emerald-50/50 flex items-center justify-center cursor-pointer hover:bg-emerald-100/50 transition-colors group"
-                             (click)="onCellClick(row, day, cell)"
-                             [matTooltip]="getCellTooltip(cell)"
-                             matTooltipPosition="above">
-                          <mat-icon class="text-emerald-600 group-hover:scale-110 transition-transform">add_circle_outline</mat-icon>
+                        <div class="flex space-x-3">
+                          <button
+                            mat-button
+                            (click)="clearMultiSelection()"
+                            class="text-slate-600 hover:bg-slate-100 px-4 py-2 rounded-lg transition-colors">
+                            Limpiar
+                          </button>
+
+                          <button
+                            mat-raised-button
+                            color="primary"
+                            (click)="applyMultiSelection()"
+                            [disabled]="!selectedGroup"
+                            class="px-6 py-2 rounded-lg">
+                            <mat-icon class="mr-2 text-sm">add</mat-icon>
+                            Asignar Clase
+                          </button>
+                        </div>
+                      </div>
+
+                      <!-- ✅ NUEVO: Overlay para instrucciones de uso -->
+                    <div *ngIf="selectedGroup && !multiSelection.isSelecting && scheduleHourRows.length > 0 && showInstructionTip"
+                         class="fixed bottom-6 right-6 bg-blue-50 border border-blue-200 rounded-lg p-3 max-w-sm z-40 shadow-lg transition-all duration-300"
+                         style="animation: slideInFromRight 0.5s ease-out;">
+
+                      <div class="flex items-start justify-between space-x-3">
+                        <!-- Contenido del tip -->
+                        <div class="flex items-start space-x-2 flex-1">
+                          <mat-icon class="text-blue-600 text-sm mt-0.5 flex-shrink-0">lightbulb</mat-icon>
+                          <div class="text-xs text-blue-800">
+                            <p class="font-semibold mb-1">💡 Selección Múltiple</p>
+                            <p class="mb-2">Mantén <kbd class="bg-white px-1.5 py-0.5 rounded border text-[10px] font-mono font-bold">Ctrl</kbd> + Click para seleccionar múltiples celdas consecutivas</p>
+
+                            <!-- Barra de progreso visual -->
+                            <div class="w-full bg-blue-200 rounded-full h-1 overflow-hidden mb-1">
+                              <div class="bg-blue-500 h-full rounded-full"
+                                   style="animation: shrinkWidth 15s linear forwards;"></div>
+                            </div>
+                            <p class="text-[10px] text-blue-600 opacity-75">Se oculta automáticamente en 15s</p>
+                          </div>
                         </div>
 
-                        <!-- Unavailable Cell (minimal) -->
-                        <div *ngIf="!cell.session && !cell.isAvailable"
-                             class="absolute inset-1 rounded-lg bg-slate-100 flex items-center justify-center">
-                          <mat-icon class="text-slate-400 text-lg">block</mat-icon>
+                        <!-- Botones de acción -->
+                        <div class="flex flex-col space-y-1">
+                          <!-- Botón cerrar permanentemente -->
+                          <button
+                            mat-icon-button
+                            (click)="closeTip()"
+                            class="w-6 h-6 hover:bg-blue-100 rounded-full flex items-center justify-center"
+                            matTooltip="Cerrar permanentemente"
+                            matTooltipPosition="left">
+                            <mat-icon class="text-blue-600 text-sm">close</mat-icon>
+                          </button>
                         </div>
-
-                      </ng-container>
+                      </div>
+                    </div>
                     </div>
                   </div>
-                </div>
-              </ng-container>
+            </ng-container>
             </ng-container>
           </div>
-        </div>
+          </div>
+            </div>
+          </div>
+<div *ngIf="multiSelection.isSelecting && multiSelection.selectedCells.size > 0"
+     class="bg-blue-50 border-l-4 border-blue-500 p-3 mx-4 mb-4 rounded-r-lg">
+  <div class="flex items-center justify-between">
+    <div class="flex items-center space-x-3">
+      <mat-icon class="text-blue-600">info</mat-icon>
+      <div class="text-sm">
+        <span class="font-medium text-blue-900">Modo selección múltiple activo</span>
+        <span class="text-blue-700 ml-2">{{ multiSelection.selectedCells.size }} celda(s) seleccionada(s)</span>
       </div>
     </div>
 
-    <!-- Compact Empty State -->
-    <div *ngIf="!selectedGroup && !loading" class="flex flex-col items-center justify-center py-20">
-      <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-        <mat-icon class="text-slate-400 text-2xl">event_available</mat-icon>
-      </div>
-      <h3 class="text-lg font-medium text-slate-900 mb-2">Seleccione un grupo</h3>
-      <p class="text-slate-500 text-center max-w-md">
-        Elija un grupo académico para visualizar y gestionar su horario
-      </p>
-    </div>
+    <div class="flex items-center space-x-2">
+      <button
+        mat-button
+        class="text-blue-600 hover:bg-blue-100 px-3 py-1 rounded text-sm"
+        (click)="clearMultiSelection()">
+        Limpiar selección
+      </button>
 
+      <button
+        mat-raised-button
+        color="primary"
+        class="px-4 py-1 text-sm"
+        (click)="applyMultiSelection()"
+        [disabled]="!selectedGroup">
+        Asignar clase
+      </button>
+    </div>
   </div>
+</div>
+
+<!-- Compact Empty State -->
+<div *ngIf="!selectedGroup && !loading" class="flex flex-col items-center justify-center py-20">
+  <div class="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+    <mat-icon class="text-slate-400 text-2xl">event_available</mat-icon>
+  </div>
+  <h3 class="text-lg font-medium text-slate-900 mb-2">Seleccione un grupo</h3>
+  <p class="text-slate-500 text-center max-w-md">
+    Elija un grupo académico para visualizar y gestionar su horario
+  </p>
+</div>
+
+</div>
 </div>
 <!-- ✅ NUEVO: Overlay para cerrar filtros al hacer click fuera -->
 <div *ngIf="filtersExpanded"
