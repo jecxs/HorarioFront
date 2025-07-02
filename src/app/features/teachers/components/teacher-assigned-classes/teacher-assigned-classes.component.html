@@ -139,42 +139,69 @@
               class="schedule-cell"
               [class]="getScheduleCellClass(row, day)">
 
-              <!-- ✅ CORREGIDO: Sesión de clase con manejo de multi-hora -->
-              <div
-                *ngIf="getCellForDay(row, day)?.session as session; else emptyCellTemplate"
-                class="session-card"
-                [class]="getSessionCardClasses(session)"
-                [matTooltip]="getSessionTooltip(session)"
-                matTooltipClass="schedule-tooltip">
+              <!-- ✅ MEJORADO: Sesión de clase con información en todas las horas -->
+              <ng-container *ngIf="getSessionInfoForHour(day, row.teachingHour) as sessionInfo">
+                <div
+                  *ngIf="sessionInfo.session; else emptyCellTemplate"
+                  class="session-card"
+                  [matTooltip]="getSessionTooltip(sessionInfo.session)"
+                  matTooltipClass="schedule-tooltip">
 
-                <div class="session-header">
-                  <span class="course-name">{{ session.course.name }}</span>
-                  <mat-chip
-                    [class]="getSessionTypeChipClass(session)"
-                    class="session-type-chip">
-                    <mat-icon>{{ getSessionTypeIcon(session.sessionType.name) }}</mat-icon>
-                  </mat-chip>
-                </div>
+                  <!-- ✅ NUEVO: Mostrar información según la posición en la sesión multi-hora -->
+                  <div class="session-content">
 
-                <div class="session-details">
-                  <div class="detail-row">
-                    <mat-icon>group</mat-icon>
-                    <span>{{ session.studentGroup.name }}</span>
+                    <!-- Primera hora: Información completa -->
+                    <div *ngIf="sessionInfo.isFirstHour" class="session-main-info">
+                      <div class="session-header">
+                        <span class="course-name">{{ sessionInfo.session.course.name }}</span>
+                        <mat-chip [class]="getSessionTypeChipClass(sessionInfo.session)" class="session-type-chip">
+                          <mat-icon>{{ getSessionTypeIcon(sessionInfo.session.sessionType.name) }}</mat-icon>
+                        </mat-chip>
+                      </div>
+
+                      <div class="session-details">
+                        <div class="detail-row">
+                          <mat-icon>group</mat-icon>
+                          <span>{{ sessionInfo.session.studentGroup.name }}</span>
+                        </div>
+                        <div class="detail-row">
+                          <mat-icon>room</mat-icon>
+                          <span>{{ sessionInfo.session.learningSpace.name }}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Horas intermedias y final: Información resumida -->
+                    <div *ngIf="!sessionInfo.isFirstHour" class="session-continuation">
+                      <div class="continuation-header">
+                        <span class="course-name-small">{{ sessionInfo.session.course.name }}</span>
+                        <span class="session-position">
+                          {{ sessionInfo.hourIndex + 1 }}/{{ sessionInfo.spanHours }}
+                        </span>
+                      </div>
+
+                      <div class="continuation-details">
+                        <mat-icon>schedule</mat-icon>
+                        <span>{{ getSessionTypeName(sessionInfo.session.sessionType.name) }}</span>
+                      </div>
+                    </div>
+
+                    <!-- ✅ NUEVO: Indicador de duración total (solo en primera hora) -->
+                    <div *ngIf="sessionInfo.isFirstHour && sessionInfo.spanHours > 1"
+                         class="multi-hour-indicator"
+                         [matTooltip]="'Clase de ' + sessionInfo.spanHours + ' horas pedagógicas consecutivas'">
+                      {{ sessionInfo.spanHours }}h
+                    </div>
+
+                    <!-- ✅ NUEVO: Indicador de conexión visual -->
+                    <div *ngIf="sessionInfo.isPartOfMultiHour" class="connection-indicator">
+                      <div class="connection-line"></div>
+                    </div>
                   </div>
-                  <div class="detail-row">
-                    <mat-icon>room</mat-icon>
-                    <span>{{ session.learningSpace.name }}</span>
-                  </div>
                 </div>
+              </ng-container>
 
-                <!-- ✅ MEJORADO: Indicador de horas múltiples más claro -->
-                <div *ngIf="session.totalHours > 1" class="multi-hour-indicator"
-                     [matTooltip]="'Esta clase abarca ' + session.totalHours + ' horas pedagógicas consecutivas'">
-                  {{ session.totalHours }}h
-                </div>
-              </div>
-
-              <!-- ✅ MEJORADO: Celda vacía con mejor UX -->
+              <!-- ✅ MEJORADO: Celda vacía -->
               <ng-template #emptyCellTemplate>
                 <div class="empty-cell">
                   <span class="empty-text">Libre</span>

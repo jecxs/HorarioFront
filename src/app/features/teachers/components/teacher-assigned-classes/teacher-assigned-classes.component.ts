@@ -300,11 +300,13 @@ export class TeacherAssignedClassesComponent implements OnInit, OnDestroy {
   }
 
   // ✅ NUEVO MÉTODO: Obtener información de sesión para una hora específica
-  private getSessionInfoForHour(day: DayOfWeek, hour: TeachingHour): {
+  protected getSessionInfoForHour(day: DayOfWeek, hour: TeachingHour): {
     session?: ClassSessionResponse;
     isFirstHour: boolean;
+    isLastHour: boolean;
     isPartOfMultiHour: boolean;
     spanHours: number;
+    hourIndex: number;
   } {
     // Buscar sesión que contenga esta hora
     const session = this.sessions.find(session =>
@@ -313,34 +315,28 @@ export class TeacherAssignedClassesComponent implements OnInit, OnDestroy {
     );
 
     if (!session) {
-      return { isFirstHour: false, isPartOfMultiHour: false, spanHours: 0 };
+      return {
+        isFirstHour: false,
+        isLastHour: false,
+        isPartOfMultiHour: false,
+        spanHours: 0,
+        hourIndex: -1
+      };
     }
 
-    // ✅ NUEVO: Debug del mapeo de horas
     const sessionHours = session.teachingHours.sort((a, b) => a.orderInTimeSlot - b.orderInTimeSlot);
-    const isFirstHour = sessionHours[0].uuid === hour.uuid;
+    const hourIndex = sessionHours.findIndex(h => h.uuid === hour.uuid);
+    const isFirstHour = hourIndex === 0;
+    const isLastHour = hourIndex === sessionHours.length - 1;
     const isPartOfMultiHour = session.teachingHours.length > 1;
 
-    // ✅ NUEVO: Debug logging
-    if (isFirstHour) {
-      console.log(`🎯 Mapping session to grid:`, {
-        requestedDay: day,
-        requestedDayName: this.getDayName(day),
-        sessionDay: session.dayOfWeek,
-        sessionDayName: this.getDayName(session.dayOfWeek),
-        courseName: session.course.name,
-        hourTime: `${hour.startTime}-${hour.endTime}`,
-        isMultiHour: isPartOfMultiHour,
-        totalHours: session.totalHours,
-        match: day === session.dayOfWeek ? '✅' : '❌ MISMATCH!'
-      });
-    }
-
     return {
-      session: isFirstHour ? session : undefined, // Solo mostrar la sesión en la primera hora
+      session, // ✅ CAMBIO: Ahora retornamos la sesión en TODAS las horas
       isFirstHour,
+      isLastHour,
       isPartOfMultiHour,
-      spanHours: session.teachingHours.length
+      spanHours: session.teachingHours.length,
+      hourIndex
     };
   }
 
@@ -375,32 +371,27 @@ export class TeacherAssignedClassesComponent implements OnInit, OnDestroy {
   // ✅ MÉTODO MEJORADO: Clases CSS para celdas del tablero
   getScheduleCellClass(row: ScheduleHourRow, day: DayOfWeek): string {
     const cell = this.getCellForDay(row, day);
+    const sessionInfo = this.getSessionInfoForHour(day, row.teachingHour);
     let classes = '';
 
-    if (cell?.session) {
-      classes += 'has-session ';
-      classes += cell.session.sessionType.name === 'THEORY' ? 'theory-session' : 'practice-session';
+    if (sessionInfo.session) {
+      const sessionType = sessionInfo.session.sessionType.name === 'THEORY' ? 'theory-session' : 'practice-session';
 
-      // ✅ NUEVO: Agregar clase para sesiones multi-hora
-      if (cell.session.totalHours > 1) {
-        classes += ' multi-hour-session';
-      }
-    } else {
-      // Verificar si es parte de una sesión multi-hora
-      const sessionInfo = this.getSessionInfoForHour(day, row.teachingHour);
-      if (sessionInfo.isPartOfMultiHour && !sessionInfo.isFirstHour) {
-        classes += 'part-of-multi-hour-session ';
-        // Encontrar la sesión para obtener el tipo
-        const session = this.sessions.find(s =>
-          s.dayOfWeek === day &&
-          s.teachingHours.some(h => h.uuid === row.teachingHour.uuid)
-        );
-        if (session) {
-          classes += session.sessionType.name === 'THEORY' ? 'theory-session' : 'practice-session';
+      if (sessionInfo.isPartOfMultiHour) {
+        classes += `multi-hour-session ${sessionType} `;
+
+        if (sessionInfo.isFirstHour) {
+          classes += 'multi-hour-first ';
+        } else if (sessionInfo.isLastHour) {
+          classes += 'multi-hour-last ';
+        } else {
+          classes += 'multi-hour-middle ';
         }
       } else {
-        classes += 'empty-session';
+        classes += `single-hour-session ${sessionType} `;
       }
+    } else {
+      classes += 'empty-session';
     }
 
     return classes;
