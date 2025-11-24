@@ -13,7 +13,7 @@ export const DOCENTES_ROUTES: Routes = [
     component: DocentePerfilComponent
   },
   {
-    path: 'mi-disponibilidad',  // ✅ NUEVA RUTA para docentes
+    path: 'mi-disponibilidad',
     component: MiDisponibilidadComponent
   }
 ];
